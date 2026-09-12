@@ -28,6 +28,8 @@ import {
 import {loadPrivateKey} from '../services/wallet';
 import {reverseResolve} from '../services/registry';
 import NfcNotAvailableModal from '../components/NfcNotAvailableModal';
+import {PulsingRadar} from '../components/PulsingRadar';
+import {triggerHaptic} from '../utils/haptics';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'ReceiveTap'>;
@@ -60,6 +62,7 @@ export default function ReceiveTapScreen({navigation}: Props) {
       }
 
       if (response.status === 'SUCCESS' && response.offer) {
+        triggerHaptic.impactMedium();
         setOffer(response.offer);
         setScanning(false);
 
@@ -81,12 +84,14 @@ export default function ReceiveTapScreen({navigation}: Props) {
           }
         }, 1200);
       } else if (response.status === 'SIGNATURE_INVALID') {
+        triggerHaptic.notificationError();
         Alert.alert(
           'Security Warning',
           'Could not verify the sender\'s cryptographic signature. Payment rejected for safety.',
           [{text: 'OK', onPress: () => startScanning()}],
         );
       } else if (response.status === 'INVALID_PAYLOAD') {
+        triggerHaptic.notificationError();
         Alert.alert(
           'Invalid Data',
           response.errorMessage || 'Corrupted or invalid payment data received.',
@@ -166,6 +171,7 @@ export default function ReceiveTapScreen({navigation}: Props) {
         encodeAcceptResponse(address);
       }
 
+      triggerHaptic.notificationSuccess();
       setAccepting(false);
 
       // 3. Navigate to TransactionStatus to track confirmation
@@ -175,12 +181,14 @@ export default function ReceiveTapScreen({navigation}: Props) {
         recipient: offer.senderAddress,
       });
     } catch (error: any) {
+      triggerHaptic.notificationError();
       setAccepting(false);
       Alert.alert('Acceptance Error', error?.message || 'Failed to authorize payment receipt.');
     }
   };
 
   const handleReject = () => {
+    triggerHaptic.impactMedium();
     setOffer(null);
     setSenderUsername(null);
     startScanning();
@@ -190,9 +198,8 @@ export default function ReceiveTapScreen({navigation}: Props) {
     return (
       <View style={styles.container}>
         <View style={styles.scanContainer}>
-          <View style={styles.radarCircle}>
-            <ActivityIndicator size="large" color="#4CAF50" />
-          </View>
+          <PulsingRadar icon="📱" color="#4CAF50" size={96} active={scanning} />
+
           <Text style={styles.scanTitle}>Ready to Receive</Text>
           <Text style={styles.scanSubtitle}>{statusMessage}</Text>
           <View style={styles.hintBadge}>

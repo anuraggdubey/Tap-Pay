@@ -29,6 +29,8 @@ import {encodePaymentOffer, computePayloadHash} from '../utils/apdu';
 import {signMessage} from '../services/wallet';
 import InsufficientBalanceModal from '../components/InsufficientBalanceModal';
 import NfcNotAvailableModal from '../components/NfcNotAvailableModal';
+import {PulsingRadar} from '../components/PulsingRadar';
+import {triggerHaptic} from '../utils/haptics';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'SendTap'>;
@@ -166,9 +168,10 @@ export default function SendTapScreen({navigation}: Props) {
         return;
       }
 
-      // 6. Enter armed state with countdown
+      // 6. Enter armed state with countdown and haptic feedback
       setIsArmed(true);
       setTimeLeft(120);
+      triggerHaptic.impactMedium();
 
       if (countdownRef.current) {
         clearInterval(countdownRef.current);
@@ -178,6 +181,7 @@ export default function SendTapScreen({navigation}: Props) {
         setTimeLeft(prev => {
           if (prev <= 1) {
             handleCancel();
+            triggerHaptic.notificationError();
             Alert.alert('Session Expired', 'Tap session timed out after 120 seconds. Please try again.');
             return 0;
           }
@@ -185,6 +189,7 @@ export default function SendTapScreen({navigation}: Props) {
         });
       }, 1000);
     } catch (err: any) {
+      triggerHaptic.notificationError();
       Alert.alert('Setup Error', err?.message || 'Failed to prepare payment tap.');
     } finally {
       setLoading(false);
@@ -204,9 +209,8 @@ export default function SendTapScreen({navigation}: Props) {
     return (
       <View style={styles.container}>
         <View style={styles.tapContainer}>
-          <View style={styles.pulseCircle}>
-            <Text style={styles.pulseIcon}>📡</Text>
-          </View>
+          <PulsingRadar icon="📡" color="#836EF9" size={96} active={isArmed} />
+
           <Text style={styles.tapTitle}>Hold Phones Together</Text>
           <Text style={styles.tapSubtitle}>
             Sending {amount} MON{'\n'}Waiting for receiver's phone to tap...

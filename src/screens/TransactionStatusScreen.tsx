@@ -11,6 +11,7 @@ import {getExplorerTxUrl} from '../config/monad';
 import {truncateAddress} from '../utils/format';
 import {waitForReceipt} from '../services/wallet';
 import {useWallet} from '../context/WalletContext';
+import {triggerHaptic} from '../utils/haptics';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'TransactionStatus'>;
@@ -36,15 +37,18 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
         const result = await waitForReceipt(txHash);
         if (isMounted) {
           if (result.confirmed) {
+            triggerHaptic.notificationSuccess();
             setStatus('confirmed');
             refreshBalance();
           } else {
+            triggerHaptic.notificationError();
             setStatus('failed');
             setErrorMessage(result.error || 'Transaction reverted');
           }
         }
       } catch (err: any) {
         if (isMounted) {
+          triggerHaptic.notificationError();
           setStatus('failed');
           setErrorMessage(err?.message || 'Failed to poll transaction receipt');
         }

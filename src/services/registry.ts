@@ -121,3 +121,9 @@ export async function reverseResolveAddress(address: string): Promise<string | n
     return null;
   }
 }
+
+/**
+ * Alias for reverseResolveAddress
+ */
+export const reverseResolve = reverseResolveAddress;
+

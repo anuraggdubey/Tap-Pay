@@ -158,7 +158,7 @@ export default function UsernamePayScreen({navigation}: Props) {
         recordTransaction({
           direction: 'sent',
           counterparty: resolvedAddress,
-          counterpartyUsername: resolvedUsername || undefined,
+          counterpartyUsername: username ? username.trim().toLowerCase() : undefined,
           amount,
           status: 'pending',
           txHash: result.txHash,

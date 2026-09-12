@@ -126,7 +126,7 @@ export async function savePrivateKey(privateKey: string): Promise<boolean> {
  */
 export async function loadPrivateKey(promptTitle?: string): Promise<string | null> {
   try {
-    const options: Keychain.Options = {
+    const options: Keychain.GetOptions = {
       service: KEYCHAIN_SERVICE,
     };
 

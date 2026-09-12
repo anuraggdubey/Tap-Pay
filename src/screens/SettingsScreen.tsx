@@ -34,7 +34,7 @@ export default function SettingsScreen({navigation}: Props) {
   useEffect(() => {
     if (address) {
       reverseResolve(address)
-        .then(u => setUsername(u))
+        .then((u: string | null) => setUsername(u))
         .catch(() => setUsername(null));
     }
   }, [address]);

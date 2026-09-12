@@ -46,7 +46,7 @@ allprojects {
     }
 }
 
-subprojects {
+subprojects { subproject ->
     configurations.all {
         resolutionStrategy {
             force("androidx.core:core:1.13.1")
@@ -58,6 +58,13 @@ subprojects {
     tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
         kotlinOptions {
             freeCompilerArgs += ["-Xskip-metadata-version-check"]
+        }
+    }
+    if (subproject.name == "react-native-safe-area-context") {
+        subproject.pluginManager.apply("com.facebook.react")
+        subproject.afterEvaluate {
+            def isNewArch = rootProject.hasProperty("newArchEnabled") && rootProject.getProperty("newArchEnabled") == "true"
+            subproject.android.sourceSets.main.java.srcDirs += ["src/main/java", isNewArch ? "src/fabric/java" : "src/paper/java"]
         }
     }
 }

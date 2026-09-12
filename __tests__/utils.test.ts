@@ -156,14 +156,18 @@ describe('Validation Utils', () => {
 describe('Contract Error Parsing', () => {
   const {parseContractError} = require('../src/services/wallet');
 
-  test('parses TapPayLedger SessionAlreadyProcessed error', () => {
-    const err = {message: 'execution reverted: SessionAlreadyProcessed'};
-    expect(parseContractError(err)).toBe('This payment session was already processed.');
+  test('parses TapPayLedger SessionAlreadyProcessed and SessionAlreadyUsed error', () => {
+    const err1 = {message: 'execution reverted: SessionAlreadyProcessed'};
+    expect(parseContractError(err1)).toBe('This payment session was already processed.');
+    const err2 = {message: 'execution reverted: SessionAlreadyUsed'};
+    expect(parseContractError(err2)).toBe('This payment session was already processed.');
   });
 
-  test('parses TapPayLedger InvalidRecipient error', () => {
-    const err = {message: 'execution reverted: InvalidRecipient'};
-    expect(parseContractError(err)).toBe('Invalid recipient address or self-payment is not allowed.');
+  test('parses TapPayLedger InvalidRecipient and SelfPayment error', () => {
+    const err1 = {message: 'execution reverted: InvalidRecipient'};
+    expect(parseContractError(err1)).toBe('Invalid recipient address or self-payment is not allowed.');
+    const err2 = {message: 'execution reverted: SelfPayment'};
+    expect(parseContractError(err2)).toBe('Invalid recipient address or self-payment is not allowed.');
   });
 
   test('parses UsernameRegistry UsernameTaken error', () => {

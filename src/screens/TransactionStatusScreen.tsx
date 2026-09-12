@@ -2,8 +2,8 @@
  * TransactionStatusScreen — Shows pending/confirmed/failed status with live Monad receipt polling
  */
 
-import React, {useState, useEffect} from 'react';
-import {View, Text, TouchableOpacity, StyleSheet, Linking, ActivityIndicator} from 'react-native';
+import React, {useState, useEffect, useRef} from 'react';
+import {View, Text, TouchableOpacity, StyleSheet, Linking, ActivityIndicator, Animated} from 'react-native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RouteProp} from '@react-navigation/native';
 import {RootStackParamList} from '../navigation/AppNavigator';
@@ -24,6 +24,7 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
   const {refreshBalance} = useWallet();
   const [status, setStatus] = useState<'pending' | 'confirmed' | 'failed'>('pending');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const checkmarkScale = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     let isMounted = true;
@@ -41,6 +42,12 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
             triggerHaptic.notificationSuccess();
             updateTransactionStatus(txHash, 'confirmed');
             setStatus('confirmed');
+            Animated.spring(checkmarkScale, {
+              toValue: 1,
+              friction: 4,
+              tension: 60,
+              useNativeDriver: true,
+            }).start();
             refreshBalance();
           } else {
             triggerHaptic.notificationError();
@@ -83,7 +90,13 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
 
         {status === 'confirmed' && (
           <>
-            <Text style={styles.checkmark}>✅</Text>
+            <Animated.View
+              style={[
+                styles.checkmarkCircle,
+                {transform: [{scale: checkmarkScale}]},
+              ]}>
+              <Text style={styles.checkmarkIcon}>✓</Text>
+            </Animated.View>
             <Text style={styles.statusText}>Payment Confirmed!</Text>
             <Text style={styles.hint}>Settled on Monad Testnet</Text>
           </>
@@ -134,6 +147,18 @@ const styles = StyleSheet.create({
   container: {flex: 1, backgroundColor: '#0A0A0F'},
   content: {flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24},
   checkmark: {fontSize: 64, marginBottom: 16},
+  checkmarkCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(0, 200, 83, 0.15)',
+    borderWidth: 2,
+    borderColor: '#00C853',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  checkmarkIcon: {fontSize: 44, color: '#00C853', fontWeight: 'bold'},
   statusText: {fontSize: 24, fontWeight: '800', color: '#FFFFFF', marginTop: 16, marginBottom: 8},
   hint: {fontSize: 14, color: '#8888AA', marginBottom: 32},
   errorText: {fontSize: 13, color: '#FF6B6B', textAlign: 'center', marginBottom: 24},

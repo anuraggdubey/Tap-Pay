@@ -207,10 +207,18 @@ export function parseContractError(error: any): string {
   const data = error.data || error.error?.data || '';
 
   // TapPayLedger custom error signatures / names
-  if (message.includes('SessionAlreadyProcessed') || data.includes('0x408b04d1')) {
+  if (
+    message.includes('SessionAlreadyProcessed') ||
+    message.includes('SessionAlreadyUsed') ||
+    data.includes('0x408b04d1')
+  ) {
     return 'This payment session was already processed.';
   }
-  if (message.includes('InvalidRecipient') || data.includes('0x1879c3f3')) {
+  if (
+    message.includes('InvalidRecipient') ||
+    message.includes('SelfPayment') ||
+    data.includes('0x1879c3f3')
+  ) {
     return 'Invalid recipient address or self-payment is not allowed.';
   }
   if (message.includes('ZeroAmount') || data.includes('0x1f2a2005')) {

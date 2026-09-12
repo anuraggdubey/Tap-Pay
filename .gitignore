@@ -80,9 +80,14 @@ yarn-error.log
 .env.production
 
 # Hardhat / Contracts
-contracts/artifacts/
-contracts/cache/
-contracts/typechain-types/
+artifacts/
+cache/
+typechain-types/
+deployed-addresses.json
+
+# Backend
+backend/node_modules/
+backend/data/
 
 # APK build outputs (download from CI instead)
 *.apk

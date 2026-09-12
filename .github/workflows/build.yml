@@ -3,12 +3,40 @@ name: Build TapPay APK
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 jobs:
+  # ── Contracts: Compile & Test (fast, runs first) ──
+  contracts:
+    name: Contract Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Compile Solidity contracts
+        run: npx hardhat compile
+
+      - name: Run Hardhat tests
+        run: npx hardhat test
+
+  # ── Android: Build Debug APK (depends on contract tests passing) ──
   build:
     name: Build Debug APK
     runs-on: ubuntu-latest
+    needs: contracts
 
     steps:
       - name: Checkout repository
@@ -45,3 +73,4 @@ jobs:
           name: tappay-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 14
+

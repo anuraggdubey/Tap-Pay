@@ -4,6 +4,7 @@ const cors = require("cors");
 const config = require("./config");
 const db = require("./db");
 const { initSocket } = require("./socket");
+const { startEventIndexer } = require("./services/eventIndexer");
 const usernameRoutes = require("./routes/username");
 const sessionRoutes = require("./routes/session");
 
@@ -52,6 +53,9 @@ setInterval(() => {
 server.listen(config.port, () => {
   console.log(`TapPay backend running on port ${config.port}`);
   console.log(`Health check: http://localhost:${config.port}/api/v1/health`);
+
+  // Start indexing on-chain events (auto-populates DB cache)
+  startEventIndexer();
 });
 
 module.exports = app;

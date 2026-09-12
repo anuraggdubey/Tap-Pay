@@ -26,6 +26,7 @@ import {
   sendPayment,
   BalanceCheckResult,
 } from '../services/wallet';
+import {recordTransaction} from '../services/history';
 import ConfirmPaymentModal from '../components/ConfirmPaymentModal';
 import InsufficientBalanceModal from '../components/InsufficientBalanceModal';
 
@@ -152,6 +153,16 @@ export default function UsernamePayScreen({navigation}: Props) {
       if (result.txHash) {
         // Refresh balance in background
         refreshBalance();
+
+        // Record in local transaction history
+        recordTransaction({
+          direction: 'sent',
+          counterparty: resolvedAddress,
+          counterpartyUsername: resolvedUsername || undefined,
+          amount,
+          status: 'pending',
+          txHash: result.txHash,
+        });
 
         // Navigate to status screen with real live transaction hash
         navigation.navigate('TransactionStatus', {

@@ -25,7 +25,7 @@ interface WalletState {
   createWallet: () => Promise<{address: string; privateKey: string} | null>;
   importWallet: (privateKey: string) => Promise<boolean>;
   refreshBalance: () => Promise<void>;
-  getPrivateKey: () => Promise<string | null>;
+  getPrivateKey: (promptTitle?: string) => Promise<string | null>;
   resetWallet: () => Promise<boolean>;
 }
 
@@ -126,8 +126,8 @@ export function WalletProvider({children}: {children: ReactNode}) {
     }
   }, [address]);
 
-  const getPrivateKey = useCallback(async () => {
-    return await loadPrivateKey();
+  const getPrivateKey = useCallback(async (promptTitle?: string) => {
+    return await loadPrivateKey(promptTitle);
   }, []);
 
   const resetWallet = useCallback(async () => {

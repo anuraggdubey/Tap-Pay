@@ -12,6 +12,7 @@ import {truncateAddress} from '../utils/format';
 import {waitForReceipt} from '../services/wallet';
 import {useWallet} from '../context/WalletContext';
 import {triggerHaptic} from '../utils/haptics';
+import {updateTransactionStatus} from '../services/history';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'TransactionStatus'>;
@@ -38,10 +39,12 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
         if (isMounted) {
           if (result.confirmed) {
             triggerHaptic.notificationSuccess();
+            updateTransactionStatus(txHash, 'confirmed');
             setStatus('confirmed');
             refreshBalance();
           } else {
             triggerHaptic.notificationError();
+            updateTransactionStatus(txHash, 'failed');
             setStatus('failed');
             setErrorMessage(result.error || 'Transaction reverted');
           }
@@ -49,6 +52,7 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
       } catch (err: any) {
         if (isMounted) {
           triggerHaptic.notificationError();
+          updateTransactionStatus(txHash, 'failed');
           setStatus('failed');
           setErrorMessage(err?.message || 'Failed to poll transaction receipt');
         }

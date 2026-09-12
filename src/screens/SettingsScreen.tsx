@@ -1,8 +1,8 @@
 /**
- * SettingsScreen — Wallet management, network settings, and developer info
+ * SettingsScreen — Wallet management, biometric export, network settings, and identity
  */
 
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -11,11 +11,14 @@ import {
   ScrollView,
   Alert,
   Linking,
+  Clipboard,
 } from 'react-native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useWallet} from '../context/WalletContext';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import {MONAD_CONFIG} from '../config/monad';
+import {reverseResolve} from '../services/registry';
+import {triggerHaptic} from '../utils/haptics';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Settings'>;
@@ -25,6 +28,26 @@ export default function SettingsScreen({navigation}: Props) {
   const {address, getPrivateKey, resetWallet} = useWallet();
   const [showPrivateKey, setShowPrivateKey] = useState(false);
   const [exportedKey, setExportedKey] = useState<string | null>(null);
+  const [username, setUsername] = useState<string | null>(null);
+  const [copiedAddr, setCopiedAddr] = useState(false);
+
+  useEffect(() => {
+    if (address) {
+      reverseResolve(address)
+        .then(u => setUsername(u))
+        .catch(() => setUsername(null));
+    }
+  }, [address]);
+
+  const copyAddress = () => {
+    if (!address) {
+      return;
+    }
+    triggerHaptic.impactMedium();
+    Clipboard.setString(address);
+    setCopiedAddr(true);
+    setTimeout(() => setCopiedAddr(false), 2000);
+  };
 
   const handleExportKey = async () => {
     if (showPrivateKey) {
@@ -39,15 +62,22 @@ export default function SettingsScreen({navigation}: Props) {
       [
         {text: 'Cancel', style: 'cancel'},
         {
-          text: 'Reveal',
+          text: 'Authenticate & Reveal',
           style: 'destructive',
           onPress: async () => {
-            const key = await getPrivateKey();
-            if (key) {
-              setExportedKey(key);
-              setShowPrivateKey(true);
-            } else {
-              Alert.alert('Error', 'Could not retrieve private key.');
+            try {
+              triggerHaptic.impactMedium();
+              const key = await getPrivateKey('Confirm Biometrics to Export Private Key');
+              if (key) {
+                setExportedKey(key);
+                setShowPrivateKey(true);
+              } else {
+                triggerHaptic.notificationError();
+                Alert.alert('Authentication Failed', 'Biometric verification is required to reveal private key.');
+              }
+            } catch (err: any) {
+              triggerHaptic.notificationError();
+              Alert.alert('Error', err?.message || 'Could not retrieve private key.');
             }
           },
         },
@@ -56,6 +86,7 @@ export default function SettingsScreen({navigation}: Props) {
   };
 
   const handleResetWallet = () => {
+    triggerHaptic.notificationError();
     Alert.alert(
       'Reset Wallet',
       'This will remove your current wallet credentials from this device. Make sure you have backed up your private key first!',
@@ -78,6 +109,26 @@ export default function SettingsScreen({navigation}: Props) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {/* Identity & Username */}
+      <Text style={styles.sectionHeader}>Identity</Text>
+      <View style={styles.card}>
+        <View style={styles.usernameRow}>
+          <View style={styles.avatarCircle}>
+            <Text style={styles.avatarText}>
+              {(username || 'U').charAt(0).toUpperCase()}
+            </Text>
+          </View>
+          <View style={styles.usernameMeta}>
+            <Text style={styles.usernameTitle}>
+              {username ? `@${username}` : 'No Username Registered'}
+            </Text>
+            <Text style={styles.usernameSubtitle}>
+              {username ? 'Monad On-Chain Registry' : 'Register via Wallet Setup'}
+            </Text>
+          </View>
+        </View>
+      </View>
+
       {/* Wallet Section */}
       <Text style={styles.sectionHeader}>Wallet</Text>
       <View style={styles.card}>
@@ -85,10 +136,18 @@ export default function SettingsScreen({navigation}: Props) {
         <Text selectable style={styles.valueMono}>{address || 'Not connected'}</Text>
 
         <TouchableOpacity
+          style={styles.actionBtnPrimary}
+          onPress={copyAddress}>
+          <Text style={styles.actionBtnPrimaryText}>
+            {copiedAddr ? '✓ Address Copied' : '❐ Copy Public Address'}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
           style={styles.actionBtnSecondary}
           onPress={handleExportKey}>
           <Text style={styles.actionBtnSecondaryText}>
-            {showPrivateKey ? 'Hide Private Key' : '🔑 Export Private Key'}
+            {showPrivateKey ? 'Hide Private Key' : '🔑 Export Private Key (Biometric)'}
           </Text>
         </TouchableOpacity>
 
@@ -116,7 +175,7 @@ export default function SettingsScreen({navigation}: Props) {
           <Text style={styles.infoVal}>{MONAD_CONFIG.nativeCurrency.name} ({MONAD_CONFIG.nativeCurrency.symbol})</Text>
         </View>
         <View style={styles.infoRow}>
-          <Text style={styles.infoKey}>RPC URL</Text>
+          <Text style={styles.infoKey}>Primary RPC</Text>
           <Text style={[styles.infoVal, styles.monoSmall]}>{MONAD_CONFIG.rpcUrls.primary}</Text>
         </View>
         <TouchableOpacity
@@ -142,6 +201,10 @@ export default function SettingsScreen({navigation}: Props) {
           <Text style={styles.infoKey}>Mode</Text>
           <Text style={styles.infoVal}>NFC HCE + Username Pay</Text>
         </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.infoKey}>Security</Text>
+          <Text style={styles.infoVal}>Android Keystore + Biometrics</Text>
+        </View>
       </View>
 
       {/* Danger Zone */}
@@ -165,7 +228,7 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   sectionHeader: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     color: '#8888AA',
     textTransform: 'uppercase',
@@ -175,11 +238,44 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: '#161622',
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 18,
     borderWidth: 1,
     borderColor: '#222235',
     marginBottom: 10,
+  },
+  usernameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  avatarCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#836EF930',
+    borderWidth: 1.5,
+    borderColor: '#836EF9',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  usernameMeta: {
+    flex: 1,
+  },
+  usernameTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  usernameSubtitle: {
+    fontSize: 12,
+    color: '#8888AA',
   },
   label: {
     fontSize: 12,
@@ -193,10 +289,24 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     marginBottom: 14,
   },
+  actionBtnPrimary: {
+    backgroundColor: '#836EF925',
+    borderColor: '#836EF980',
+    borderWidth: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  actionBtnPrimaryText: {
+    color: '#C4B5FD',
+    fontWeight: '700',
+    fontSize: 14,
+  },
   actionBtnSecondary: {
     backgroundColor: '#242438',
     paddingVertical: 12,
-    borderRadius: 10,
+    borderRadius: 12,
     alignItems: 'center',
   },
   actionBtnSecondaryText: {
@@ -209,7 +319,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#2A1A1A',
     borderColor: '#FF5252',
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 12,
     padding: 12,
   },
   warningTitle: {
@@ -227,7 +337,7 @@ const styles = StyleSheet.create({
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#1E1E30',
   },
@@ -247,11 +357,11 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   linkRow: {
-    paddingVertical: 10,
-    marginTop: 6,
+    paddingVertical: 12,
+    marginTop: 4,
   },
   linkText: {
-    color: '#7C5CFC',
+    color: '#836EF9',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -259,7 +369,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FF333320',
     borderColor: '#FF3333',
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 12,
     paddingVertical: 12,
     alignItems: 'center',
   },

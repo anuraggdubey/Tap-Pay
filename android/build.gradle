@@ -65,6 +65,8 @@ subprojects { subproject ->
         subproject.afterEvaluate {
             def isNewArch = rootProject.hasProperty("newArchEnabled") && rootProject.getProperty("newArchEnabled") == "true"
             subproject.android.sourceSets.main.java.srcDirs += ["src/main/java", isNewArch ? "src/fabric/java" : "src/paper/java"]
+            subproject.android.buildFeatures.buildConfig = true
+            subproject.android.defaultConfig.buildConfigField("boolean", "IS_NEW_ARCHITECTURE_ENABLED", isNewArch.toString())
         }
     }
 }

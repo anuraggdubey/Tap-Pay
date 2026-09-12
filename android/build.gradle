@@ -5,7 +5,7 @@ buildscript {
         compileSdkVersion = 34
         targetSdkVersion = 34
         ndkVersion = "27.1.12297006"
-        kotlinVersion = "2.0.21"
+        kotlinVersion = "2.1.10"
     }
     repositories {
         google()
@@ -14,12 +14,12 @@ buildscript {
     dependencies {
         classpath("com.android.tools.build:gradle:8.7.3")
         classpath("com.facebook.react:react-native-gradle-plugin")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.0.21")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.10")
     }
     configurations.classpath {
         resolutionStrategy {
             force("com.android.tools.build:gradle:8.7.3")
-            force("org.jetbrains.kotlin:kotlin-gradle-plugin:2.0.21")
+            force("org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.10")
         }
     }
 }
@@ -30,5 +30,34 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+    }
+    configurations.all {
+        resolutionStrategy {
+            force("androidx.core:core:1.13.1")
+            force("androidx.core:core-ktx:1.13.1")
+            force("androidx.transition:transition:1.5.0")
+            force("androidx.transition:transition-ktx:1.5.0")
+        }
+    }
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+        kotlinOptions {
+            freeCompilerArgs += ["-Xskip-metadata-version-check"]
+        }
+    }
+}
+
+subprojects {
+    configurations.all {
+        resolutionStrategy {
+            force("androidx.core:core:1.13.1")
+            force("androidx.core:core-ktx:1.13.1")
+            force("androidx.transition:transition:1.5.0")
+            force("androidx.transition:transition-ktx:1.5.0")
+        }
+    }
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+        kotlinOptions {
+            freeCompilerArgs += ["-Xskip-metadata-version-check"]
+        }
     }
 }

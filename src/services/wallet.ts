@@ -89,11 +89,24 @@ export function generateWallet(): {address: string; privateKey: string} {
 }
 
 /**
+ * Check if the device has biometric authentication hardware and enrolled biometrics
+ */
+export async function isBiometricsAvailable(): Promise<boolean> {
+  try {
+    const biometryType = await Keychain.getSupportedBiometryType();
+    return biometryType !== null;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Save a private key to Android Keystore via react-native-keychain
  */
 export async function savePrivateKey(privateKey: string): Promise<boolean> {
   try {
-    await Keychain.setGenericPassword('tappay_wallet', privateKey, {
+    const wallet = new ethers.Wallet(privateKey);
+    await Keychain.setGenericPassword(wallet.address, privateKey, {
       service: KEYCHAIN_SERVICE,
       accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_ANY_OR_DEVICE_PASSCODE,
       securityLevel: Keychain.SECURITY_LEVEL.SECURE_HARDWARE,
@@ -107,30 +120,46 @@ export async function savePrivateKey(privateKey: string): Promise<boolean> {
 }
 
 /**
- * Load the private key from Android Keystore
- * @returns The private key string, or null if not found
+ * Load the private key from Android Keystore with biometric authorization
+ * @param promptTitle Optional prompt title to display in Android BiometricPrompt
+ * @returns The private key string, or null if cancelled or not found
  */
-export async function loadPrivateKey(): Promise<string | null> {
+export async function loadPrivateKey(promptTitle?: string): Promise<string | null> {
   try {
-    const credentials = await Keychain.getGenericPassword({
+    const options: Keychain.Options = {
       service: KEYCHAIN_SERVICE,
-    });
+    };
+
+    if (promptTitle) {
+      options.authenticationPrompt = {
+        title: promptTitle,
+        subtitle: 'TapPay Authorization',
+        description: 'Confirm your identity using biometrics to proceed',
+        cancel: 'Cancel',
+      };
+    }
+
+    const credentials = await Keychain.getGenericPassword(options);
     if (credentials) {
       return credentials.password;
     }
     return null;
-  } catch (error) {
-    console.error('Failed to load private key:', error);
+  } catch (error: any) {
+    console.warn('Biometric/Keystore authentication cancelled or failed:', error?.message || error);
     return null;
   }
 }
 
 /**
- * Check if a wallet exists in secure storage
+ * Check if a wallet exists in secure storage without prompting for biometrics
  */
 export async function hasWallet(): Promise<boolean> {
-  const key = await loadPrivateKey();
-  return key !== null;
+  try {
+    const credentials = await Keychain.getGenericPassword({service: KEYCHAIN_SERVICE});
+    return credentials !== false && !!credentials;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -147,15 +176,23 @@ export async function deleteWallet(): Promise<boolean> {
 }
 
 /**
- * Get the wallet address from a stored private key
+ * Get the wallet address from stored credentials
  */
 export async function getWalletAddress(): Promise<string | null> {
-  const key = await loadPrivateKey();
-  if (!key) {
+  try {
+    const credentials = await Keychain.getGenericPassword({service: KEYCHAIN_SERVICE});
+    if (!credentials) {
+      return null;
+    }
+    // If username stores the address, return it immediately
+    if (credentials.username && credentials.username.startsWith('0x')) {
+      return credentials.username;
+    }
+    const wallet = new ethers.Wallet(credentials.password);
+    return wallet.address;
+  } catch {
     return null;
   }
-  const wallet = new ethers.Wallet(key);
-  return wallet.address;
 }
 
 /**
@@ -262,10 +299,13 @@ export async function getBalance(address: string): Promise<bigint> {
 }
 
 /**
- * Sign a message with the stored wallet key (for payload signing, username registration, etc.)
+ * Sign a message with the stored wallet key (gated by biometric authorization)
  */
-export async function signMessage(message: string | Uint8Array): Promise<string | null> {
-  const key = await loadPrivateKey();
+export async function signMessage(
+  message: string | Uint8Array,
+  authPromptTitle = 'Confirm Biometric Authorization to Sign',
+): Promise<string | null> {
+  const key = await loadPrivateKey(authPromptTitle);
   if (!key) {
     return null;
   }
@@ -281,11 +321,12 @@ export async function sendPayment(
   to: string,
   amountWei: bigint,
   sessionIdHash?: string,
+  authPromptTitle = 'Confirm Biometric Authorization to Send Payment',
 ): Promise<{txHash: string | null; error?: string}> {
   try {
-    const key = await loadPrivateKey();
+    const key = await loadPrivateKey(authPromptTitle);
     if (!key) {
-      return {txHash: null, error: 'Wallet not found on device'};
+      return {txHash: null, error: 'Authentication cancelled or wallet not found'};
     }
 
     return await withRpcFailover(async provider => {

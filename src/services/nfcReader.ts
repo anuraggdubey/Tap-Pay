@@ -1,12 +1,26 @@
 /**
- * NFC Reader Service — Receiver-side NFC tag discovery
+ * NFC Reader Service — Receiver-side NFC tag discovery & verification
  *
  * Uses react-native-nfc-manager to discover and read the sender's
- * HCE-emulated card, extracting the binary payment payload.
+ * HCE-emulated card, extracting and cryptographically verifying the binary payment payload.
  */
 
 import NfcManager, {NfcTech, Ndef} from 'react-native-nfc-manager';
-import {decodePaymentOffer, PaymentOffer} from '../utils/apdu';
+import {decodePaymentOffer, verifyPaymentOffer, PaymentOffer} from '../utils/apdu';
+
+export type NfcReadStatus =
+  | 'SUCCESS'
+  | 'DISCONNECTED'
+  | 'INVALID_PAYLOAD'
+  | 'SIGNATURE_INVALID'
+  | 'CANCELLED'
+  | 'ERROR';
+
+export interface NfcReadResponse {
+  status: NfcReadStatus;
+  offer: PaymentOffer | null;
+  errorMessage?: string;
+}
 
 /**
  * Initialize NFC Manager
@@ -22,12 +36,11 @@ export async function initNfc(): Promise<boolean> {
 }
 
 /**
- * Check if NFC is supported and enabled on this device
+ * Check if NFC is supported on this device
  */
 export async function isNfcSupported(): Promise<boolean> {
   try {
-    const supported = await NfcManager.isSupported();
-    return supported;
+    return await NfcManager.isSupported();
   } catch {
     return false;
   }
@@ -57,11 +70,9 @@ export async function openNfcSettings(): Promise<void> {
 
 /**
  * Start listening for an NFC tag (receiver mode)
- * Reads the sender's HCE payload and decodes the binary PaymentOffer
- *
- * @returns The decoded PaymentOffer, or null if read failed
+ * Reads the sender's HCE payload, decodes binary PaymentOffer, and verifies ECDSA signature
  */
-export async function readPaymentOffer(): Promise<PaymentOffer | null> {
+export async function readPaymentOffer(): Promise<NfcReadResponse> {
   try {
     // Request NFC Ndef technology
     await NfcManager.requestTechnology(NfcTech.Ndef);
@@ -69,30 +80,74 @@ export async function readPaymentOffer(): Promise<PaymentOffer | null> {
     const tag = await NfcManager.getTag();
 
     if (!tag?.ndefMessage || tag.ndefMessage.length === 0) {
-      return null;
+      return {
+        status: 'INVALID_PAYLOAD',
+        offer: null,
+        errorMessage: 'Invalid payment data received. Ask sender to retry.',
+      };
     }
 
-    // Extract the text payload from the NDEF message
+    // Extract text payload from NDEF message
     const record = tag.ndefMessage[0];
     const text = Ndef.text.decodePayload(new Uint8Array(record.payload));
 
     if (!text) {
-      return null;
+      return {
+        status: 'INVALID_PAYLOAD',
+        offer: null,
+        errorMessage: 'Empty payload received from card.',
+      };
     }
 
-    // The HCE service stores the payload as hex string
-    // Decode hex back to bytes
+    // Decode hex back to binary bytes
     const bytes = new Uint8Array(
       text.match(/.{1,2}/g)?.map((byte: string) => parseInt(byte, 16)) || [],
     );
 
     // Decode binary payload to PaymentOffer
-    return decodePaymentOffer(bytes);
-  } catch (error) {
+    const offer = decodePaymentOffer(bytes);
+    if (!offer) {
+      return {
+        status: 'INVALID_PAYLOAD',
+        offer: null,
+        errorMessage: 'Invalid payment structure. Ensure sender app is updated.',
+      };
+    }
+
+    // Cryptographic signature verification
+    const isValidSignature = verifyPaymentOffer(offer);
+    if (!isValidSignature) {
+      return {
+        status: 'SIGNATURE_INVALID',
+        offer: null,
+        errorMessage: 'Could not verify sender cryptographic signature. Payment rejected for safety.',
+      };
+    }
+
+    return {
+      status: 'SUCCESS',
+      offer,
+    };
+  } catch (error: any) {
+    const errorStr = error?.message || error?.toString() || '';
+    if (errorStr.includes('cancelled') || errorStr.includes('user cancelled')) {
+      return {status: 'CANCELLED', offer: null};
+    }
+    if (errorStr.includes('Tag was lost') || errorStr.includes('disconnect') || errorStr.includes('transceive fail')) {
+      return {
+        status: 'DISCONNECTED',
+        offer: null,
+        errorMessage: 'Tap interrupted. Move phones closer and try again.',
+      };
+    }
     console.error('NFC read error:', error);
-    return null;
+    return {
+      status: 'ERROR',
+      offer: null,
+      errorMessage: errorStr || 'NFC read failure. Please tap again.',
+    };
   } finally {
-    // Always clean up the NFC session
+    // Clean up NFC session
     NfcManager.cancelTechnologyRequest().catch(() => {});
   }
 }

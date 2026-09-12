@@ -24,9 +24,11 @@ import {
   BalanceCheckResult,
 } from '../services/wallet';
 import {startHceSession, stopHceSession} from '../services/hce';
-import {encodePaymentOffer} from '../utils/apdu';
+import {isNfcSupported, isNfcEnabled, openNfcSettings} from '../services/nfcReader';
+import {encodePaymentOffer, computePayloadHash} from '../utils/apdu';
 import {signMessage} from '../services/wallet';
 import InsufficientBalanceModal from '../components/InsufficientBalanceModal';
+import NfcNotAvailableModal from '../components/NfcNotAvailableModal';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'SendTap'>;
@@ -46,6 +48,7 @@ export default function SendTapScreen({navigation}: Props) {
   // Insufficient Balance Modal State
   const [balanceModalVisible, setBalanceModalVisible] = useState(false);
   const [balanceCheckData, setBalanceCheckData] = useState<BalanceCheckResult | null>(null);
+  const [nfcModalVisible, setNfcModalVisible] = useState(false);
 
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -95,6 +98,26 @@ export default function SendTapScreen({navigation}: Props) {
       return;
     }
 
+    // 0. Verify NFC Hardware Support & Activation
+    const nfcSupported = await isNfcSupported();
+    if (!nfcSupported) {
+      setNfcModalVisible(true);
+      return;
+    }
+
+    const nfcEnabled = await isNfcEnabled();
+    if (!nfcEnabled) {
+      Alert.alert(
+        'NFC Disabled',
+        'NFC is turned off in your device settings. Please turn on NFC to use Tap Pay.',
+        [
+          {text: 'Cancel', style: 'cancel'},
+          {text: 'Open Settings', onPress: () => openNfcSettings()},
+        ],
+      );
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -113,17 +136,22 @@ export default function SendTapScreen({navigation}: Props) {
       const sessionIdHex = ethers.hexlify(ethers.randomBytes(16)).replace('0x', '');
       const sessionId = `${sessionIdHex.slice(0, 8)}-${sessionIdHex.slice(8, 12)}-4${sessionIdHex.slice(13, 16)}-8${sessionIdHex.slice(17, 20)}-${sessionIdHex.slice(20, 32)}`;
 
-      // 3. Create ECDSA signature over the payload intent
-      const payloadHash = ethers.keccak256(
-        ethers.solidityPacked(
-          ['uint8', 'uint256', 'address', 'string'],
-          [0x01, amountWei, address, sessionId],
-        ),
+      // 3. Create ECDSA signature over the payload intent (Biometric-gated)
+      const payloadHash = computePayloadHash(0x01, amountWei, address, sessionId);
+      const signature = await signMessage(
+        ethers.getBytes(payloadHash),
+        'Confirm Biometrics to Authorize TapPay Payment',
       );
-      const signature = (await signMessage(ethers.getBytes(payloadHash))) || '0x' + '00'.repeat(65);
+
+      if (!signature) {
+        setLoading(false);
+        // User cancelled biometric prompt
+        return;
+      }
 
       // 4. Binary APDU encoding (134-byte PAYMENT_OFFER)
       const encodedPayload = encodePaymentOffer({
+        version: 0x01,
         amountWei,
         senderAddress: address,
         sessionId,
@@ -243,6 +271,16 @@ export default function SendTapScreen({navigation}: Props) {
           userAddress={address || ''}
         />
       )}
+
+      {/* NFC Hardware Not Available Modal */}
+      <NfcNotAvailableModal
+        visible={nfcModalVisible}
+        onClose={() => setNfcModalVisible(false)}
+        onSwitchToUsernamePay={() => {
+          setNfcModalVisible(false);
+          navigation.replace('UsernamePay');
+        }}
+      />
     </View>
   );
 }

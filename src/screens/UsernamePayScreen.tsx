@@ -1,34 +1,60 @@
 /**
- * UsernamePayScreen — Search username, resolve to address, enter amount, send
+ * UsernamePayScreen — Search username, resolve to address, pre-check balance & gas,
+ * confirm with Apple Pay-style sheet, and broadcast to Monad testnet.
  */
 
-import React, {useState, useCallback} from 'react';
-import {View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert} from 'react-native';
+import React, {useState, useCallback, useEffect} from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {ethers} from 'ethers';
 import {useWallet} from '../context/WalletContext';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import {resolveUsername} from '../services/registry';
 import {validateAmount, validateUsername} from '../utils/validation';
 import {truncateAddress, formatMon} from '../utils/format';
+import {
+  checkSufficientBalance,
+  estimateGasCost,
+  sendPayment,
+  BalanceCheckResult,
+} from '../services/wallet';
+import ConfirmPaymentModal from '../components/ConfirmPaymentModal';
+import InsufficientBalanceModal from '../components/InsufficientBalanceModal';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'UsernamePay'>;
 };
 
 export default function UsernamePayScreen({navigation}: Props) {
-  const {balance} = useWallet();
+  const {address, balance, refreshBalance} = useWallet();
   const [username, setUsername] = useState('');
   const [resolvedAddress, setResolvedAddress] = useState<string | null>(null);
   const [amount, setAmount] = useState('');
   const [searching, setSearching] = useState(false);
   const [sending, setSending] = useState(false);
+  const [estimatedGasWei, setEstimatedGasWei] = useState<bigint | null>(null);
 
-  // Debounced username resolution
+  // Modals
+  const [confirmModalVisible, setConfirmModalVisible] = useState(false);
+  const [insufficientModalVisible, setInsufficientModalVisible] = useState(false);
+  const [balanceCheckData, setBalanceCheckData] = useState<BalanceCheckResult | null>(null);
+
+  // Debounced username resolution reset
   const handleUsernameChange = useCallback((text: string) => {
     setUsername(text);
     setResolvedAddress(null);
+    setEstimatedGasWei(null);
   }, []);
 
+  // Search username on chain
   const handleSearch = async () => {
     const validation = validateUsername(username);
     if (!validation.valid) {
@@ -37,37 +63,110 @@ export default function UsernamePayScreen({navigation}: Props) {
     }
 
     setSearching(true);
-    const address = await resolveUsername(username);
-    setSearching(false);
-
-    if (address) {
-      setResolvedAddress(address);
-    } else {
-      Alert.alert('Not Found', `Username @${username} is not registered.`);
+    try {
+      const addr = await resolveUsername(username.trim().toLowerCase());
+      if (addr && addr !== ethers.ZeroAddress) {
+        setResolvedAddress(addr);
+      } else {
+        Alert.alert('Not Found', `Username @${username} is not registered on Monad testnet.`);
+      }
+    } catch (err: any) {
+      Alert.alert('Lookup Failed', err?.message || 'Could not query username registry.');
+    } finally {
+      setSearching(false);
     }
   };
 
-  const handleSend = async () => {
+  // Dynamic gas estimation when amount or resolved address changes
+  useEffect(() => {
+    const val = validateAmount(amount);
+    if (!val.valid || !address || !resolvedAddress) {
+      setEstimatedGasWei(null);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        const amountWei = ethers.parseEther(amount);
+        const gasInfo = await estimateGasCost(address, resolvedAddress, amountWei);
+        if (gasInfo) {
+          setEstimatedGasWei(gasInfo.gasCostWei);
+        }
+      } catch {
+        // Silently ignore gas estimate previews
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [amount, address, resolvedAddress]);
+
+  // Initiate send flow -> pre-check balance -> show Confirm Modal
+  const handleInitiateSend = async () => {
     const amountValidation = validateAmount(amount);
     if (!amountValidation.valid) {
       Alert.alert('Invalid Amount', amountValidation.error);
       return;
     }
 
-    if (!resolvedAddress) {
+    if (!address || !resolvedAddress) {
       return;
     }
 
     setSending(true);
-    // TODO: Call wallet.sendPayment() with resolvedAddress and amount
-    // TODO: Navigate to TransactionStatus
-    setSending(false);
+    try {
+      const amountWei = ethers.parseEther(amount);
 
-    navigation.navigate('TransactionStatus', {
-      txHash: '0x...pending',
-      amount,
-      recipient: resolvedAddress,
-    });
+      // Pre-check balance before opening confirmation
+      const check = await checkSufficientBalance(address, resolvedAddress, amountWei);
+      if (!check.canAfford) {
+        setBalanceCheckData(check);
+        setInsufficientModalVisible(true);
+        return;
+      }
+
+      setBalanceCheckData(check);
+      setConfirmModalVisible(true);
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Failed to verify transaction readiness.');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  // Final confirmation: sign and broadcast to Monad testnet
+  const handleConfirmSend = async () => {
+    if (!resolvedAddress || !balanceCheckData) {
+      return;
+    }
+
+    setSending(true);
+    try {
+      const result = await sendPayment(
+        resolvedAddress,
+        balanceCheckData.amountWei,
+      );
+
+      setSending(false);
+      setConfirmModalVisible(false);
+
+      if (result.txHash) {
+        // Refresh balance in background
+        refreshBalance();
+
+        // Navigate to status screen with real live transaction hash
+        navigation.navigate('TransactionStatus', {
+          txHash: result.txHash,
+          amount,
+          recipient: resolvedAddress,
+        });
+      } else {
+        Alert.alert('Payment Failed', result.error || 'Transaction could not be broadcast.');
+      }
+    } catch (err: any) {
+      setSending(false);
+      setConfirmModalVisible(false);
+      Alert.alert('Transaction Error', err?.message || 'An error occurred during payment.');
+    }
   };
 
   return (
@@ -99,13 +198,23 @@ export default function UsernamePayScreen({navigation}: Props) {
           </TouchableOpacity>
         </View>
 
-        {/* Resolved User */}
+        {/* Resolved User Card */}
         {resolvedAddress && (
           <View style={styles.resolvedCard}>
-            <Text style={styles.resolvedName}>@{username}</Text>
-            <Text style={styles.resolvedAddr}>
-              {truncateAddress(resolvedAddress)}
-            </Text>
+            <View style={styles.avatarCircle}>
+              <Text style={styles.avatarLetter}>
+                {username.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+            <View style={styles.resolvedMeta}>
+              <Text style={styles.resolvedName}>@{username}</Text>
+              <Text style={styles.resolvedAddr}>
+                {truncateAddress(resolvedAddress)}
+              </Text>
+            </View>
+            <View style={styles.resolvedBadge}>
+              <Text style={styles.resolvedBadgeText}>Verified</Text>
+            </View>
           </View>
         )}
 
@@ -121,13 +230,21 @@ export default function UsernamePayScreen({navigation}: Props) {
               onChangeText={setAmount}
               keyboardType="decimal-pad"
             />
+
+            {/* Real-time Gas Display */}
+            {estimatedGasWei !== null && (
+              <Text style={styles.gasHint}>
+                ⚡ Est. Gas: ~{formatMon(estimatedGasWei)} (Monad)
+              </Text>
+            )}
+
             <Text style={styles.balanceHint}>
               Available: {formatMon(balance)}
             </Text>
 
             <TouchableOpacity
               style={[styles.sendButton, sending && {opacity: 0.6}]}
-              onPress={handleSend}
+              onPress={handleInitiateSend}
               disabled={sending}>
               {sending ? (
                 <ActivityIndicator color="#FFF" />
@@ -140,24 +257,55 @@ export default function UsernamePayScreen({navigation}: Props) {
           </>
         )}
       </View>
+
+      {/* Confirmation Modal */}
+      {balanceCheckData && (
+        <ConfirmPaymentModal
+          visible={confirmModalVisible}
+          onConfirm={handleConfirmSend}
+          onCancel={() => setConfirmModalVisible(false)}
+          recipient={resolvedAddress || ''}
+          recipientUsername={username}
+          amountWei={balanceCheckData.amountWei}
+          gasCostWei={balanceCheckData.gasCostWei}
+          loading={sending}
+        />
+      )}
+
+      {/* Insufficient Balance Modal */}
+      {balanceCheckData && (
+        <InsufficientBalanceModal
+          visible={insufficientModalVisible}
+          onClose={() => setInsufficientModalVisible(false)}
+          requiredWei={balanceCheckData.requiredTotal}
+          currentBalanceWei={balanceCheckData.balance}
+          userAddress={address || ''}
+        />
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {flex: 1, backgroundColor: '#0A0A0F'},
-  content: {flex: 1, paddingHorizontal: 24, paddingTop: 24},
+  content: {flex: 1, justifyContent: 'center', paddingHorizontal: 24},
   label: {fontSize: 14, color: '#8888AA', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1},
-  searchRow: {flexDirection: 'row', alignItems: 'center', marginBottom: 16},
-  atSign: {fontSize: 20, color: '#7C5CFC', fontWeight: '700', marginRight: 8},
-  searchInput: {flex: 1, backgroundColor: '#1A1A2E', borderRadius: 12, padding: 14, fontSize: 16, color: '#FFFFFF', borderWidth: 1, borderColor: '#2A2A3E'},
-  searchButton: {marginLeft: 12, backgroundColor: '#1A1A2E', paddingVertical: 14, paddingHorizontal: 16, borderRadius: 12, borderWidth: 1, borderColor: '#7C5CFC'},
-  searchButtonText: {fontSize: 14, color: '#7C5CFC', fontWeight: '600'},
-  resolvedCard: {backgroundColor: '#1A1A2E', borderRadius: 12, padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderWidth: 1, borderColor: '#4CAF50'},
-  resolvedName: {fontSize: 16, fontWeight: '700', color: '#4CAF50'},
-  resolvedAddr: {fontSize: 14, color: '#8888AA', fontFamily: 'monospace'},
-  amountInput: {fontSize: 36, fontWeight: '800', color: '#FFFFFF', textAlign: 'center', paddingVertical: 16, marginBottom: 8},
-  balanceHint: {fontSize: 14, color: '#666', textAlign: 'center', marginBottom: 32},
+  searchRow: {flexDirection: 'row', alignItems: 'center', backgroundColor: '#14141E', borderRadius: 16, paddingHorizontal: 16, borderWidth: 1, borderColor: '#262636', marginBottom: 16},
+  atSign: {fontSize: 20, fontWeight: '700', color: '#7C5CFC', marginRight: 6},
+  searchInput: {flex: 1, fontSize: 18, color: '#FFFFFF', paddingVertical: 14},
+  searchButton: {backgroundColor: '#1E1E2C', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 10, borderWidth: 1, borderColor: '#33334A'},
+  searchButtonText: {fontSize: 14, fontWeight: '700', color: '#7C5CFC'},
+  resolvedCard: {flexDirection: 'row', alignItems: 'center', backgroundColor: '#161622', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#2E2E44'},
+  avatarCircle: {width: 44, height: 44, borderRadius: 22, backgroundColor: '#7C5CFC', justifyContent: 'center', alignItems: 'center', marginRight: 14},
+  avatarLetter: {fontSize: 20, fontWeight: '800', color: '#FFFFFF'},
+  resolvedMeta: {flex: 1},
+  resolvedName: {fontSize: 16, fontWeight: '700', color: '#FFFFFF', marginBottom: 2},
+  resolvedAddr: {fontSize: 12, color: '#8888AA', fontFamily: 'monospace'},
+  resolvedBadge: {backgroundColor: 'rgba(76, 175, 80, 0.15)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8},
+  resolvedBadgeText: {fontSize: 12, fontWeight: '700', color: '#4CAF50'},
+  amountInput: {fontSize: 48, fontWeight: '800', color: '#FFFFFF', textAlign: 'center', marginBottom: 8, paddingVertical: 12},
+  gasHint: {fontSize: 13, color: '#7C5CFC', textAlign: 'center', marginBottom: 6, fontWeight: '600'},
+  balanceHint: {fontSize: 14, color: '#666', textAlign: 'center', marginBottom: 36},
   sendButton: {backgroundColor: '#7C5CFC', paddingVertical: 18, borderRadius: 16, alignItems: 'center'},
   sendButtonText: {fontSize: 18, fontWeight: '700', color: '#FFFFFF'},
 });

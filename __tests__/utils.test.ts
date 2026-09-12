@@ -81,3 +81,27 @@ describe('Validation Utils', () => {
     expect(validateAddress('0xinvalid')).toBe(false);
   });
 });
+
+describe('Contract Error Parsing', () => {
+  const {parseContractError} = require('../src/services/wallet');
+
+  test('parses TapPayLedger SessionAlreadyProcessed error', () => {
+    const err = {message: 'execution reverted: SessionAlreadyProcessed'};
+    expect(parseContractError(err)).toBe('This payment session was already processed.');
+  });
+
+  test('parses TapPayLedger InvalidRecipient error', () => {
+    const err = {message: 'execution reverted: InvalidRecipient'};
+    expect(parseContractError(err)).toBe('Invalid recipient address or self-payment is not allowed.');
+  });
+
+  test('parses UsernameRegistry UsernameTaken error', () => {
+    const err = {message: 'execution reverted: UsernameTaken'};
+    expect(parseContractError(err)).toBe('This username is already taken by another user.');
+  });
+
+  test('parses insufficient funds error', () => {
+    const err = {message: 'sender doesn\'t have enough funds to send tx or exceeds balance'};
+    expect(parseContractError(err)).toBe('Insufficient MON balance for payment and network gas fee.');
+  });
+});

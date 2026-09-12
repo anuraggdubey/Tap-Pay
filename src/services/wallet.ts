@@ -13,25 +13,67 @@ import {MONAD_CONFIG, GAS_LIMIT_FALLBACK, TX_POLL_INTERVAL_MS, TX_MAX_WAIT_MS} f
 
 const KEYCHAIN_SERVICE = 'com.tappay.wallet';
 
-// Create a provider with fallback
-function createProvider(): ethers.JsonRpcProvider {
-  // Primary RPC — switch to fallback if this fails
+// List of Monad RPC endpoints for automatic failover rotation
+const RPC_ENDPOINTS = [
+  MONAD_CONFIG.rpcUrls.primary,
+  MONAD_CONFIG.rpcUrls.fallback1,
+  MONAD_CONFIG.rpcUrls.fallback2,
+];
+
+let _currentRpcIndex = 0;
+let _provider: ethers.JsonRpcProvider | null = null;
+
+// Create a provider for the current RPC endpoint
+function createProvider(endpointIndex = _currentRpcIndex): ethers.JsonRpcProvider {
   return new ethers.JsonRpcProvider(
-    MONAD_CONFIG.rpcUrls.primary,
+    RPC_ENDPOINTS[endpointIndex],
     {
       chainId: MONAD_CONFIG.chainId,
       name: MONAD_CONFIG.chainName,
     },
+    {
+      staticNetwork: true,
+    },
   );
 }
-
-let _provider: ethers.JsonRpcProvider | null = null;
 
 export function getProvider(): ethers.JsonRpcProvider {
   if (!_provider) {
     _provider = createProvider();
   }
   return _provider;
+}
+
+/**
+ * Rotate to the next fallback RPC if the current one is unresponsive or rate-limited
+ */
+export function rotateRpcProvider(): ethers.JsonRpcProvider {
+  _currentRpcIndex = (_currentRpcIndex + 1) % RPC_ENDPOINTS.length;
+  console.log(`[RPC Failover] Switching to RPC endpoint #${_currentRpcIndex}: ${RPC_ENDPOINTS[_currentRpcIndex]}`);
+  _provider = createProvider(_currentRpcIndex);
+  return _provider;
+}
+
+/**
+ * Execute an RPC action with automatic retry & rotation on failover
+ */
+export async function withRpcFailover<T>(action: (provider: ethers.JsonRpcProvider) => Promise<T>): Promise<T> {
+  let attempts = 0;
+  let lastError: any = null;
+
+  while (attempts < RPC_ENDPOINTS.length) {
+    try {
+      const provider = getProvider();
+      return await action(provider);
+    } catch (err: any) {
+      lastError = err;
+      console.warn(`RPC call failed on endpoint #${_currentRpcIndex}, rotating... Error:`, err?.message || err);
+      rotateRpcProvider();
+      attempts++;
+    }
+  }
+
+  throw lastError;
 }
 
 /**
@@ -117,11 +159,106 @@ export async function getWalletAddress(): Promise<string | null> {
 }
 
 /**
- * Get the wallet's MON balance
+ * Parse contract revert reasons and common RPC errors into human-readable messages
+ */
+export function parseContractError(error: any): string {
+  if (!error) {
+    return 'Unknown transaction error occurred';
+  }
+
+  const message = error.message || error.toString();
+  const data = error.data || error.error?.data || '';
+
+  // TapPayLedger custom error signatures / names
+  if (message.includes('SessionAlreadyProcessed') || data.includes('0x408b04d1')) {
+    return 'This payment session was already processed.';
+  }
+  if (message.includes('InvalidRecipient') || data.includes('0x1879c3f3')) {
+    return 'Invalid recipient address or self-payment is not allowed.';
+  }
+  if (message.includes('ZeroAmount') || data.includes('0x1f2a2005')) {
+    return 'Payment amount must be greater than zero.';
+  }
+  if (message.includes('TransferFailed') || data.includes('0x90b98a11')) {
+    return 'Transfer to recipient contract failed.';
+  }
+
+  // UsernameRegistry custom errors
+  if (message.includes('UsernameTaken')) {
+    return 'This username is already taken by another user.';
+  }
+  if (message.includes('AlreadyRegistered')) {
+    return 'This wallet already has a registered username.';
+  }
+  if (message.includes('NotRegistered')) {
+    return 'This wallet does not have a registered username.';
+  }
+  if (message.includes('InvalidUsernameLength')) {
+    return 'Username must be between 3 and 20 characters.';
+  }
+  if (message.includes('InvalidCharacter')) {
+    return 'Username contains invalid characters (use a-z, 0-9, and _).';
+  }
+
+  // Standard EVM / RPC errors
+  if (message.includes('insufficient funds') || message.includes('exceeds balance')) {
+    return 'Insufficient MON balance for payment and network gas fee.';
+  }
+  if (message.includes('nonce too low') || message.includes('replacement transaction underpriced')) {
+    return 'Transaction nonce conflict. Please wait a moment and retry.';
+  }
+  if (message.includes('user rejected') || message.includes('User denied')) {
+    return 'Payment cancelled by user.';
+  }
+
+  return error.reason || error.shortMessage || message;
+}
+
+export interface BalanceCheckResult {
+  canAfford: boolean;
+  balance: bigint;
+  requiredTotal: bigint;
+  amountWei: bigint;
+  gasCostWei: bigint;
+  missingWei: bigint;
+}
+
+/**
+ * Pre-check if the wallet balance can cover the payment amount plus estimated gas cost
+ */
+export async function checkSufficientBalance(
+  fromAddress: string,
+  toAddress: string,
+  amountWei: bigint,
+): Promise<BalanceCheckResult> {
+  const provider = getProvider();
+  const balance = await getBalance(fromAddress);
+
+  // Estimate gas or use safe fallback
+  const gasInfo = await estimateGasCost(fromAddress, toAddress, amountWei);
+  const gasCostWei = gasInfo ? gasInfo.gasCostWei : GAS_LIMIT_FALLBACK * ethers.parseUnits('50', 'gwei');
+
+  const requiredTotal = amountWei + gasCostWei;
+  const canAfford = balance >= requiredTotal;
+  const missingWei = canAfford ? 0n : requiredTotal - balance;
+
+  return {
+    canAfford,
+    balance,
+    requiredTotal,
+    amountWei,
+    gasCostWei,
+    missingWei,
+  };
+}
+
+/**
+ * Get the wallet's MON balance with failover support
  */
 export async function getBalance(address: string): Promise<bigint> {
-  const provider = getProvider();
-  return await provider.getBalance(address);
+  return await withRpcFailover(async provider => {
+    return await provider.getBalance(address);
+  });
 }
 
 /**
@@ -143,68 +280,73 @@ export async function signMessage(message: string | Uint8Array): Promise<string 
 export async function sendPayment(
   to: string,
   amountWei: bigint,
-  sessionIdHash: string,
+  sessionIdHash?: string,
 ): Promise<{txHash: string | null; error?: string}> {
   try {
     const key = await loadPrivateKey();
     if (!key) {
-      return {txHash: null, error: 'Wallet not found'};
+      return {txHash: null, error: 'Wallet not found on device'};
     }
 
-    const provider = getProvider();
-    const wallet = new ethers.Wallet(key, provider);
+    return await withRpcFailover(async provider => {
+      const wallet = new ethers.Wallet(key, provider);
 
-    // Check balance before sending
-    const balance = await provider.getBalance(wallet.address);
-    if (balance < amountWei) {
-      return {txHash: null, error: 'Insufficient MON balance'};
-    }
+      // Pre-check balance before sending
+      const balance = await provider.getBalance(wallet.address);
+      if (balance < amountWei) {
+        return {txHash: null, error: 'Insufficient MON balance'};
+      }
 
-    // If TapPayLedger contract is configured, call payWithLog
-    // Otherwise, fall back to a direct native transfer
-    if (MONAD_CONFIG.contracts.tapPayLedger) {
-      const ledgerAbi = [
-        'function payWithLog(address to, bytes32 sessionIdHash) external payable',
-      ];
-      const ledgerContract = new ethers.Contract(
-        MONAD_CONFIG.contracts.tapPayLedger,
-        ledgerAbi,
-        wallet,
-      );
-      const tx = await ledgerContract.payWithLog(to, sessionIdHash, {
-        value: amountWei,
-      });
-      return {txHash: tx.hash};
-    }
+      // If TapPayLedger contract is configured, call payWithLog
+      if (MONAD_CONFIG.contracts.tapPayLedger && sessionIdHash) {
+        const ledgerAbi = [
+          'function payWithLog(address to, bytes32 sessionIdHash) external payable',
+        ];
+        const ledgerContract = new ethers.Contract(
+          MONAD_CONFIG.contracts.tapPayLedger,
+          ledgerAbi,
+          wallet,
+        );
+        const tx = await ledgerContract.payWithLog(to, sessionIdHash, {
+          value: amountWei,
+        });
+        return {txHash: tx.hash};
+      }
 
-    // Estimate gas
-    let gasLimit: bigint;
-    try {
-      const estimate = await provider.estimateGas({
-        from: wallet.address,
+      // Estimate gas with 20% safety margin
+      let gasLimit: bigint;
+      try {
+        const estimate = await provider.estimateGas({
+          from: wallet.address,
+          to,
+          value: amountWei,
+        });
+        gasLimit = (estimate * 120n) / 100n;
+      } catch {
+        gasLimit = GAS_LIMIT_FALLBACK;
+      }
+
+      // Get nonce (pending to avoid collisions)
+      const nonce = await provider.getTransactionCount(wallet.address, 'pending');
+
+      // Fetch fee data
+      const feeData = await provider.getFeeData();
+
+      // Build and broadcast transaction
+      const tx = await wallet.sendTransaction({
         to,
         value: amountWei,
+        gasLimit,
+        nonce,
+        gasPrice: feeData.gasPrice,
+        chainId: MONAD_CONFIG.chainId,
       });
-      gasLimit = (estimate * 120n) / 100n; // 20% safety margin
-    } catch {
-      gasLimit = GAS_LIMIT_FALLBACK;
-    }
 
-    // Get nonce (pending to avoid conflicts)
-    const nonce = await provider.getTransactionCount(wallet.address, 'pending');
-
-    // Build and sign transaction
-    const tx = await wallet.sendTransaction({
-      to,
-      value: amountWei,
-      gasLimit,
-      nonce,
-      chainId: MONAD_CONFIG.chainId,
+      return {txHash: tx.hash};
     });
-
-    return {txHash: tx.hash};
   } catch (error: any) {
-    return {txHash: null, error: error.message || 'Transaction failed'};
+    const parsedError = parseContractError(error);
+    return {txHash: null, error: parsedError};
   }
 }
 
@@ -214,21 +356,21 @@ export async function sendPayment(
 export async function waitForReceipt(
   txHash: string,
 ): Promise<{confirmed: boolean; error?: string}> {
-  const provider = getProvider();
   const startTime = Date.now();
 
   while (Date.now() - startTime < TX_MAX_WAIT_MS) {
     try {
+      const provider = getProvider();
       const receipt = await provider.getTransactionReceipt(txHash);
       if (receipt) {
         if (receipt.status === 1) {
           return {confirmed: true};
         } else {
-          return {confirmed: false, error: 'Transaction reverted'};
+          return {confirmed: false, error: 'Transaction reverted on chain'};
         }
       }
     } catch {
-      // RPC error — continue polling
+      // RPC transient error — continue polling
     }
 
     // Wait 500ms (Monad has ~1s blocks)
@@ -239,7 +381,7 @@ export async function waitForReceipt(
 }
 
 /**
- * Estimate gas cost for a payment (for display in confirm modal)
+ * Estimate gas cost for a payment (for display in confirm modal & pre-flight checks)
  */
 export async function estimateGasCost(
   from: string,
@@ -247,17 +389,32 @@ export async function estimateGasCost(
   amountWei: bigint,
 ): Promise<{gasLimit: bigint; gasPrice: bigint; gasCostWei: bigint} | null> {
   try {
-    const provider = getProvider();
-    const [estimate, feeData] = await Promise.all([
-      provider.estimateGas({from, to, value: amountWei}),
-      provider.getFeeData(),
-    ]);
+    return await withRpcFailover(async provider => {
+      let estimate: bigint;
+      try {
+        estimate = await provider.estimateGas({from, to, value: amountWei});
+        estimate = (estimate * 120n) / 100n; // 20% safety margin
+      } catch {
+        estimate = GAS_LIMIT_FALLBACK;
+      }
 
-    const gasPrice = feeData.gasPrice || 0n;
-    const gasCostWei = estimate * gasPrice;
+      const feeData = await provider.getFeeData();
+      const gasPrice = feeData.gasPrice && feeData.gasPrice > 0n
+        ? feeData.gasPrice
+        : ethers.parseUnits('50', 'gwei');
 
-    return {gasLimit: estimate, gasPrice, gasCostWei};
+      const gasCostWei = estimate * gasPrice;
+
+      return {gasLimit: estimate, gasPrice, gasCostWei};
+    });
   } catch {
-    return null;
+    // Fallback calculation in case of RPC offline
+    const fallbackGasLimit = GAS_LIMIT_FALLBACK;
+    const fallbackGasPrice = ethers.parseUnits('50', 'gwei');
+    return {
+      gasLimit: fallbackGasLimit,
+      gasPrice: fallbackGasPrice,
+      gasCostWei: fallbackGasLimit * fallbackGasPrice,
+    };
   }
 }

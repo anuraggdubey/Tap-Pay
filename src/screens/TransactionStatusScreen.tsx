@@ -1,5 +1,5 @@
 /**
- * TransactionStatusScreen — Shows pending/confirmed/failed status with explorer link
+ * TransactionStatusScreen — Shows pending/confirmed/failed status with live Monad receipt polling
  */
 
 import React, {useState, useEffect} from 'react';
@@ -9,6 +9,8 @@ import {RouteProp} from '@react-navigation/native';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import {getExplorerTxUrl} from '../config/monad';
 import {truncateAddress} from '../utils/format';
+import {waitForReceipt} from '../services/wallet';
+import {useWallet} from '../context/WalletContext';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'TransactionStatus'>;
@@ -17,17 +19,47 @@ type Props = {
 
 export default function TransactionStatusScreen({navigation, route}: Props) {
   const {txHash, amount, recipient} = route.params;
+  const {refreshBalance} = useWallet();
   const [status, setStatus] = useState<'pending' | 'confirmed' | 'failed'>('pending');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    // TODO: Poll for receipt using wallet.waitForReceipt(txHash)
-    // Update status accordingly
-    const timer = setTimeout(() => setStatus('confirmed'), 2000); // Simulated
-    return () => clearTimeout(timer);
-  }, [txHash]);
+    let isMounted = true;
+
+    // Real Monad 500ms receipt polling
+    (async () => {
+      if (!txHash || txHash.startsWith('0x...')) {
+        return;
+      }
+
+      try {
+        const result = await waitForReceipt(txHash);
+        if (isMounted) {
+          if (result.confirmed) {
+            setStatus('confirmed');
+            refreshBalance();
+          } else {
+            setStatus('failed');
+            setErrorMessage(result.error || 'Transaction reverted');
+          }
+        }
+      } catch (err: any) {
+        if (isMounted) {
+          setStatus('failed');
+          setErrorMessage(err?.message || 'Failed to poll transaction receipt');
+        }
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [txHash, refreshBalance]);
 
   const openExplorer = () => {
-    Linking.openURL(getExplorerTxUrl(txHash));
+    if (txHash && !txHash.startsWith('0x...')) {
+      Linking.openURL(getExplorerTxUrl(txHash));
+    }
   };
 
   return (
@@ -45,6 +77,7 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
           <>
             <Text style={styles.checkmark}>✅</Text>
             <Text style={styles.statusText}>Payment Confirmed!</Text>
+            <Text style={styles.hint}>Settled on Monad Testnet</Text>
           </>
         )}
 
@@ -52,6 +85,7 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
           <>
             <Text style={styles.checkmark}>❌</Text>
             <Text style={styles.statusText}>Transaction Failed</Text>
+            {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
           </>
         )}
 
@@ -72,9 +106,11 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.explorerButton} onPress={openExplorer}>
-          <Text style={styles.explorerText}>View on Monadscan ↗</Text>
-        </TouchableOpacity>
+        {txHash && !txHash.startsWith('0x...') && (
+          <TouchableOpacity style={styles.explorerButton} onPress={openExplorer}>
+            <Text style={styles.explorerText}>View on Monadscan ↗</Text>
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity
           style={styles.homeButton}
@@ -92,6 +128,7 @@ const styles = StyleSheet.create({
   checkmark: {fontSize: 64, marginBottom: 16},
   statusText: {fontSize: 24, fontWeight: '800', color: '#FFFFFF', marginTop: 16, marginBottom: 8},
   hint: {fontSize: 14, color: '#8888AA', marginBottom: 32},
+  errorText: {fontSize: 13, color: '#FF6B6B', textAlign: 'center', marginBottom: 24},
   detailsCard: {backgroundColor: '#1A1A2E', borderRadius: 16, padding: 20, width: '100%', marginTop: 24, marginBottom: 24},
   detailRow: {flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#2A2A3E'},
   detailLabel: {fontSize: 14, color: '#8888AA'},

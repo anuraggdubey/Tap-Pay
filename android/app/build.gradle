@@ -58,7 +58,8 @@ dependencies {
     implementation("com.facebook.react:react-android")
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
 
-    if (hermesEnabled.toBoolean()) {
+    def isHermesEnabled = project.hasProperty("hermesEnabled") ? project.hermesEnabled.toBoolean() : true
+    if (isHermesEnabled) {
         implementation("com.facebook.react:hermes-android")
     } else {
         implementation jscFlavor

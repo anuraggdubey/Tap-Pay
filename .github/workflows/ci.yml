@@ -1,4 +1,4 @@
-name: CI — Contracts & Lint
+name: CI — Tests & Lint
 
 on:
   push:
@@ -16,10 +16,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js 20
+      - name: Set up Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
 
       - name: Install npm dependencies
@@ -31,6 +31,62 @@ jobs:
       - name: Run contract tests
         run: npx hardhat test
 
+  # ── Jest: React Native + Utility Unit Tests ──
+  jest:
+    name: Jest Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Run Jest tests
+        run: npm test
+
+  # ── Backend: Smoke Test ──
+  backend:
+    name: Backend Smoke Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm install
+
+      - name: Verify backend starts
+        working-directory: backend
+        run: |
+          timeout 10 node src/index.js &
+          SERVER_PID=$!
+          sleep 3
+          # Health check
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/api/v1/health || echo "000")
+          kill $SERVER_PID 2>/dev/null || true
+          if [ "$HTTP_STATUS" = "200" ]; then
+            echo "✅ Backend health check passed (HTTP $HTTP_STATUS)"
+          else
+            echo "❌ Backend health check failed (HTTP $HTTP_STATUS)"
+            exit 1
+          fi
+
   # ── Lint ──
   lint:
     name: ESLint
@@ -40,10 +96,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js 20
+      - name: Set up Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
 
       - name: Install npm dependencies

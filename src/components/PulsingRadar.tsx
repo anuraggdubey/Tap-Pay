@@ -2,14 +2,15 @@
  * PulsingRadar Component
  *
  * Apple Pay-style pulsing wave radar animation for NFC Tap Pay screens.
- * Features 3 staggered concentric rings radiating outwards with smooth scale and opacity interpolation.
+ * Features 3 staggered concentric rings radiating outwards with smooth scale and opacity interpolation,
+ * with a completely unboxed, freestanding contactless radio glyph.
  */
 
 import React, {useEffect, useRef} from 'react';
 import {View, Text, StyleSheet, Animated, Easing} from 'react-native';
 
 interface PulsingRadarProps {
-  label?: string; // e.g. "TAP", "NFC"
+  label?: string; // e.g. "SEND", "RECEIVE"
   color?: string; // Accent color (default: Monad Purple #836EF9)
   size?: number; // Center icon diameter (default: 90)
   active?: boolean;
@@ -75,7 +76,7 @@ export const PulsingRadar: React.FC<PulsingRadarProps> = ({
 
     const opacity = animVal.interpolate({
       inputRange: [0, 0.2, 0.8, 1],
-      outputRange: [0, 0.45, 0.15, 0],
+      outputRange: [0, 0.35, 0.1, 0],
     });
 
     return (
@@ -106,19 +107,8 @@ export const PulsingRadar: React.FC<PulsingRadarProps> = ({
         </>
       )}
 
-      {/* Center glowing badge with styled NFC Contactless Symbol */}
-      <View
-        style={[
-          styles.centerBadge,
-          {
-            width: size,
-            height: size,
-            borderRadius: size / 2,
-            backgroundColor: `${color}18`,
-            borderColor: color,
-          },
-        ]}>
-        {/* Modern styled contactless wave curves */}
+      {/* Center freestanding contactless symbol — unboxed, no circular container */}
+      <View style={[styles.centerFreestanding, {width: size, height: size}]}>
         <View style={styles.contactlessContainer}>
           <View style={[styles.arcOuter, {borderColor: color}]} />
           <View style={[styles.arcMid, {borderColor: color}]} />
@@ -139,33 +129,27 @@ const styles = StyleSheet.create({
   },
   wave: {
     position: 'absolute',
-    borderWidth: 2,
+    borderWidth: 1.5,
   },
-  centerBadge: {
+  centerFreestanding: {
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
     paddingTop: 4,
   },
   contactlessContainer: {
-    width: 28,
-    height: 28,
+    width: 36,
+    height: 36,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   arcOuter: {
     position: 'absolute',
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 2,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 2.5,
     borderTopColor: 'transparent',
     borderBottomColor: 'transparent',
     borderLeftColor: 'transparent',
@@ -173,10 +157,10 @@ const styles = StyleSheet.create({
   },
   arcMid: {
     position: 'absolute',
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 2.5,
     borderTopColor: 'transparent',
     borderBottomColor: 'transparent',
     borderLeftColor: 'transparent',
@@ -184,10 +168,10 @@ const styles = StyleSheet.create({
   },
   arcInner: {
     position: 'absolute',
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    borderWidth: 2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 2.5,
     borderTopColor: 'transparent',
     borderBottomColor: 'transparent',
     borderLeftColor: 'transparent',
@@ -195,14 +179,14 @@ const styles = StyleSheet.create({
   },
   arcDot: {
     position: 'absolute',
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    left: 8,
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    left: 10,
   },
   labelText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '800',
-    letterSpacing: 1.5,
+    letterSpacing: 2,
   },
 });

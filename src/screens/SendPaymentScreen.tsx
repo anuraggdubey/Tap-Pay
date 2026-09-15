@@ -337,6 +337,44 @@ export default function SendPaymentScreen({navigation}: Props) {
               <Text style={styles.amountCurrency}>MON</Text>
             </View>
 
+            {/* Quick Amount Chips (Binance Pay style) */}
+            <View style={styles.presetsRow}>
+              {['0.1', '0.5', '1', '5'].map(val => (
+                <TouchableOpacity
+                  key={val}
+                  style={[
+                    styles.presetChip,
+                    amount === val && styles.presetChipActive,
+                  ]}
+                  onPress={() => {
+                    triggerHaptic.impactMedium();
+                    setAmount(val);
+                  }}
+                  activeOpacity={0.7}>
+                  <Text
+                    style={[
+                      styles.presetChipText,
+                      amount === val && styles.presetChipTextActive,
+                    ]}>
+                    {val}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity
+                style={[styles.presetChip, styles.maxChip]}
+                onPress={() => {
+                  triggerHaptic.impactMedium();
+                  const balStr = ethers.formatEther(balance);
+                  const balNum = parseFloat(balStr);
+                  // Leave small headroom for gas
+                  const maxSend = Math.max(0, balNum - 0.005).toFixed(4);
+                  setAmount(maxSend > '0' ? maxSend : '0');
+                }}
+                activeOpacity={0.7}>
+                <Text style={styles.maxChipText}>MAX</Text>
+              </TouchableOpacity>
+            </View>
+
             {/* Gas & Balance Info */}
             <View style={styles.infoRow}>
               {estimatedGasWei !== null && (
@@ -409,26 +447,26 @@ const styles = StyleSheet.create({
   },
   modeToggle: {
     flexDirection: 'row',
-    backgroundColor: '#131320',
-    borderRadius: 14,
-    padding: 4,
-    marginBottom: 28,
+    backgroundColor: '#15151E',
+    borderRadius: 12,
+    padding: 3,
+    marginBottom: 24,
     borderWidth: 1,
-    borderColor: '#1E1E30',
+    borderColor: '#242433',
   },
   modeTab: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 11,
+    paddingVertical: 10,
+    borderRadius: 9,
     alignItems: 'center',
   },
   modeTabActive: {
-    backgroundColor: '#836EF9',
+    backgroundColor: '#6E54FF',
   },
   modeTabText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    color: '#6B6B88',
+    color: '#71717A',
   },
   modeTabTextActive: {
     color: '#FFFFFF',
@@ -437,71 +475,73 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#6B6B88',
-    letterSpacing: 1.5,
+    color: '#71717A',
+    letterSpacing: 1,
     marginBottom: 10,
     marginLeft: 2,
   },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#131320',
-    borderRadius: 14,
+    backgroundColor: '#15151E',
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#1E1E30',
+    borderColor: '#242433',
     marginBottom: 16,
   },
   inputPrefix: {
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingVertical: 14,
     borderRightWidth: 1,
-    borderRightColor: '#1E1E30',
+    borderRightColor: '#242433',
   },
   inputPrefixText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#836EF9',
+    color: '#6E54FF',
   },
   recipientInput: {
     flex: 1,
     fontSize: 15,
     color: '#FFFFFF',
     paddingHorizontal: 14,
-    paddingVertical: 16,
+    paddingVertical: 14,
   },
   searchBtn: {
-    paddingHorizontal: 18,
-    paddingVertical: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
     marginRight: 8,
-    backgroundColor: '#1E1E30',
-    borderRadius: 10,
+    backgroundColor: '#20202E',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#2F2F44',
   },
   searchBtnText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#836EF9',
+    color: '#FFFFFF',
   },
   recipientCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#131320',
-    borderRadius: 16,
+    backgroundColor: '#15151E',
+    borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#242438',
+    borderColor: '#242433',
     marginBottom: 4,
   },
   recipientAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#836EF9',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#6E54FF',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 14,
+    marginRight: 12,
   },
   recipientAvatarText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '800',
     color: '#FFFFFF',
   },
@@ -509,67 +549,103 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   recipientName: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: '#FFFFFF',
     marginBottom: 2,
   },
   recipientAddr: {
     fontSize: 12,
-    color: '#6B6B88',
+    color: '#71717A',
     fontFamily: 'monospace',
   },
   verifiedBadge: {
-    backgroundColor: '#10B98118',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#10B98130',
+    borderColor: 'rgba(16, 185, 129, 0.25)',
   },
   verifiedText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
     color: '#10B981',
-    textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   amountContainer: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   amountInput: {
-    fontSize: 48,
+    fontSize: 44,
     fontWeight: '800',
     color: '#FFFFFF',
     textAlign: 'center',
-    paddingVertical: 12,
+    paddingVertical: 10,
     width: '100%',
   },
   amountCurrency: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    color: '#6B6B88',
+    color: '#71717A',
     letterSpacing: 1,
     marginTop: -4,
+  },
+  presetsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 20,
+  },
+  presetChip: {
+    backgroundColor: '#15151E',
+    borderWidth: 1,
+    borderColor: '#242433',
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+  },
+  presetChipActive: {
+    backgroundColor: '#6E54FF',
+    borderColor: '#6E54FF',
+  },
+  presetChipText: {
+    color: '#8E8E93',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  presetChipTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+  },
+  maxChip: {
+    backgroundColor: '#1C2620',
+    borderColor: '#23382D',
+  },
+  maxChipText: {
+    color: '#10B981',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   infoRow: {
     flexDirection: 'row',
     gap: 10,
-    marginBottom: 32,
+    marginBottom: 28,
   },
   infoPill: {
     flex: 1,
-    backgroundColor: '#131320',
+    backgroundColor: '#15151E',
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 14,
     borderWidth: 1,
-    borderColor: '#1E1E30',
+    borderColor: '#242433',
   },
   infoLabel: {
-    fontSize: 11,
-    color: '#6B6B88',
+    fontSize: 10,
+    color: '#71717A',
     marginBottom: 4,
     fontWeight: '600',
     textTransform: 'uppercase',
@@ -581,13 +657,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   sendButton: {
-    backgroundColor: '#836EF9',
-    paddingVertical: 18,
-    borderRadius: 16,
+    backgroundColor: '#6E54FF',
+    paddingVertical: 16,
+    borderRadius: 14,
     alignItems: 'center',
   },
   sendButtonText: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
   },

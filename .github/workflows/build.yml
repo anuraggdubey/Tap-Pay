@@ -75,13 +75,15 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Accept Android Licenses & Install SDK components
+      - name: Accept Android Licenses & Install NDK
         run: |
-          yes | sdkmanager --licenses || true
-          sdkmanager --install "ndk;27.1.12297006" "cmake;3.22.1" "platforms;android-34" "build-tools;34.0.0"
+          if command -v sdkmanager > /dev/null; then
+            yes | sdkmanager --licenses || true
+            sdkmanager --install "ndk;27.1.12297006" "cmake;3.22.1" || true
+          else
+            yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
+            "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;27.1.12297006" "cmake;3.22.1" || true
+          fi
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -95,7 +97,8 @@ jobs:
       - name: Build Release APK
         working-directory: android
         env:
-          ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.1.12297006
+          ANDROID_HOME: /usr/local/lib/android/sdk
+          ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/27.1.12297006
         run: ./gradlew assembleRelease --no-daemon --stacktrace
 
       - name: Upload Release APK

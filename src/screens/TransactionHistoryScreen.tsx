@@ -198,8 +198,8 @@ export default function TransactionHistoryScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor="#836EF9"
-              colors={['#836EF9']}
+              tintColor="#6E54FF"
+              colors={['#6E54FF']}
             />
           }
         />
@@ -211,7 +211,7 @@ export default function TransactionHistoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: '#09090D',
   },
   filterRow: {
     flexDirection: 'row',
@@ -223,39 +223,39 @@ const styles = StyleSheet.create({
   filterTab: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: '#131320',
+    borderRadius: 8,
+    backgroundColor: '#15151E',
     borderWidth: 1,
-    borderColor: '#1E1E30',
+    borderColor: '#242433',
     gap: 6,
   },
   filterTabActive: {
-    backgroundColor: '#836EF918',
-    borderColor: '#836EF940',
+    backgroundColor: '#1E1E2D',
+    borderColor: '#6E54FF',
   },
   filterTabText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#6B6B88',
+    color: '#8E8E93',
   },
   filterTabTextActive: {
-    color: '#836EF9',
+    color: '#6E54FF',
   },
   filterCount: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#4A4A66',
-    backgroundColor: '#1A1A2E',
+    color: '#71717A',
+    backgroundColor: '#101018',
     paddingHorizontal: 6,
     paddingVertical: 1,
-    borderRadius: 6,
+    borderRadius: 4,
     overflow: 'hidden',
   },
   filterCountActive: {
-    color: '#836EF9',
-    backgroundColor: '#836EF920',
+    color: '#6E54FF',
+    backgroundColor: 'rgba(110, 84, 255, 0.15)',
   },
   list: {
     padding: 16,
@@ -265,12 +265,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#131320',
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: '#15151E',
+    borderRadius: 12,
+    padding: 14,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#1E1E30',
+    borderColor: '#242433',
   },
   txLeft: {
     flexDirection: 'row',
@@ -279,24 +279,24 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   directionBadge: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
+    width: 38,
+    height: 38,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
   txDirectionIcon: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
   },
   txMeta: {
     flex: 1,
   },
   txName: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
     color: '#FFFFFF',
-    marginBottom: 4,
+    marginBottom: 3,
   },
   txSubRow: {
     flexDirection: 'row',
@@ -305,7 +305,7 @@ const styles = StyleSheet.create({
   },
   txTime: {
     fontSize: 12,
-    color: '#6B6B88',
+    color: '#8E8E93',
   },
   statusDot: {
     width: 5,
@@ -327,31 +327,31 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   emptyIconBox: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
-    backgroundColor: '#131320',
+    width: 56,
+    height: 56,
+    borderRadius: 14,
+    backgroundColor: '#15151E',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 18,
+    marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#1E1E30',
+    borderColor: '#242433',
   },
   emptyIconText: {
-    fontSize: 24,
-    color: '#4A4A66',
+    fontSize: 22,
+    color: '#71717A',
     fontWeight: '300',
   },
   emptyTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
     color: '#FFFFFF',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   emptyHint: {
-    fontSize: 14,
-    color: '#6B6B88',
+    fontSize: 13,
+    color: '#8E8E93',
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 18,
   },
 });

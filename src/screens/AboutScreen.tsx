@@ -14,6 +14,7 @@ import {
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import {triggerHaptic} from '../utils/haptics';
+import BrandLogo from '../components/BrandLogo';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'AboutTapPay'>;
@@ -24,9 +25,7 @@ export default function AboutScreen({navigation}: Props) {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* App Header */}
       <View style={styles.appHeader}>
-        <View style={styles.logoContainer}>
-          <Text style={styles.logoMonogram}>T</Text>
-        </View>
+        <BrandLogo size={76} style={{marginBottom: 14}} />
         <Text style={styles.appName}>TapPay</Text>
         <Text style={styles.appVersion}>Version 0.0.1 • Monad Native</Text>
         <View style={styles.tagline}>
@@ -175,78 +174,75 @@ export default function AboutScreen({navigation}: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: '#09090D',
   },
   content: {
-    padding: 20,
+    padding: 18,
     paddingBottom: 40,
   },
   appHeader: {
     alignItems: 'center',
-    paddingVertical: 28,
+    paddingVertical: 20,
     marginBottom: 8,
   },
-  logoContainer: {
-    width: 76,
-    height: 76,
-    borderRadius: 24,
-    backgroundColor: '#836EF9',
+  logoBox: {
+    width: 72,
+    height: 72,
+    borderRadius: 18,
+    backgroundColor: '#1E1E2D',
+    borderWidth: 1,
+    borderColor: '#6E54FF',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
-    elevation: 8,
-    shadowColor: '#836EF9',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
+    marginBottom: 14,
   },
   logoMonogram: {
-    fontSize: 36,
+    fontSize: 34,
     fontWeight: '900',
     color: '#FFFFFF',
   },
   appName: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '900',
     color: '#FFFFFF',
     letterSpacing: -0.5,
     marginBottom: 4,
   },
   appVersion: {
-    fontSize: 14,
-    color: '#8888AA',
+    fontSize: 13,
+    color: '#8E8E93',
     fontWeight: '500',
-    marginBottom: 16,
+    marginBottom: 14,
   },
   tagline: {
-    backgroundColor: '#161622',
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 20,
+    backgroundColor: '#15151E',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#222235',
+    borderColor: '#242433',
   },
   taglineText: {
     fontSize: 13,
-    color: '#C4B5FD',
+    color: '#D0D0E8',
     fontWeight: '600',
     textAlign: 'center',
   },
   sectionHeader: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
-    color: '#8888AA',
-    letterSpacing: 1.5,
+    color: '#71717A',
+    letterSpacing: 1,
     marginTop: 12,
-    marginBottom: 10,
+    marginBottom: 8,
     marginLeft: 4,
   },
   card: {
-    backgroundColor: '#161622',
-    borderRadius: 18,
-    padding: 18,
+    backgroundColor: '#15151E',
+    borderRadius: 14,
+    padding: 16,
     borderWidth: 1,
-    borderColor: '#222235',
+    borderColor: '#242433',
     marginBottom: 10,
   },
   featureRow: {

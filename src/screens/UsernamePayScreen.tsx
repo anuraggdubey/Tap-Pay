@@ -31,7 +31,7 @@ import ConfirmPaymentModal from '../components/ConfirmPaymentModal';
 import InsufficientBalanceModal from '../components/InsufficientBalanceModal';
 
 type Props = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'UsernamePay'>;
+  navigation: NativeStackNavigationProp<RootStackParamList>;
 };
 
 export default function UsernamePayScreen({navigation}: Props) {
@@ -245,7 +245,7 @@ export default function UsernamePayScreen({navigation}: Props) {
             {/* Real-time Gas Display */}
             {estimatedGasWei !== null && (
               <Text style={styles.gasHint}>
-                ⚡ Est. Gas: ~{formatMon(estimatedGasWei)} (Monad)
+                Est. Gas: ~{formatMon(estimatedGasWei)} (Monad)
               </Text>
             )}
 

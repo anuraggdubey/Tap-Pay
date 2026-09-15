@@ -32,7 +32,7 @@ export default function NfcNotAvailableModal({
       <View style={styles.overlay}>
         <View style={styles.modalCard}>
           <View style={styles.iconCircle}>
-            <Text style={styles.iconText}>📡</Text>
+            <Text style={styles.iconBadgeText}>NFC</Text>
           </View>
 
           <Text style={styles.title}>NFC Not Available</Text>
@@ -43,14 +43,14 @@ export default function NfcNotAvailableModal({
           <View style={styles.alternativeCard}>
             <Text style={styles.altHeading}>Alternative Payment Mode:</Text>
             <Text style={styles.altBody}>
-              You can still send and receive payments instantly on Monad using @usernames without needing physical tap contact.
+              You can still send and receive payments instantly on Monad using @usernames or direct wallet addresses.
             </Text>
           </View>
 
           <TouchableOpacity
             style={[styles.button, styles.primaryButton]}
             onPress={onSwitchToUsernamePay}>
-            <Text style={styles.primaryText}>Use Username Pay</Text>
+            <Text style={styles.primaryText}>Use Direct Pay</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.dismissButton} onPress={onClose}>
@@ -89,8 +89,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
-  iconText: {
-    fontSize: 28,
+  iconBadgeText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#836EF9',
+    letterSpacing: 1,
   },
   title: {
     fontSize: 22,

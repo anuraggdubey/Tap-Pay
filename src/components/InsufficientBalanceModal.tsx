@@ -52,7 +52,7 @@ export default function InsufficientBalanceModal({
       <View style={styles.overlay}>
         <View style={styles.modalCard}>
           <View style={styles.iconCircle}>
-            <Text style={styles.iconText}>⚠️</Text>
+            <Text style={styles.iconBadgeText}>!</Text>
           </View>
 
           <Text style={styles.title}>Insufficient MON</Text>
@@ -125,8 +125,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
-  iconText: {
-    fontSize: 28,
+  iconBadgeText: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#FF6B6B',
   },
   title: {
     fontSize: 22,

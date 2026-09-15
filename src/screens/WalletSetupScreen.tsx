@@ -101,14 +101,10 @@ export default function WalletSetupScreen({navigation}: Props) {
       }
 
       // Try to register on-chain
-      let onChainSuccess = false;
       try {
-        const result = await registerUsername(trimmed);
-        if (result.txHash) {
-          onChainSuccess = true;
-        }
+        await registerUsername(trimmed);
       } catch {
-        // On-chain registration failed (contract not deployed, no funds, etc.)
+        // On-chain registration failed (contract not deployed, no gas yet, etc.)
         // We'll still save locally
       }
 
@@ -143,20 +139,23 @@ export default function WalletSetupScreen({navigation}: Props) {
 
   const handleFinishOnboarding = () => {
     triggerHaptic.notificationSuccess();
-    navigation.replace('Home');
+    navigation.replace('MainTabs');
   };
 
   // Step 1: Import View
   if (step === 'import') {
     return (
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Import Wallet</Text>
-        <Text style={styles.subtitle}>Paste your 64-character private key below</Text>
+        <View style={styles.headerBadge}>
+          <Text style={styles.headerBadgeText}>IMPORT WALLET</Text>
+        </View>
+        <Text style={styles.title}>Enter Private Key</Text>
+        <Text style={styles.subtitle}>Paste your 64-character hexadecimal key to restore your wallet</Text>
 
         <TextInput
           style={styles.input}
           placeholder="0x..."
-          placeholderTextColor="#666"
+          placeholderTextColor="#555"
           value={privateKeyInput}
           onChangeText={setPrivateKeyInput}
           autoCapitalize="none"
@@ -178,7 +177,7 @@ export default function WalletSetupScreen({navigation}: Props) {
         <TouchableOpacity
           style={styles.linkButton}
           onPress={() => setStep('welcome')}>
-          <Text style={styles.linkText}>← Back to Welcome</Text>
+          <Text style={styles.linkText}>Back to Welcome</Text>
         </TouchableOpacity>
       </ScrollView>
     );
@@ -188,10 +187,12 @@ export default function WalletSetupScreen({navigation}: Props) {
   if (step === 'username') {
     return (
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <Text style={styles.stepBadge}>Step 2 of 3</Text>
-        <Text style={styles.title}>Claim Your @username</Text>
+        <View style={styles.stepBadge}>
+          <Text style={styles.stepBadgeText}>STEP 2 OF 3</Text>
+        </View>
+        <Text style={styles.title}>Claim Your @handle</Text>
         <Text style={styles.subtitle}>
-          Choose your unique identity for instant, zero-address payments on Monad testnet.
+          Choose your unique identity for instant, zero-address payments on Monad.
         </Text>
 
         <View style={styles.usernameInputWrapper}>
@@ -199,7 +200,7 @@ export default function WalletSetupScreen({navigation}: Props) {
           <TextInput
             style={styles.usernameInput}
             placeholder="alice"
-            placeholderTextColor="#666"
+            placeholderTextColor="#555"
             value={usernameInput}
             onChangeText={setUsernameInput}
             autoCapitalize="none"
@@ -221,7 +222,7 @@ export default function WalletSetupScreen({navigation}: Props) {
         <TouchableOpacity
           style={styles.linkButton}
           onPress={handleSkipUsername}>
-          <Text style={styles.linkText}>Skip for now →</Text>
+          <Text style={styles.linkText}>Skip for now</Text>
         </TouchableOpacity>
       </ScrollView>
     );
@@ -231,11 +232,12 @@ export default function WalletSetupScreen({navigation}: Props) {
   if (step === 'backup') {
     return (
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <Text style={styles.stepBadge}>Step 3 of 3</Text>
-        <Text style={styles.title}>⚠️ Back Up Your Key</Text>
+        <View style={styles.stepBadge}>
+          <Text style={styles.stepBadgeText}>STEP 3 OF 3</Text>
+        </View>
+        <Text style={styles.title}>Back Up Secret Key</Text>
         <Text style={styles.subtitle}>
-          Your private key is protected by your Android Keystore.
-          Save this key offline — if you lose this device, funds cannot be recovered.
+          Your private key is protected by Android Keystore. Save this key offline — if you lose this device, funds cannot be recovered.
         </Text>
 
         {newAddress ? (
@@ -246,18 +248,21 @@ export default function WalletSetupScreen({navigation}: Props) {
         ) : null}
 
         <View style={styles.keyBox}>
-          <Text style={styles.keyLabel}>Your Private Key (Never Share!)</Text>
+          <Text style={styles.keyLabel}>Your Private Key (Never Share)</Text>
           <Text style={styles.keyValue} selectable>{newPrivateKey}</Text>
           <TouchableOpacity style={styles.copyBtn} onPress={handleCopyKey}>
             <Text style={styles.copyBtnText}>
-              {copiedKey ? '✓ Copied to Clipboard' : '❐ Copy Private Key'}
+              {copiedKey ? 'Copied to Clipboard' : 'Copy Private Key'}
             </Text>
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.warning}>
-          ⚠️ Store this securely. TapPay never logs or uploads private keys.
-        </Text>
+        <View style={styles.warningCard}>
+          <View style={styles.warningDot} />
+          <Text style={styles.warningText}>
+            Store this offline. TapPay never logs or transmits your private key.
+          </Text>
+        </View>
 
         <TouchableOpacity
           style={[styles.button, styles.primaryButton]}
@@ -271,31 +276,50 @@ export default function WalletSetupScreen({navigation}: Props) {
   // Step 1: Welcome View
   return (
     <View style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.logo}>⚡</Text>
-        <Text style={styles.title}>TapPay</Text>
-        <Text style={styles.subtitle}>
-          Tap to pay. Search to send.{'\n'}Powered by Monad.
+      <View style={styles.welcomeContent}>
+        {/* Monad TapPay Brand Emblem */}
+        <View style={styles.brandEmblemContainer}>
+          <View style={styles.brandOuterRing}>
+            <View style={styles.brandInnerCircle}>
+              <Text style={styles.brandMonogram}>T</Text>
+            </View>
+          </View>
+        </View>
+
+        <Text style={styles.brandTitle}>TapPay</Text>
+        <Text style={styles.brandSubtitle}>
+          Near-instant contactless crypto on Monad
         </Text>
 
-        <TouchableOpacity
-          style={[styles.button, styles.primaryButton]}
-          onPress={handleCreate}
-          disabled={loading}>
-          {loading ? (
-            <ActivityIndicator color="#FFF" />
-          ) : (
-            <Text style={styles.buttonText}>Create New Wallet</Text>
-          )}
-        </TouchableOpacity>
+        <View style={styles.featurePills}>
+          <View style={styles.featurePill}>
+            <Text style={styles.featurePillText}>~1s Monad Finality</Text>
+          </View>
+          <View style={styles.featurePill}>
+            <Text style={styles.featurePillText}>NFC HCE & @handle</Text>
+          </View>
+        </View>
 
-        <TouchableOpacity
-          style={[styles.button, styles.secondaryButton]}
-          onPress={() => setStep('import')}>
-          <Text style={[styles.buttonText, {color: '#836EF9'}]}>
-            Import Private Key
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.actionSection}>
+          <TouchableOpacity
+            style={[styles.button, styles.primaryButton]}
+            onPress={handleCreate}
+            disabled={loading}>
+            {loading ? (
+              <ActivityIndicator color="#FFF" />
+            ) : (
+              <Text style={styles.buttonText}>Create New Wallet</Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.button, styles.secondaryButton]}
+            onPress={() => setStep('import')}>
+            <Text style={styles.secondaryButtonText}>
+              Import Private Key
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -307,93 +331,188 @@ const styles = StyleSheet.create({
     backgroundColor: '#0A0A0F',
   },
   content: {
+    padding: 24,
+    paddingTop: 60,
+  },
+  welcomeContent: {
     flex: 1,
     justifyContent: 'center',
+    alignItems: 'center',
     paddingHorizontal: 24,
-    paddingBottom: 40,
   },
-  stepBadge: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#836EF9',
-    textTransform: 'uppercase',
-    letterSpacing: 1.5,
+  brandEmblemContainer: {
+    marginBottom: 24,
+  },
+  brandOuterRing: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: 'rgba(131, 110, 249, 0.12)',
+    borderWidth: 2,
+    borderColor: 'rgba(131, 110, 249, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  brandInnerCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#836EF9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 8,
+    shadowColor: '#836EF9',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+  },
+  brandMonogram: {
+    fontSize: 36,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: -1,
+  },
+  brandTitle: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: -0.5,
     marginBottom: 8,
   },
-  logo: {
-    fontSize: 64,
+  brandSubtitle: {
+    fontSize: 15,
+    color: '#8A8A9E',
     textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  featurePills: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 48,
+  },
+  featurePill: {
+    backgroundColor: 'rgba(131, 110, 249, 0.1)',
+    borderColor: 'rgba(131, 110, 249, 0.25)',
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  featurePillText: {
+    fontSize: 12,
+    color: '#A290FB',
+    fontWeight: '600',
+  },
+  actionSection: {
+    width: '100%',
+  },
+  headerBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(131, 110, 249, 0.12)',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 8,
     marginBottom: 16,
   },
+  headerBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#836EF9',
+    letterSpacing: 1,
+  },
+  stepBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(131, 110, 249, 0.12)',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  stepBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#836EF9',
+    letterSpacing: 1,
+  },
   title: {
-    fontSize: 30,
+    fontSize: 26,
     fontWeight: '800',
     color: '#FFFFFF',
-    marginBottom: 10,
+    marginBottom: 8,
+    letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 15,
-    color: '#8888AA',
-    marginBottom: 32,
+    color: '#8A8A9E',
+    marginBottom: 28,
     lineHeight: 22,
+  },
+  input: {
+    backgroundColor: '#161622',
+    borderRadius: 14,
+    padding: 16,
+    color: '#FFFFFF',
+    fontSize: 15,
+    borderWidth: 1,
+    borderColor: '#242436',
+    marginBottom: 24,
+    fontFamily: 'monospace',
+  },
+  usernameInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#161622',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#242436',
+    paddingHorizontal: 16,
+    marginBottom: 24,
+  },
+  atSymbol: {
+    fontSize: 20,
+    color: '#836EF9',
+    fontWeight: '700',
+    marginRight: 6,
+  },
+  usernameInput: {
+    flex: 1,
+    paddingVertical: 16,
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
   },
   button: {
     paddingVertical: 16,
-    borderRadius: 16,
+    borderRadius: 14,
     alignItems: 'center',
     marginBottom: 12,
+    width: '100%',
   },
   primaryButton: {
     backgroundColor: '#836EF9',
   },
   secondaryButton: {
     backgroundColor: 'transparent',
-    borderWidth: 1.5,
-    borderColor: '#836EF9',
+    borderWidth: 1,
+    borderColor: 'rgba(131, 110, 249, 0.4)',
   },
   buttonText: {
     fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
   },
-  input: {
-    backgroundColor: '#1A1A2E',
-    borderRadius: 14,
-    padding: 16,
-    fontSize: 14,
-    color: '#FFFFFF',
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#2A2A3E',
-  },
-  usernameInputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1A1A2E',
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: '#2A2A3E',
-  },
-  atSymbol: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#836EF9',
-    marginRight: 6,
-  },
-  usernameInput: {
-    flex: 1,
-    paddingVertical: 16,
+  secondaryButtonText: {
     fontSize: 16,
-    color: '#FFFFFF',
+    fontWeight: '700',
+    color: '#A290FB',
   },
   linkButton: {
+    paddingVertical: 14,
     alignItems: 'center',
-    paddingVertical: 12,
   },
   linkText: {
-    color: '#836EF9',
+    color: '#8A8A9E',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -407,10 +526,11 @@ const styles = StyleSheet.create({
   },
   keyLabel: {
     fontSize: 12,
-    color: '#8888AA',
-    marginBottom: 8,
+    color: '#8A8A9E',
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 0.8,
+    marginBottom: 8,
+    fontWeight: '600',
   },
   keyValue: {
     fontSize: 13,
@@ -421,21 +541,36 @@ const styles = StyleSheet.create({
   copyBtn: {
     marginTop: 12,
     paddingVertical: 8,
-    paddingHorizontal: 12,
+    alignItems: 'center',
+    backgroundColor: 'rgba(131, 110, 249, 0.15)',
     borderRadius: 8,
-    backgroundColor: '#836EF920',
-    alignSelf: 'flex-start',
   },
   copyBtnText: {
-    color: '#836EF9',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  warning: {
     fontSize: 13,
-    color: '#FF6B6B',
-    textAlign: 'center',
+    color: '#836EF9',
+    fontWeight: '600',
+  },
+  warningCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.25)',
+    borderRadius: 12,
+    padding: 14,
     marginBottom: 24,
+    gap: 10,
+  },
+  warningDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#EF4444',
+  },
+  warningText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#F87171',
     lineHeight: 18,
   },
 });

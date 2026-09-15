@@ -209,7 +209,7 @@ export default function SendTapScreen({navigation}: Props) {
     return (
       <View style={styles.container}>
         <View style={styles.tapContainer}>
-          <PulsingRadar icon="📡" color="#836EF9" size={96} active={isArmed} />
+          <PulsingRadar label="SEND" color="#836EF9" size={96} active={isArmed} />
 
           <Text style={styles.tapTitle}>Hold Phones Together</Text>
           <Text style={styles.tapSubtitle}>
@@ -245,7 +245,7 @@ export default function SendTapScreen({navigation}: Props) {
         {/* Live Gas Fee Estimate */}
         {estimatedGasWei !== null && (
           <Text style={styles.gasHint}>
-            ⚡ Est. Gas: ~{formatMon(estimatedGasWei)} (Monad)
+            Est. Gas: ~{formatMon(estimatedGasWei)} (Monad)
           </Text>
         )}
 
@@ -282,7 +282,7 @@ export default function SendTapScreen({navigation}: Props) {
         onClose={() => setNfcModalVisible(false)}
         onSwitchToUsernamePay={() => {
           setNfcModalVisible(false);
-          navigation.replace('UsernamePay');
+          navigation.navigate('SendPayment');
         }}
       />
     </View>

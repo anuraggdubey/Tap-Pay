@@ -49,7 +49,7 @@ export default function ConfirmPaymentModal({
           <View style={styles.grabber} />
 
           <Text style={styles.title}>Confirm Payment</Text>
-          <Text style={styles.networkBadge}>⚡ Monad Testnet (~1s Finality)</Text>
+          <Text style={styles.networkBadge}>Monad Testnet • ~1s Finality</Text>
 
           {/* Amount Display */}
           <View style={styles.amountBox}>

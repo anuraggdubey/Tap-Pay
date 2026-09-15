@@ -123,8 +123,8 @@ export default function NetworkScreen({navigation}: Props) {
             Linking.openURL(MONAD_CONFIG.faucetUrl);
           }}>
           <View style={styles.linkLeft}>
-            <View style={[styles.linkIconCircle, {backgroundColor: '#3B82F620'}]}>
-              <Text style={styles.linkIcon}>🚰</Text>
+            <View style={[styles.linkIconCircle, {backgroundColor: 'rgba(59, 130, 246, 0.15)'}]}>
+              <Text style={[styles.linkTagText, {color: '#3B82F6'}]}>FCT</Text>
             </View>
             <View>
               <Text style={styles.linkTitle}>Monad Faucet</Text>
@@ -144,8 +144,8 @@ export default function NetworkScreen({navigation}: Props) {
             Linking.openURL(MONAD_CONFIG.blockExplorer.url);
           }}>
           <View style={styles.linkLeft}>
-            <View style={[styles.linkIconCircle, {backgroundColor: '#10B98120'}]}>
-              <Text style={styles.linkIcon}>🔍</Text>
+            <View style={[styles.linkIconCircle, {backgroundColor: 'rgba(16, 185, 129, 0.15)'}]}>
+              <Text style={[styles.linkTagText, {color: '#10B981'}]}>EXP</Text>
             </View>
             <View>
               <Text style={styles.linkTitle}>{MONAD_CONFIG.blockExplorer.name}</Text>
@@ -326,6 +326,11 @@ const styles = StyleSheet.create({
   },
   linkIcon: {
     fontSize: 20,
+  },
+  linkTagText: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   linkTitle: {
     fontSize: 15,

@@ -198,7 +198,7 @@ export default function ReceiveTapScreen({navigation}: Props) {
     return (
       <View style={styles.container}>
         <View style={styles.scanContainer}>
-          <PulsingRadar icon="📱" color="#4CAF50" size={96} active={scanning} />
+          <PulsingRadar label="RECEIVE" color="#10B981" size={96} active={scanning} />
 
           <Text style={styles.scanTitle}>Ready to Receive</Text>
           <Text style={styles.scanSubtitle}>{statusMessage}</Text>
@@ -213,7 +213,7 @@ export default function ReceiveTapScreen({navigation}: Props) {
           onClose={() => setNfcModalVisible(false)}
           onSwitchToUsernamePay={() => {
             setNfcModalVisible(false);
-            navigation.replace('UsernamePay');
+            navigation.navigate('SendPayment');
           }}
         />
       </View>
@@ -225,7 +225,7 @@ export default function ReceiveTapScreen({navigation}: Props) {
       <View style={styles.container}>
         <View style={styles.offerContainer}>
           <View style={styles.verifiedBadge}>
-            <Text style={styles.verifiedBadgeText}>🛡️ Cryptographically Verified</Text>
+            <Text style={styles.verifiedBadgeText}>Verified • ECDSA Signed</Text>
           </View>
 
           <Text style={styles.offerLabel}>Incoming Payment</Text>

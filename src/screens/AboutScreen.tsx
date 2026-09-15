@@ -1,5 +1,5 @@
 /**
- * AboutScreen — App information, version, features, and credits
+ * AboutScreen — App information, version, features, and architecture
  */
 
 import React from 'react';
@@ -25,10 +25,10 @@ export default function AboutScreen({navigation}: Props) {
       {/* App Header */}
       <View style={styles.appHeader}>
         <View style={styles.logoContainer}>
-          <Text style={styles.logoEmoji}>⚡</Text>
+          <Text style={styles.logoMonogram}>T</Text>
         </View>
         <Text style={styles.appName}>TapPay</Text>
-        <Text style={styles.appVersion}>Version 0.0.1 (Alpha)</Text>
+        <Text style={styles.appVersion}>Version 0.0.1 • Monad Native</Text>
         <View style={styles.tagline}>
           <Text style={styles.taglineText}>
             Tap to pay. Search to send. Powered by Monad.
@@ -40,13 +40,13 @@ export default function AboutScreen({navigation}: Props) {
       <Text style={styles.sectionHeader}>FEATURES</Text>
       <View style={styles.card}>
         <View style={styles.featureRow}>
-          <View style={styles.featureIconCircle}>
-            <Text style={styles.featureIcon}>📱</Text>
+          <View style={[styles.featureTagBadge, {backgroundColor: 'rgba(131, 110, 249, 0.15)'}]}>
+            <Text style={[styles.featureTagText, {color: '#836EF9'}]}>NFC</Text>
           </View>
           <View style={styles.featureMeta}>
-            <Text style={styles.featureTitle}>NFC Tap-to-Pay</Text>
+            <Text style={styles.featureTitle}>Contactless Tap-to-Pay</Text>
             <Text style={styles.featureDesc}>
-              Send crypto by tapping phones via NFC HCE
+              Send crypto by tapping devices via ISO 7816-4 NFC Host Card Emulation
             </Text>
           </View>
         </View>
@@ -54,13 +54,13 @@ export default function AboutScreen({navigation}: Props) {
         <View style={styles.featureDivider} />
 
         <View style={styles.featureRow}>
-          <View style={styles.featureIconCircle}>
-            <Text style={styles.featureIcon}>@</Text>
+          <View style={[styles.featureTagBadge, {backgroundColor: 'rgba(59, 130, 246, 0.15)'}]}>
+            <Text style={[styles.featureTagText, {color: '#3B82F6'}]}>@</Text>
           </View>
           <View style={styles.featureMeta}>
             <Text style={styles.featureTitle}>Username Pay</Text>
             <Text style={styles.featureDesc}>
-              Send to human-readable @usernames instead of addresses
+              Pay direct to human-readable handles registered on Monad Testnet
             </Text>
           </View>
         </View>
@@ -68,13 +68,13 @@ export default function AboutScreen({navigation}: Props) {
         <View style={styles.featureDivider} />
 
         <View style={styles.featureRow}>
-          <View style={styles.featureIconCircle}>
-            <Text style={styles.featureIcon}>🔐</Text>
+          <View style={[styles.featureTagBadge, {backgroundColor: 'rgba(16, 185, 129, 0.15)'}]}>
+            <Text style={[styles.featureTagText, {color: '#10B981'}]}>KEY</Text>
           </View>
           <View style={styles.featureMeta}>
-            <Text style={styles.featureTitle}>Hardware Security</Text>
+            <Text style={styles.featureTitle}>Hardware Keystore</Text>
             <Text style={styles.featureDesc}>
-              Keys protected by Android Keystore + Biometrics
+              Private keys secured in Android Hardware Keystore (TEE) with biometrics
             </Text>
           </View>
         </View>
@@ -82,13 +82,13 @@ export default function AboutScreen({navigation}: Props) {
         <View style={styles.featureDivider} />
 
         <View style={styles.featureRow}>
-          <View style={styles.featureIconCircle}>
-            <Text style={styles.featureIcon}>⚡</Text>
+          <View style={[styles.featureTagBadge, {backgroundColor: 'rgba(245, 158, 11, 0.15)'}]}>
+            <Text style={[styles.featureTagText, {color: '#F59E0B'}]}>TPS</Text>
           </View>
           <View style={styles.featureMeta}>
-            <Text style={styles.featureTitle}>Monad Speed</Text>
+            <Text style={styles.featureTitle}>Monad Throughput</Text>
             <Text style={styles.featureDesc}>
-              ~1 second block times with 10,000 TPS throughput
+              Sub-second block finality with parallelized EVM execution
             </Text>
           </View>
         </View>
@@ -126,8 +126,8 @@ export default function AboutScreen({navigation}: Props) {
             Linking.openURL('https://monad.xyz');
           }}>
           <View style={styles.linkLeft}>
-            <View style={[styles.featureIconCircle, {backgroundColor: '#836EF920'}]}>
-              <Text style={styles.featureIcon}>🟣</Text>
+            <View style={[styles.featureTagBadge, {backgroundColor: 'rgba(131, 110, 249, 0.15)'}]}>
+              <Text style={[styles.featureTagText, {color: '#836EF9'}]}>MND</Text>
             </View>
             <View>
               <Text style={styles.linkTitle}>Monad Blockchain</Text>
@@ -147,8 +147,8 @@ export default function AboutScreen({navigation}: Props) {
             Linking.openURL('https://docs.monad.xyz');
           }}>
           <View style={styles.linkLeft}>
-            <View style={[styles.featureIconCircle, {backgroundColor: '#3B82F620'}]}>
-              <Text style={styles.featureIcon}>📚</Text>
+            <View style={[styles.featureTagBadge, {backgroundColor: 'rgba(59, 130, 246, 0.15)'}]}>
+              <Text style={[styles.featureTagText, {color: '#3B82F6'}]}>DOC</Text>
             </View>
             <View>
               <Text style={styles.linkTitle}>Monad Documentation</Text>
@@ -162,10 +162,10 @@ export default function AboutScreen({navigation}: Props) {
       {/* Footer */}
       <View style={styles.footer}>
         <Text style={styles.footerText}>
-          TapPay is an open-source project
+          TapPay • Open-Source Contactless Payments
         </Text>
         <Text style={styles.footerSubtext}>
-          Built for the Monad ecosystem 🟣
+          Built for the Monad Ecosystem
         </Text>
       </View>
     </ScrollView>
@@ -183,22 +183,27 @@ const styles = StyleSheet.create({
   },
   appHeader: {
     alignItems: 'center',
-    paddingVertical: 32,
+    paddingVertical: 28,
     marginBottom: 8,
   },
   logoContainer: {
-    width: 80,
-    height: 80,
+    width: 76,
+    height: 76,
     borderRadius: 24,
-    backgroundColor: '#836EF920',
-    borderWidth: 2,
-    borderColor: '#836EF960',
+    backgroundColor: '#836EF9',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
+    elevation: 8,
+    shadowColor: '#836EF9',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
   },
-  logoEmoji: {
-    fontSize: 40,
+  logoMonogram: {
+    fontSize: 36,
+    fontWeight: '900',
+    color: '#FFFFFF',
   },
   appName: {
     fontSize: 28,
@@ -250,16 +255,17 @@ const styles = StyleSheet.create({
     gap: 14,
     paddingVertical: 6,
   },
-  featureIconCircle: {
+  featureTagBadge: {
     width: 42,
     height: 42,
-    borderRadius: 14,
-    backgroundColor: '#1E1A2E',
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  featureIcon: {
-    fontSize: 20,
+  featureTagText: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   featureMeta: {
     flex: 1,

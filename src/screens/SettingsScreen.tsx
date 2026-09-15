@@ -14,16 +14,18 @@ import {
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useWallet} from '../context/WalletContext';
 import {RootStackParamList} from '../navigation/AppNavigator';
+import {MONAD_CONFIG} from '../config/monad';
 import {triggerHaptic} from '../utils/haptics';
 import {truncateAddress} from '../utils/format';
 
 type Props = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'Settings'>;
+  navigation: NativeStackNavigationProp<RootStackParamList>;
 };
 
 interface MenuItemProps {
-  icon: string;
-  iconBg: string;
+  tag: string;
+  tagColor: string;
+  tagBg: string;
   title: string;
   subtitle: string;
   onPress: () => void;
@@ -31,8 +33,9 @@ interface MenuItemProps {
 }
 
 function MenuItem({
-  icon,
-  iconBg,
+  tag,
+  tagColor,
+  tagBg,
   title,
   subtitle,
   onPress,
@@ -47,8 +50,8 @@ function MenuItem({
         onPress();
       }}>
       <View style={styles.menuItemLeft}>
-        <View style={[styles.menuIconCircle, {backgroundColor: iconBg}]}>
-          <Text style={styles.menuIcon}>{icon}</Text>
+        <View style={[styles.menuTagBadge, {backgroundColor: tagBg}]}>
+          <Text style={[styles.menuTagText, {color: tagColor}]}>{tag}</Text>
         </View>
         <View style={styles.menuMeta}>
           <Text
@@ -109,7 +112,7 @@ export default function SettingsScreen({navigation}: Props) {
           </View>
           <View style={styles.profileMeta}>
             <Text style={styles.profileName}>
-              {username ? `@${username}` : 'No Username'}
+              {username ? `@${username}` : 'No Username Claimed'}
             </Text>
             <Text style={styles.profileAddress}>
               {address ? truncateAddress(address, 6, 4) : 'Not connected'}
@@ -122,10 +125,11 @@ export default function SettingsScreen({navigation}: Props) {
       <Text style={styles.sectionHeader}>ACCOUNT</Text>
       <View style={styles.menuGroup}>
         <MenuItem
-          icon="👤"
-          iconBg="#836EF920"
+          tag="ID"
+          tagColor="#836EF9"
+          tagBg="rgba(131, 110, 249, 0.12)"
           title="Account Info"
-          subtitle="Username, address & secret key"
+          subtitle="Username claim, address & secret key"
           onPress={() => navigation.navigate('AccountInfo')}
         />
       </View>
@@ -134,16 +138,18 @@ export default function SettingsScreen({navigation}: Props) {
       <Text style={styles.sectionHeader}>APP</Text>
       <View style={styles.menuGroup}>
         <MenuItem
-          icon="⚡"
-          iconBg="#F59E0B20"
+          tag="TP"
+          tagColor="#F59E0B"
+          tagBg="rgba(245, 158, 11, 0.12)"
           title="About TapPay"
-          subtitle="Version, features & security info"
+          subtitle="Architecture, features & security"
           onPress={() => navigation.navigate('AboutTapPay')}
         />
         <View style={styles.menuDivider} />
         <MenuItem
-          icon="🌐"
-          iconBg="#10B98120"
+          tag="NET"
+          tagColor="#10B981"
+          tagBg="rgba(16, 185, 129, 0.12)"
           title="Network"
           subtitle={`${MONAD_CONFIG.chainName} • Chain ${MONAD_CONFIG.chainId}`}
           onPress={() => navigation.navigate('NetworkInfo')}
@@ -152,14 +158,15 @@ export default function SettingsScreen({navigation}: Props) {
 
       {/* Danger Zone */}
       <Text style={[styles.sectionHeader, styles.sectionHeaderDanger]}>
-        DANGER ZONE
+        SECURITY ZONE
       </Text>
       <View style={[styles.menuGroup, styles.menuGroupDanger]}>
         <MenuItem
-          icon="⚠️"
-          iconBg="#FF333320"
+          tag="RST"
+          tagColor="#EF4444"
+          tagBg="rgba(239, 68, 68, 0.12)"
           title="Reset Wallet"
-          subtitle="Remove all wallet data from device"
+          subtitle="Remove wallet and credentials from device"
           onPress={handleResetWallet}
           isDestructive
         />
@@ -167,14 +174,11 @@ export default function SettingsScreen({navigation}: Props) {
 
       {/* Footer */}
       <View style={styles.footer}>
-        <Text style={styles.footerText}>TapPay v0.0.1 • Monad Testnet</Text>
+        <Text style={styles.footerText}>TapPay • Monad Testnet</Text>
       </View>
     </ScrollView>
   );
 }
-
-// Import MONAD_CONFIG for display in menu subtitle
-import {MONAD_CONFIG} from '../config/monad';
 
 const styles = StyleSheet.create({
   container: {
@@ -205,7 +209,7 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: '#836EF925',
+    backgroundColor: 'rgba(131, 110, 249, 0.15)',
     borderWidth: 2,
     borderColor: '#836EF9',
     justifyContent: 'center',
@@ -240,7 +244,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   sectionHeaderDanger: {
-    color: '#FF5252',
+    color: '#EF4444',
   },
   menuGroup: {
     backgroundColor: '#161622',
@@ -251,7 +255,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   menuGroupDanger: {
-    borderColor: '#3A1515',
+    borderColor: 'rgba(239, 68, 68, 0.3)',
   },
   menuItem: {
     flexDirection: 'row',
@@ -265,15 +269,17 @@ const styles = StyleSheet.create({
     gap: 14,
     flex: 1,
   },
-  menuIconCircle: {
+  menuTagBadge: {
     width: 42,
     height: 42,
-    borderRadius: 14,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  menuIcon: {
-    fontSize: 20,
+  menuTagText: {
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   menuMeta: {
     flex: 1,
@@ -285,14 +291,14 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   menuTitleDanger: {
-    color: '#FF5252',
+    color: '#EF4444',
   },
   menuSubtitle: {
     fontSize: 12,
     color: '#8888AA',
   },
   menuSubtitleDanger: {
-    color: '#AA4444',
+    color: '#F87171',
   },
   menuChevron: {
     fontSize: 24,
@@ -300,7 +306,7 @@ const styles = StyleSheet.create({
     fontWeight: '300',
   },
   menuChevronDanger: {
-    color: '#AA4444',
+    color: '#F87171',
   },
   menuDivider: {
     height: 1,

@@ -1,9 +1,8 @@
 /**
- * HomeScreen — Apple Pay-style dashboard with luxury wallet card,
- * live balance, quick-action tiles, and recent transaction activity.
+ * HomeScreen — Premium dashboard with wallet card, NFC actions, and quick pay
  */
 
-import React, {useState, useEffect, useCallback} from 'react';
+import React, {useState, useCallback} from 'react';
 import {
   View,
   Text,
@@ -12,49 +11,28 @@ import {
   ScrollView,
   RefreshControl,
   Clipboard,
-  Alert,
 } from 'react-native';
-import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useWallet} from '../context/WalletContext';
-import {RootStackParamList} from '../navigation/AppNavigator';
 import {truncateAddress, formatMon} from '../utils/format';
 import {triggerHaptic} from '../utils/haptics';
-import {
-  getTransactionHistory,
-  subscribeHistory,
-  TransactionRecord,
-} from '../services/history';
+import {useNavigation} from '@react-navigation/native';
+import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {RootStackParamList} from '../navigation/AppNavigator';
 
-type Props = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'Home'>;
-};
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-export default function HomeScreen({navigation}: Props) {
-  const {address, balance, refreshBalance} = useWallet();
+export default function HomeScreen() {
+  const {address, balance, username, refreshBalance} = useWallet();
+  const navigation = useNavigation<NavigationProp>();
   const [refreshing, setRefreshing] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [recentTxs, setRecentTxs] = useState<TransactionRecord[]>([]);
 
-  const loadRecent = useCallback(() => {
-    const list = getTransactionHistory();
-    setRecentTxs(list.slice(0, 3));
-  }, []);
-
-  useEffect(() => {
-    loadRecent();
-    const unsub = subscribeHistory(() => {
-      loadRecent();
-    });
-    return () => unsub();
-  }, [loadRecent]);
-
-  const onRefresh = async () => {
+  const onRefresh = useCallback(async () => {
     triggerHaptic.impactMedium();
     setRefreshing(true);
     await refreshBalance();
-    loadRecent();
     setRefreshing(false);
-  };
+  }, [refreshBalance]);
 
   const copyAddress = () => {
     if (!address) {
@@ -78,17 +56,21 @@ export default function HomeScreen({navigation}: Props) {
           colors={['#836EF9']}
         />
       }>
-      {/* Apple Pay-Style Luxury Wallet Card */}
+
+      {/* Greeting */}
+      <Text style={styles.greeting}>
+        {username ? `Hello, @${username}` : 'Welcome back'}
+      </Text>
+
+      {/* Wallet Card */}
       <View style={styles.cardContainer}>
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <View style={styles.cardChipRow}>
-              {/* Gold EMV Chip visual */}
-              <View style={styles.emvChip}>
-                <View style={styles.emvChipLine} />
+            <View style={styles.cardBrand}>
+              <View style={styles.brandMark}>
+                <Text style={styles.brandLetter}>T</Text>
               </View>
-              {/* Contactless waves */}
-              <Text style={styles.contactlessSymbol}>〰️</Text>
+              <Text style={styles.brandName}>TapPay</Text>
             </View>
             <View style={styles.networkBadge}>
               <View style={styles.networkDot} />
@@ -109,19 +91,22 @@ export default function HomeScreen({navigation}: Props) {
               <Text style={styles.addressText}>
                 {address ? truncateAddress(address, 6, 4) : '...'}
               </Text>
-              <Text style={styles.copyIcon}>{copied ? '✓ Copied' : '❐ Copy'}</Text>
+              <View style={styles.copyIndicator}>
+                <Text style={styles.copyText}>{copied ? 'Copied' : 'Copy'}</Text>
+              </View>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.refreshBtn}
-              onPress={onRefresh}>
+              onPress={onRefresh}
+              activeOpacity={0.7}>
               <Text style={styles.refreshIcon}>↻</Text>
             </TouchableOpacity>
           </View>
         </View>
       </View>
 
-      {/* Primary Action Tiles */}
+      {/* NFC Actions */}
       <Text style={styles.sectionTitle}>Tap Pay</Text>
       <View style={styles.actionRow}>
         <TouchableOpacity
@@ -145,7 +130,7 @@ export default function HomeScreen({navigation}: Props) {
             triggerHaptic.impactMedium();
             navigation.navigate('ReceiveTap');
           }}>
-          <View style={[styles.actionIconCircle, {backgroundColor: '#4CAF5040'}]}>
+          <View style={[styles.actionIconCircle, {backgroundColor: '#10B98130'}]}>
             <Text style={styles.actionIcon}>↓</Text>
           </View>
           <Text style={styles.actionTitle}>Receive</Text>
@@ -153,106 +138,44 @@ export default function HomeScreen({navigation}: Props) {
         </TouchableOpacity>
       </View>
 
-      {/* Username Pay Quick Tile */}
+      {/* Quick Send Tile */}
       <TouchableOpacity
-        style={styles.usernameTile}
+        style={styles.quickSendTile}
         activeOpacity={0.8}
         onPress={() => {
           triggerHaptic.impactMedium();
-          navigation.navigate('UsernamePay');
+          navigation.navigate('SendPayment');
         }}>
-        <View style={styles.usernameTileLeft}>
-          <View style={styles.usernameIconCircle}>
-            <Text style={styles.usernameTileIcon}>@</Text>
+        <View style={styles.quickSendLeft}>
+          <View style={styles.quickSendIcon}>
+            <Text style={styles.quickSendIconText}>→</Text>
           </View>
           <View>
-            <Text style={styles.usernameTileTitle}>Pay by Username</Text>
-            <Text style={styles.usernameTileSubtitle}>
-              On-chain username lookup & transfer
+            <Text style={styles.quickSendTitle}>Send Payment</Text>
+            <Text style={styles.quickSendSubtitle}>
+              Pay by @username or wallet address
             </Text>
           </View>
         </View>
-        <Text style={styles.arrowIcon}>›</Text>
+        <Text style={styles.chevron}>›</Text>
       </TouchableOpacity>
 
-      {/* Recent Activity Section */}
-      <View style={styles.sectionHeaderRow}>
-        <Text style={styles.sectionTitle}>Recent Activity</Text>
-        <TouchableOpacity
-          onPress={() => {
-            triggerHaptic.impactMedium();
-            navigation.navigate('TransactionHistory');
-          }}>
-          <Text style={styles.seeAllText}>See All ({recentTxs.length}) ›</Text>
-        </TouchableOpacity>
-      </View>
-
-      {recentTxs.length === 0 ? (
-        <View style={styles.emptyRecentCard}>
-          <Text style={styles.emptyRecentText}>No transactions yet</Text>
-        </View>
-      ) : (
-        recentTxs.map(tx => {
-          const isSent = tx.direction === 'sent';
-          return (
-            <TouchableOpacity
-              key={tx.id}
-              style={styles.txRow}
-              activeOpacity={0.7}
-              onPress={() => {
-                triggerHaptic.impactMedium();
-                navigation.navigate('TransactionStatus', {
-                  txHash: tx.txHash,
-                  amount: tx.amount,
-                  recipient: tx.counterparty,
-                });
-              }}>
-              <View style={styles.txLeft}>
-                <View
-                  style={[
-                    styles.directionBadge,
-                    {backgroundColor: isSent ? '#FF444420' : '#00C85320'},
-                  ]}>
-                  <Text
-                    style={[
-                      styles.txDirection,
-                      {color: isSent ? '#FF6B6B' : '#4CAF50'},
-                    ]}>
-                    {isSent ? '↑' : '↓'}
-                  </Text>
-                </View>
-                <View>
-                  <Text style={styles.txName}>
-                    {tx.counterpartyUsername
-                      ? `@${tx.counterpartyUsername}`
-                      : truncateAddress(tx.counterparty)}
-                  </Text>
-                  <Text style={styles.txTime}>{tx.timestamp}</Text>
-                </View>
-              </View>
-              <Text
-                style={[
-                  styles.txAmount,
-                  {color: isSent ? '#FF6B6B' : '#4CAF50'},
-                ]}>
-                {isSent ? '-' : '+'}
-                {tx.amount} MON
+      {/* Account Quick View */}
+      {username && (
+        <View style={styles.identityCard}>
+          <View style={styles.identityLeft}>
+            <View style={styles.identityAvatar}>
+              <Text style={styles.identityAvatarText}>
+                {username.charAt(0).toUpperCase()}
               </Text>
-            </TouchableOpacity>
-          );
-        })
+            </View>
+            <View>
+              <Text style={styles.identityName}>@{username}</Text>
+              <Text style={styles.identityHint}>Your Monad identity</Text>
+            </View>
+          </View>
+        </View>
       )}
-
-      {/* Settings Navigation Link */}
-      <TouchableOpacity
-        style={styles.settingsFooterBtn}
-        activeOpacity={0.8}
-        onPress={() => {
-          triggerHaptic.impactMedium();
-          navigation.navigate('Settings');
-        }}>
-        <Text style={styles.settingsFooterText}>⚙️ Wallet Settings & Security</Text>
-      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -264,83 +187,90 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
-    paddingBottom: 40,
+    paddingBottom: 24,
+  },
+  greeting: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6B6B88',
+    marginBottom: 18,
   },
   cardContainer: {
-    marginBottom: 26,
+    marginBottom: 28,
     borderRadius: 24,
     elevation: 12,
     shadowColor: '#836EF9',
     shadowOffset: {width: 0, height: 8},
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.2,
     shadowRadius: 16,
   },
   card: {
     backgroundColor: '#16132A',
     borderRadius: 24,
     padding: 24,
-    borderWidth: 1.5,
-    borderColor: '#3D3472',
+    borderWidth: 1,
+    borderColor: '#2A2450',
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 22,
   },
-  cardChipRow: {
+  cardBrand: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
   },
-  emvChip: {
-    width: 36,
-    height: 28,
-    borderRadius: 6,
-    backgroundColor: '#D4AF37',
-    borderWidth: 1,
-    borderColor: '#B8972E',
+  brandMark: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: '#836EF9',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  emvChipLine: {
-    width: 20,
-    height: 1,
-    backgroundColor: '#8C721F',
-  },
-  contactlessSymbol: {
+  brandLetter: {
     fontSize: 16,
-    color: '#D4AF37',
+    fontWeight: '900',
+    color: '#FFFFFF',
+  },
+  brandName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#C4B5FD',
+    letterSpacing: 0.5,
   },
   networkBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#201A3D',
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingVertical: 5,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#4E3FA8',
+    borderColor: '#2A2450',
   },
   networkDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#836EF9',
+    backgroundColor: '#10B981',
     marginRight: 6,
   },
   networkText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
-    color: '#C4B5FD',
+    color: '#8B7FCC',
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   balanceSection: {
     marginBottom: 22,
   },
   cardLabel: {
-    fontSize: 12,
-    color: '#9CA3AF',
+    fontSize: 11,
+    color: '#7B6FC0',
     marginBottom: 6,
     textTransform: 'uppercase',
     letterSpacing: 1,
@@ -358,207 +288,178 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 14,
     borderTopWidth: 1,
-    borderTopColor: '#2B2353',
+    borderTopColor: '#2A2450',
   },
   addressPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#211B40',
+    backgroundColor: '#201A3D',
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 14,
-    gap: 8,
+    paddingVertical: 7,
+    borderRadius: 10,
+    gap: 10,
   },
   addressText: {
-    fontSize: 13,
-    color: '#C4B5FD',
+    fontSize: 12,
+    color: '#8B7FCC',
     fontFamily: 'monospace',
     fontWeight: '600',
   },
-  copyIcon: {
-    fontSize: 11,
+  copyIndicator: {
+    backgroundColor: '#836EF920',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  copyText: {
+    fontSize: 10,
     color: '#836EF9',
     fontWeight: '700',
+    textTransform: 'uppercase',
   },
   refreshBtn: {
-    padding: 6,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#201A3D',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   refreshIcon: {
     fontSize: 18,
-    color: '#A78BFA',
+    color: '#8B7FCC',
     fontWeight: '700',
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
     color: '#FFFFFF',
-    marginBottom: 12,
+    marginBottom: 14,
   },
   actionRow: {
     flexDirection: 'row',
-    gap: 14,
-    marginBottom: 20,
+    gap: 12,
+    marginBottom: 16,
   },
   actionButton: {
     flex: 1,
-    borderRadius: 20,
+    borderRadius: 18,
     padding: 20,
-    justifyContent: 'center',
   },
   sendButton: {
     backgroundColor: '#836EF9',
   },
   receiveButton: {
-    backgroundColor: '#2E7D32',
+    backgroundColor: '#0D7A3E',
   },
   actionIconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#FFFFFF25',
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF20',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
   },
   actionIcon: {
-    fontSize: 22,
+    fontSize: 20,
     color: '#FFFFFF',
     fontWeight: '800',
   },
   actionTitle: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 17,
+    fontWeight: '700',
     color: '#FFFFFF',
-    marginBottom: 4,
+    marginBottom: 3,
   },
   actionSubtitle: {
     fontSize: 12,
-    color: '#E0E7FF',
-    opacity: 0.9,
+    color: '#FFFFFFBB',
   },
-  usernameTile: {
-    backgroundColor: '#151522',
-    borderRadius: 20,
+  quickSendTile: {
+    backgroundColor: '#131320',
+    borderRadius: 16,
     padding: 18,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 28,
+    marginBottom: 14,
     borderWidth: 1,
-    borderColor: '#252538',
+    borderColor: '#1E1E30',
   },
-  usernameTileLeft: {
+  quickSendLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
   },
-  usernameIconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#836EF920',
+  quickSendIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: '#836EF918',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#836EF950',
+    borderColor: '#836EF930',
   },
-  usernameTileIcon: {
-    fontSize: 20,
+  quickSendIconText: {
+    fontSize: 18,
     color: '#836EF9',
-    fontWeight: '800',
+    fontWeight: '700',
   },
-  usernameTileTitle: {
-    fontSize: 16,
+  quickSendTitle: {
+    fontSize: 15,
     fontWeight: '700',
     color: '#FFFFFF',
     marginBottom: 2,
   },
-  usernameTileSubtitle: {
+  quickSendSubtitle: {
     fontSize: 12,
-    color: '#8888AA',
+    color: '#6B6B88',
   },
-  arrowIcon: {
+  chevron: {
     fontSize: 22,
-    color: '#8888AA',
+    color: '#4A4A66',
     fontWeight: '300',
   },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  seeAllText: {
-    fontSize: 13,
-    color: '#836EF9',
-    fontWeight: '600',
-  },
-  emptyRecentCard: {
-    backgroundColor: '#151522',
-    borderRadius: 16,
-    padding: 24,
-    alignItems: 'center',
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: '#252538',
-  },
-  emptyRecentText: {
-    color: '#8888AA',
-    fontSize: 14,
-  },
-  txRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#151522',
+  identityCard: {
+    backgroundColor: '#131320',
     borderRadius: 16,
     padding: 16,
-    marginBottom: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#222235',
+    borderColor: '#1E1E30',
   },
-  txLeft: {
+  identityLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
-  directionBadge: {
+  identityAvatar: {
     width: 38,
     height: 38,
-    borderRadius: 19,
+    borderRadius: 12,
+    backgroundColor: '#836EF920',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#836EF940',
   },
-  txDirection: {
-    fontSize: 18,
+  identityAvatarText: {
+    fontSize: 16,
     fontWeight: '700',
+    color: '#836EF9',
   },
-  txName: {
-    fontSize: 15,
+  identityName: {
+    fontSize: 14,
     fontWeight: '600',
     color: '#FFFFFF',
-    marginBottom: 2,
+    marginBottom: 1,
   },
-  txTime: {
-    fontSize: 12,
-    color: '#8888AA',
-  },
-  txAmount: {
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  settingsFooterBtn: {
-    marginTop: 10,
-    paddingVertical: 14,
-    alignItems: 'center',
-    borderRadius: 12,
-    backgroundColor: '#161622',
-    borderWidth: 1,
-    borderColor: '#222235',
-  },
-  settingsFooterText: {
-    fontSize: 14,
-    color: '#8888AA',
-    fontWeight: '600',
+  identityHint: {
+    fontSize: 11,
+    color: '#6B6B88',
   },
 });

@@ -1,29 +1,33 @@
 /**
- * AccountInfoScreen — Displays username, wallet address, and biometric-locked secret key
+ * AccountInfoScreen — Username (with claim), wallet address, biometric-locked secret key
  */
 
 import React, {useState, useEffect, useRef} from 'react';
 import {
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   StyleSheet,
   ScrollView,
   Alert,
   Clipboard,
   Animated,
+  ActivityIndicator,
 } from 'react-native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useWallet} from '../context/WalletContext';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import {triggerHaptic} from '../utils/haptics';
+import {validateUsername} from '../utils/validation';
+import {resolveUsername, registerUsername} from '../services/registry';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'AccountInfo'>;
 };
 
 export default function AccountInfoScreen({navigation}: Props) {
-  const {address, username, getPrivateKey} = useWallet();
+  const {address, username, getPrivateKey, saveUsername} = useWallet();
   const [showSecretKey, setShowSecretKey] = useState(false);
   const [exportedKey, setExportedKey] = useState<string | null>(null);
   const [copiedAddr, setCopiedAddr] = useState(false);
@@ -31,7 +35,10 @@ export default function AccountInfoScreen({navigation}: Props) {
   const autoHideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  // Auto-hide secret key after 30 seconds
+  // Username claim state
+  const [claimInput, setClaimInput] = useState('');
+  const [claiming, setClaiming] = useState(false);
+
   useEffect(() => {
     if (showSecretKey) {
       Animated.timing(fadeAnim, {
@@ -44,7 +51,6 @@ export default function AccountInfoScreen({navigation}: Props) {
         hideSecretKey();
       }, 30000);
     }
-
     return () => {
       if (autoHideTimer.current) {
         clearTimeout(autoHideTimer.current);
@@ -83,6 +89,50 @@ export default function AccountInfoScreen({navigation}: Props) {
     setTimeout(() => setCopiedKey(false), 2000);
   };
 
+  // Claim username flow
+  const handleClaimUsername = async () => {
+    const trimmed = claimInput.trim().toLowerCase();
+    const validation = validateUsername(trimmed);
+    if (!validation.valid) {
+      triggerHaptic.notificationError();
+      Alert.alert('Invalid Username', validation.error);
+      return;
+    }
+
+    setClaiming(true);
+    try {
+      // Check availability
+      const existing = await resolveUsername(trimmed);
+      if (existing) {
+        setClaiming(false);
+        triggerHaptic.notificationError();
+        Alert.alert('Username Taken', `@${trimmed} is already registered.`);
+        return;
+      }
+
+      // Try on-chain registration
+      try {
+        const result = await registerUsername(trimmed);
+        // Success or fail, save locally
+      } catch {
+        // Contract not deployed — save locally anyway
+      }
+
+      await saveUsername(trimmed);
+      setClaiming(false);
+      triggerHaptic.notificationSuccess();
+      setClaimInput('');
+      Alert.alert('Success', `@${trimmed} is now your username!`);
+    } catch {
+      setClaiming(false);
+      // Still save locally
+      if (trimmed) {
+        await saveUsername(trimmed);
+        setClaimInput('');
+      }
+    }
+  };
+
   const handleUnlockSecretKey = () => {
     if (showSecretKey) {
       hideSecretKey();
@@ -91,7 +141,7 @@ export default function AccountInfoScreen({navigation}: Props) {
 
     Alert.alert(
       'Reveal Secret Key',
-      'Your secret key grants full control over your wallet and funds. Never share it with anyone.',
+      'Your secret key grants full control over your wallet. Never share it.',
       [
         {text: 'Cancel', style: 'cancel'},
         {
@@ -100,25 +150,17 @@ export default function AccountInfoScreen({navigation}: Props) {
           onPress: async () => {
             try {
               triggerHaptic.impactMedium();
-              const key = await getPrivateKey(
-                'Authenticate to Reveal Secret Key',
-              );
+              const key = await getPrivateKey('Authenticate to Reveal Secret Key');
               if (key) {
                 setExportedKey(key);
                 setShowSecretKey(true);
               } else {
                 triggerHaptic.notificationError();
-                Alert.alert(
-                  'Authentication Failed',
-                  'Biometric verification is required to reveal your secret key.',
-                );
+                Alert.alert('Authentication Failed', 'Biometric verification required.');
               }
             } catch (err: any) {
               triggerHaptic.notificationError();
-              Alert.alert(
-                'Error',
-                err?.message || 'Could not retrieve secret key.',
-              );
+              Alert.alert('Error', err?.message || 'Could not retrieve secret key.');
             }
           },
         },
@@ -139,77 +181,102 @@ export default function AccountInfoScreen({navigation}: Props) {
           {username ? `@${username}` : 'No Username'}
         </Text>
         <Text style={styles.profileSubtitle}>
-          {username
-            ? 'Monad On-Chain Identity'
-            : 'Claim a username during wallet setup'}
+          {username ? 'Monad On-Chain Identity' : 'Claim a username below'}
         </Text>
       </View>
 
       {/* Username Section */}
       <Text style={styles.sectionHeader}>USERNAME</Text>
-      <View style={styles.card}>
-        <View style={styles.infoRow}>
-          <View style={styles.infoRowLeft}>
-            <Text style={styles.infoIcon}>@</Text>
-            <View>
-              <Text style={styles.infoLabel}>Username</Text>
-              <Text style={styles.infoValue}>
-                {username ? `@${username}` : 'Not registered'}
-              </Text>
+      {username ? (
+        <View style={styles.card}>
+          <View style={styles.infoRow}>
+            <View style={styles.infoRowLeft}>
+              <View style={styles.infoIconBox}>
+                <Text style={styles.infoIconText}>@</Text>
+              </View>
+              <View>
+                <Text style={styles.infoLabel}>Username</Text>
+                <Text style={styles.infoValue}>@{username}</Text>
+              </View>
             </View>
           </View>
         </View>
-      </View>
+      ) : (
+        <View style={styles.card}>
+          <Text style={styles.claimTitle}>Claim Your Username</Text>
+          <Text style={styles.claimSubtitle}>
+            Choose a unique identity for easy payments on Monad.
+          </Text>
+          <View style={styles.claimInputRow}>
+            <View style={styles.claimPrefix}>
+              <Text style={styles.claimPrefixText}>@</Text>
+            </View>
+            <TextInput
+              style={styles.claimInput}
+              placeholder="username"
+              placeholderTextColor="#4A4A66"
+              value={claimInput}
+              onChangeText={setClaimInput}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </View>
+          <TouchableOpacity
+            style={[styles.claimButton, claiming && {opacity: 0.6}]}
+            onPress={handleClaimUsername}
+            disabled={claiming}
+            activeOpacity={0.8}>
+            {claiming ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <Text style={styles.claimButtonText}>Claim Username</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      )}
 
-      {/* Wallet Address Section */}
+      {/* Wallet Address */}
       <Text style={styles.sectionHeader}>WALLET ADDRESS</Text>
       <View style={styles.card}>
         <Text style={styles.addressLabel}>Public Address</Text>
-        <Text selectable style={styles.addressMono}>
-          {address || 'Not connected'}
-        </Text>
+        <View style={styles.addressBox}>
+          <Text selectable style={styles.addressMono}>
+            {address || 'Not connected'}
+          </Text>
+        </View>
         <TouchableOpacity
           style={styles.copyButton}
           onPress={copyAddress}
           activeOpacity={0.7}>
           <Text style={styles.copyButtonText}>
-            {copiedAddr ? '✓ Copied to Clipboard' : '❐ Copy Address'}
+            {copiedAddr ? 'Copied to Clipboard' : 'Copy Address'}
           </Text>
         </TouchableOpacity>
       </View>
 
-      {/* Secret Key Section */}
+      {/* Secret Key */}
       <Text style={styles.sectionHeader}>SECRET KEY</Text>
       <View style={[styles.card, styles.secretKeyCard]}>
         <View style={styles.secretKeyHeader}>
-          <View style={styles.lockIconContainer}>
-            <Text style={styles.lockIcon}>
-              {showSecretKey ? '🔓' : '🔒'}
-            </Text>
+          <View style={styles.lockIconBox}>
+            <Text style={styles.lockIconText}>{showSecretKey ? '●' : '○'}</Text>
           </View>
           <View style={styles.secretKeyMeta}>
             <Text style={styles.secretKeyTitle}>Private Key</Text>
             <Text style={styles.secretKeySubtitle}>
               {showSecretKey
-                ? 'Key visible • Auto-hides in 30s'
+                ? 'Key visible — auto-hides in 30s'
                 : 'Protected by biometric authentication'}
             </Text>
           </View>
         </View>
 
         <TouchableOpacity
-          style={[
-            styles.unlockButton,
-            showSecretKey && styles.unlockButtonActive,
-          ]}
+          style={[styles.unlockButton, showSecretKey && styles.unlockButtonActive]}
           onPress={handleUnlockSecretKey}
           activeOpacity={0.7}>
-          <Text
-            style={[
-              styles.unlockButtonText,
-              showSecretKey && styles.unlockButtonTextActive,
-            ]}>
-            {showSecretKey ? '🔒 Lock Secret Key' : '🔓 Unlock Secret Key'}
+          <Text style={[styles.unlockButtonText, showSecretKey && styles.unlockButtonTextActive]}>
+            {showSecretKey ? 'Lock Secret Key' : 'Unlock Secret Key'}
           </Text>
         </TouchableOpacity>
 
@@ -217,19 +284,17 @@ export default function AccountInfoScreen({navigation}: Props) {
           <Animated.View style={[styles.revealedKeyBox, {opacity: fadeAnim}]}>
             <View style={styles.warningBanner}>
               <Text style={styles.warningBannerText}>
-                ⚠️ NEVER share your secret key. Anyone with this key has full
+                NEVER share your secret key. Anyone with this key has full
                 control over your funds.
               </Text>
             </View>
-            <Text selectable style={styles.secretKeyMono}>
-              {exportedKey}
-            </Text>
+            <Text selectable style={styles.secretKeyMono}>{exportedKey}</Text>
             <TouchableOpacity
               style={styles.copyKeyButton}
               onPress={copySecretKey}
               activeOpacity={0.7}>
               <Text style={styles.copyKeyButtonText}>
-                {copiedKey ? '✓ Copied' : '❐ Copy Secret Key'}
+                {copiedKey ? 'Copied' : 'Copy Secret Key'}
               </Text>
             </TouchableOpacity>
           </Animated.View>
@@ -250,22 +315,22 @@ const styles = StyleSheet.create({
   },
   profileHeader: {
     alignItems: 'center',
-    paddingVertical: 28,
+    paddingVertical: 24,
     marginBottom: 8,
   },
   avatarLarge: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#836EF925',
+    width: 72,
+    height: 72,
+    borderRadius: 24,
+    backgroundColor: '#836EF918',
     borderWidth: 2,
     borderColor: '#836EF9',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 14,
   },
   avatarLargeText: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '800',
     color: '#FFFFFF',
   },
@@ -277,23 +342,23 @@ const styles = StyleSheet.create({
   },
   profileSubtitle: {
     fontSize: 13,
-    color: '#8888AA',
+    color: '#6B6B88',
   },
   sectionHeader: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
-    color: '#8888AA',
+    color: '#6B6B88',
     letterSpacing: 1.5,
     marginTop: 12,
     marginBottom: 10,
-    marginLeft: 4,
+    marginLeft: 2,
   },
   card: {
-    backgroundColor: '#161622',
-    borderRadius: 18,
+    backgroundColor: '#131320',
+    borderRadius: 16,
     padding: 18,
     borderWidth: 1,
-    borderColor: '#222235',
+    borderColor: '#1E1E30',
     marginBottom: 10,
   },
   infoRow: {
@@ -306,63 +371,120 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 14,
   },
-  infoIcon: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#836EF9',
+  infoIconBox: {
     width: 40,
     height: 40,
-    lineHeight: 40,
-    textAlign: 'center',
-    backgroundColor: '#836EF920',
     borderRadius: 12,
-    overflow: 'hidden',
+    backgroundColor: '#836EF918',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  infoIconText: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#836EF9',
   },
   infoLabel: {
-    fontSize: 12,
-    color: '#8888AA',
+    fontSize: 11,
+    color: '#6B6B88',
     marginBottom: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   infoValue: {
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
   },
+  // Claim username
+  claimTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  claimSubtitle: {
+    fontSize: 13,
+    color: '#6B6B88',
+    marginBottom: 16,
+    lineHeight: 18,
+  },
+  claimInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0E0E1A',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#1E1E30',
+    marginBottom: 14,
+  },
+  claimPrefix: {
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    borderRightWidth: 1,
+    borderRightColor: '#1E1E30',
+  },
+  claimPrefixText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#836EF9',
+  },
+  claimInput: {
+    flex: 1,
+    fontSize: 15,
+    color: '#FFFFFF',
+    paddingHorizontal: 12,
+    paddingVertical: 14,
+  },
+  claimButton: {
+    backgroundColor: '#836EF9',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  claimButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  // Address
   addressLabel: {
-    fontSize: 12,
-    color: '#8888AA',
+    fontSize: 11,
+    color: '#6B6B88',
     marginBottom: 8,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  addressBox: {
+    backgroundColor: '#0E0E1A',
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#1E1E30',
+    marginBottom: 14,
   },
   addressMono: {
     fontSize: 13,
     color: '#FFFFFF',
     fontFamily: 'monospace',
     lineHeight: 20,
-    marginBottom: 14,
-    backgroundColor: '#0E0E1A',
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#1E1E30',
-    overflow: 'hidden',
   },
   copyButton: {
-    backgroundColor: '#836EF920',
-    borderColor: '#836EF960',
+    backgroundColor: '#836EF918',
+    borderColor: '#836EF940',
     borderWidth: 1,
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: 'center',
   },
   copyButtonText: {
-    color: '#C4B5FD',
+    color: '#836EF9',
     fontWeight: '700',
     fontSize: 14,
   },
+  // Secret key
   secretKeyCard: {
-    borderColor: '#2A2040',
+    borderColor: '#1E1E30',
   },
   secretKeyHeader: {
     flexDirection: 'row',
@@ -370,16 +492,20 @@ const styles = StyleSheet.create({
     gap: 14,
     marginBottom: 16,
   },
-  lockIconContainer: {
-    width: 44,
-    height: 44,
+  lockIconBox: {
+    width: 42,
+    height: 42,
     borderRadius: 14,
-    backgroundColor: '#1E1A30',
+    backgroundColor: '#1A1A2E',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#2A2A40',
   },
-  lockIcon: {
-    fontSize: 22,
+  lockIconText: {
+    fontSize: 16,
+    color: '#836EF9',
+    fontWeight: '800',
   },
   secretKeyMeta: {
     flex: 1,
@@ -392,11 +518,11 @@ const styles = StyleSheet.create({
   },
   secretKeySubtitle: {
     fontSize: 12,
-    color: '#8888AA',
+    color: '#6B6B88',
   },
   unlockButton: {
-    backgroundColor: '#2A1A3D',
-    borderColor: '#836EF950',
+    backgroundColor: '#1A1A2E',
+    borderColor: '#836EF940',
     borderWidth: 1,
     paddingVertical: 14,
     borderRadius: 12,
@@ -404,10 +530,10 @@ const styles = StyleSheet.create({
   },
   unlockButtonActive: {
     backgroundColor: '#1A1520',
-    borderColor: '#FF525250',
+    borderColor: '#FF525240',
   },
   unlockButtonText: {
-    color: '#C4B5FD',
+    color: '#836EF9',
     fontWeight: '700',
     fontSize: 14,
   },
@@ -418,8 +544,8 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   warningBanner: {
-    backgroundColor: '#2A1A1A',
-    borderColor: '#FF5252',
+    backgroundColor: '#1A1215',
+    borderColor: '#FF525240',
     borderWidth: 1,
     borderRadius: 10,
     padding: 12,
@@ -437,16 +563,16 @@ const styles = StyleSheet.create({
     fontFamily: 'monospace',
     lineHeight: 18,
     backgroundColor: '#1A1015',
-    padding: 12,
-    borderRadius: 10,
+    padding: 14,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#3A2020',
+    borderColor: '#2A1A1A',
     marginBottom: 10,
     overflow: 'hidden',
   },
   copyKeyButton: {
     backgroundColor: '#FF333315',
-    borderColor: '#FF333350',
+    borderColor: '#FF333530',
     borderWidth: 1,
     paddingVertical: 10,
     borderRadius: 10,

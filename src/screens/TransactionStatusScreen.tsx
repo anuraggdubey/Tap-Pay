@@ -104,7 +104,9 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
 
         {status === 'failed' && (
           <>
-            <Text style={styles.checkmark}>❌</Text>
+            <View style={styles.failCircle}>
+              <Text style={styles.failIcon}>✕</Text>
+            </View>
             <Text style={styles.statusText}>Transaction Failed</Text>
             {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
           </>
@@ -159,6 +161,18 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   checkmarkIcon: {fontSize: 44, color: '#00C853', fontWeight: 'bold'},
+  failCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    borderWidth: 2,
+    borderColor: '#EF4444',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  failIcon: {fontSize: 36, color: '#EF4444', fontWeight: 'bold'},
   statusText: {fontSize: 24, fontWeight: '800', color: '#FFFFFF', marginTop: 16, marginBottom: 8},
   hint: {fontSize: 14, color: '#8888AA', marginBottom: 32},
   errorText: {fontSize: 13, color: '#FF6B6B', textAlign: 'center', marginBottom: 24},

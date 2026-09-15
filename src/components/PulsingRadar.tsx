@@ -9,14 +9,14 @@ import React, {useEffect, useRef} from 'react';
 import {View, Text, StyleSheet, Animated, Easing} from 'react-native';
 
 interface PulsingRadarProps {
-  icon?: string;
+  label?: string; // e.g. "TAP", "NFC"
   color?: string; // Accent color (default: Monad Purple #836EF9)
   size?: number; // Center icon diameter (default: 90)
   active?: boolean;
 }
 
 export const PulsingRadar: React.FC<PulsingRadarProps> = ({
-  icon = '📡',
+  label = 'NFC',
   color = '#836EF9',
   size = 90,
   active = true,
@@ -106,7 +106,7 @@ export const PulsingRadar: React.FC<PulsingRadarProps> = ({
         </>
       )}
 
-      {/* Center glowing badge */}
+      {/* Center glowing badge with styled NFC Contactless Symbol */}
       <View
         style={[
           styles.centerBadge,
@@ -114,11 +114,18 @@ export const PulsingRadar: React.FC<PulsingRadarProps> = ({
             width: size,
             height: size,
             borderRadius: size / 2,
-            backgroundColor: `${color}25`,
-            borderColor: `${color}88`,
+            backgroundColor: `${color}18`,
+            borderColor: color,
           },
         ]}>
-        <Text style={[styles.iconText, {fontSize: size * 0.42}]}>{icon}</Text>
+        {/* Modern styled contactless wave curves */}
+        <View style={styles.contactlessContainer}>
+          <View style={[styles.arcOuter, {borderColor: color}]} />
+          <View style={[styles.arcMid, {borderColor: color}]} />
+          <View style={[styles.arcInner, {borderColor: color}]} />
+          <View style={[styles.arcDot, {backgroundColor: color}]} />
+        </View>
+        <Text style={[styles.labelText, {color}]}>{label}</Text>
       </View>
     </View>
   );
@@ -143,8 +150,59 @@ const styles = StyleSheet.create({
     shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.3,
     shadowRadius: 10,
+    paddingTop: 4,
   },
-  iconText: {
-    textAlign: 'center',
+  contactlessContainer: {
+    width: 28,
+    height: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+    marginBottom: 4,
+  },
+  arcOuter: {
+    position: 'absolute',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderTopColor: 'transparent',
+    borderBottomColor: 'transparent',
+    borderLeftColor: 'transparent',
+    transform: [{rotate: '-45deg'}],
+  },
+  arcMid: {
+    position: 'absolute',
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderTopColor: 'transparent',
+    borderBottomColor: 'transparent',
+    borderLeftColor: 'transparent',
+    transform: [{rotate: '-45deg'}],
+  },
+  arcInner: {
+    position: 'absolute',
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderTopColor: 'transparent',
+    borderBottomColor: 'transparent',
+    borderLeftColor: 'transparent',
+    transform: [{rotate: '-45deg'}],
+  },
+  arcDot: {
+    position: 'absolute',
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    left: 8,
+  },
+  labelText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.5,
   },
 });

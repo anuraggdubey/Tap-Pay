@@ -1,11 +1,12 @@
 /**
  * WalletContext — Global wallet state provider
  *
- * Exposes wallet address, balance, loading status, and actions
+ * Exposes wallet address, balance, username, loading status, and actions
  * to all screens via React Context.
  */
 
 import React, {createContext, useContext, useState, useEffect, useCallback, ReactNode} from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   generateWallet,
   savePrivateKey,
@@ -15,18 +16,23 @@ import {
   hasWallet,
   deleteWallet,
 } from '../services/wallet';
+import {reverseResolve} from '../services/registry';
+
+const USERNAME_STORAGE_KEY = '@tappay_username';
 
 interface WalletState {
   isLoading: boolean;
   isInitialized: boolean;
   address: string | null;
   balance: bigint;
+  username: string | null;
   // Actions
   createWallet: () => Promise<{address: string; privateKey: string} | null>;
   importWallet: (privateKey: string) => Promise<boolean>;
   refreshBalance: () => Promise<void>;
   getPrivateKey: (promptTitle?: string) => Promise<string | null>;
   resetWallet: () => Promise<boolean>;
+  saveUsername: (name: string) => Promise<void>;
 }
 
 const WalletContext = createContext<WalletState | undefined>(undefined);
@@ -36,6 +42,31 @@ export function WalletProvider({children}: {children: ReactNode}) {
   const [isInitialized, setIsInitialized] = useState(false);
   const [address, setAddress] = useState<string | null>(null);
   const [balance, setBalance] = useState<bigint>(0n);
+  const [username, setUsername] = useState<string | null>(null);
+
+  // Load stored username from AsyncStorage
+  const loadStoredUsername = useCallback(async (addr: string | null) => {
+    try {
+      // First try local storage
+      const storedUsername = await AsyncStorage.getItem(USERNAME_STORAGE_KEY);
+      if (storedUsername) {
+        setUsername(storedUsername);
+        return;
+      }
+
+      // Fallback: try on-chain reverse resolve if address is available
+      if (addr) {
+        const onChainUsername = await reverseResolve(addr);
+        if (onChainUsername) {
+          setUsername(onChainUsername);
+          // Cache it locally for next time
+          await AsyncStorage.setItem(USERNAME_STORAGE_KEY, onChainUsername);
+        }
+      }
+    } catch {
+      // Silently fail — username display is non-critical
+    }
+  }, []);
 
   // Check for existing wallet on mount
   useEffect(() => {
@@ -46,6 +77,9 @@ export function WalletProvider({children}: {children: ReactNode}) {
           const addr = await getWalletAddress();
           setAddress(addr);
           setIsInitialized(true);
+
+          // Load username
+          await loadStoredUsername(addr);
 
           if (addr) {
             try {
@@ -62,7 +96,7 @@ export function WalletProvider({children}: {children: ReactNode}) {
         setIsLoading(false);
       }
     })();
-  }, []);
+  }, [loadStoredUsername]);
 
   // Periodic balance refresh (every 10 seconds)
   useEffect(() => {
@@ -126,8 +160,17 @@ export function WalletProvider({children}: {children: ReactNode}) {
     }
   }, [address]);
 
-  const getPrivateKey = useCallback(async (promptTitle?: string) => {
+  const getPrivateKeyFn = useCallback(async (promptTitle?: string) => {
     return await loadPrivateKey(promptTitle);
+  }, []);
+
+  const saveUsernameFn = useCallback(async (name: string) => {
+    try {
+      await AsyncStorage.setItem(USERNAME_STORAGE_KEY, name);
+      setUsername(name);
+    } catch (error) {
+      console.error('Failed to save username:', error);
+    }
   }, []);
 
   const resetWallet = useCallback(async () => {
@@ -137,6 +180,9 @@ export function WalletProvider({children}: {children: ReactNode}) {
         setAddress(null);
         setBalance(0n);
         setIsInitialized(false);
+        setUsername(null);
+        // Clear stored username
+        await AsyncStorage.removeItem(USERNAME_STORAGE_KEY);
         return true;
       }
       return false;
@@ -153,11 +199,13 @@ export function WalletProvider({children}: {children: ReactNode}) {
         isInitialized,
         address,
         balance,
+        username,
         createWallet,
         importWallet,
         refreshBalance,
-        getPrivateKey,
+        getPrivateKey: getPrivateKeyFn,
         resetWallet,
+        saveUsername: saveUsernameFn,
       }}>
       {children}
     </WalletContext.Provider>

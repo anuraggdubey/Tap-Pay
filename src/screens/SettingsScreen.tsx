@@ -1,8 +1,8 @@
 /**
- * SettingsScreen — Wallet management, biometric export, network settings, and identity
+ * SettingsScreen — Navigation hub for app settings and wallet management
  */
 
-import React, {useState, useEffect} from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -10,86 +10,76 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
-  Linking,
-  Clipboard,
 } from 'react-native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useWallet} from '../context/WalletContext';
 import {RootStackParamList} from '../navigation/AppNavigator';
-import {MONAD_CONFIG} from '../config/monad';
-import {reverseResolve} from '../services/registry';
 import {triggerHaptic} from '../utils/haptics';
+import {truncateAddress} from '../utils/format';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Settings'>;
 };
 
+interface MenuItemProps {
+  icon: string;
+  iconBg: string;
+  title: string;
+  subtitle: string;
+  onPress: () => void;
+  isDestructive?: boolean;
+}
+
+function MenuItem({
+  icon,
+  iconBg,
+  title,
+  subtitle,
+  onPress,
+  isDestructive,
+}: MenuItemProps) {
+  return (
+    <TouchableOpacity
+      style={styles.menuItem}
+      activeOpacity={0.6}
+      onPress={() => {
+        triggerHaptic.impactMedium();
+        onPress();
+      }}>
+      <View style={styles.menuItemLeft}>
+        <View style={[styles.menuIconCircle, {backgroundColor: iconBg}]}>
+          <Text style={styles.menuIcon}>{icon}</Text>
+        </View>
+        <View style={styles.menuMeta}>
+          <Text
+            style={[styles.menuTitle, isDestructive && styles.menuTitleDanger]}>
+            {title}
+          </Text>
+          <Text
+            style={[
+              styles.menuSubtitle,
+              isDestructive && styles.menuSubtitleDanger,
+            ]}>
+            {subtitle}
+          </Text>
+        </View>
+      </View>
+      <Text
+        style={[styles.menuChevron, isDestructive && styles.menuChevronDanger]}>
+        ›
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
 export default function SettingsScreen({navigation}: Props) {
-  const {address, getPrivateKey, resetWallet} = useWallet();
-  const [showPrivateKey, setShowPrivateKey] = useState(false);
-  const [exportedKey, setExportedKey] = useState<string | null>(null);
-  const [username, setUsername] = useState<string | null>(null);
-  const [copiedAddr, setCopiedAddr] = useState(false);
-
-  useEffect(() => {
-    if (address) {
-      reverseResolve(address)
-        .then((u: string | null) => setUsername(u))
-        .catch(() => setUsername(null));
-    }
-  }, [address]);
-
-  const copyAddress = () => {
-    if (!address) {
-      return;
-    }
-    triggerHaptic.impactMedium();
-    Clipboard.setString(address);
-    setCopiedAddr(true);
-    setTimeout(() => setCopiedAddr(false), 2000);
-  };
-
-  const handleExportKey = async () => {
-    if (showPrivateKey) {
-      setShowPrivateKey(false);
-      setExportedKey(null);
-      return;
-    }
-
-    Alert.alert(
-      'Export Private Key',
-      'Never share your private key with anyone. Anyone with this key has full control over your funds.',
-      [
-        {text: 'Cancel', style: 'cancel'},
-        {
-          text: 'Authenticate & Reveal',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              triggerHaptic.impactMedium();
-              const key = await getPrivateKey('Confirm Biometrics to Export Private Key');
-              if (key) {
-                setExportedKey(key);
-                setShowPrivateKey(true);
-              } else {
-                triggerHaptic.notificationError();
-                Alert.alert('Authentication Failed', 'Biometric verification is required to reveal private key.');
-              }
-            } catch (err: any) {
-              triggerHaptic.notificationError();
-              Alert.alert('Error', err?.message || 'Could not retrieve private key.');
-            }
-          },
-        },
-      ],
-    );
-  };
+  const {address, username, resetWallet} = useWallet();
 
   const handleResetWallet = () => {
     triggerHaptic.notificationError();
     Alert.alert(
       'Reset Wallet',
-      'This will remove your current wallet credentials from this device. Make sure you have backed up your private key first!',
+      'This will remove your wallet credentials and username from this device. Make sure you have backed up your private key!',
       [
         {text: 'Cancel', style: 'cancel'},
         {
@@ -109,114 +99,82 @@ export default function SettingsScreen({navigation}: Props) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Identity & Username */}
-      <Text style={styles.sectionHeader}>Identity</Text>
-      <View style={styles.card}>
-        <View style={styles.usernameRow}>
+      {/* Profile Card */}
+      <View style={styles.profileCard}>
+        <View style={styles.profileLeft}>
           <View style={styles.avatarCircle}>
             <Text style={styles.avatarText}>
               {(username || 'U').charAt(0).toUpperCase()}
             </Text>
           </View>
-          <View style={styles.usernameMeta}>
-            <Text style={styles.usernameTitle}>
-              {username ? `@${username}` : 'No Username Registered'}
+          <View style={styles.profileMeta}>
+            <Text style={styles.profileName}>
+              {username ? `@${username}` : 'No Username'}
             </Text>
-            <Text style={styles.usernameSubtitle}>
-              {username ? 'Monad On-Chain Registry' : 'Register via Wallet Setup'}
+            <Text style={styles.profileAddress}>
+              {address ? truncateAddress(address, 6, 4) : 'Not connected'}
             </Text>
           </View>
         </View>
       </View>
 
-      {/* Wallet Section */}
-      <Text style={styles.sectionHeader}>Wallet</Text>
-      <View style={styles.card}>
-        <Text style={styles.label}>Public Address</Text>
-        <Text selectable style={styles.valueMono}>{address || 'Not connected'}</Text>
-
-        <TouchableOpacity
-          style={styles.actionBtnPrimary}
-          onPress={copyAddress}>
-          <Text style={styles.actionBtnPrimaryText}>
-            {copiedAddr ? '✓ Address Copied' : '❐ Copy Public Address'}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.actionBtnSecondary}
-          onPress={handleExportKey}>
-          <Text style={styles.actionBtnSecondaryText}>
-            {showPrivateKey ? 'Hide Private Key' : '🔑 Export Private Key (Biometric)'}
-          </Text>
-        </TouchableOpacity>
-
-        {showPrivateKey && exportedKey && (
-          <View style={styles.warningBox}>
-            <Text style={styles.warningTitle}>⚠️ Keep Secret</Text>
-            <Text selectable style={styles.privateKeyMono}>{exportedKey}</Text>
-          </View>
-        )}
+      {/* Account Section */}
+      <Text style={styles.sectionHeader}>ACCOUNT</Text>
+      <View style={styles.menuGroup}>
+        <MenuItem
+          icon="👤"
+          iconBg="#836EF920"
+          title="Account Info"
+          subtitle="Username, address & secret key"
+          onPress={() => navigation.navigate('AccountInfo')}
+        />
       </View>
 
-      {/* Network Section */}
-      <Text style={styles.sectionHeader}>Network</Text>
-      <View style={styles.card}>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoKey}>Network</Text>
-          <Text style={styles.infoVal}>{MONAD_CONFIG.chainName}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoKey}>Chain ID</Text>
-          <Text style={styles.infoVal}>{MONAD_CONFIG.chainId}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoKey}>Currency</Text>
-          <Text style={styles.infoVal}>{MONAD_CONFIG.nativeCurrency.name} ({MONAD_CONFIG.nativeCurrency.symbol})</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoKey}>Primary RPC</Text>
-          <Text style={[styles.infoVal, styles.monoSmall]}>{MONAD_CONFIG.rpcUrls.primary}</Text>
-        </View>
-        <TouchableOpacity
-          style={styles.linkRow}
-          onPress={() => Linking.openURL(MONAD_CONFIG.faucetUrl)}>
-          <Text style={styles.linkText}>🚰 Open Monad Faucet ↗</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.linkRow}
-          onPress={() => Linking.openURL(MONAD_CONFIG.blockExplorer.url)}>
-          <Text style={styles.linkText}>🔍 Monadscan Explorer ↗</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* App Info */}
-      <Text style={styles.sectionHeader}>About</Text>
-      <View style={styles.card}>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoKey}>App</Text>
-          <Text style={styles.infoVal}>TapPay v0.0.1</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoKey}>Mode</Text>
-          <Text style={styles.infoVal}>NFC HCE + Username Pay</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoKey}>Security</Text>
-          <Text style={styles.infoVal}>Android Keystore + Biometrics</Text>
-        </View>
+      {/* App Section */}
+      <Text style={styles.sectionHeader}>APP</Text>
+      <View style={styles.menuGroup}>
+        <MenuItem
+          icon="⚡"
+          iconBg="#F59E0B20"
+          title="About TapPay"
+          subtitle="Version, features & security info"
+          onPress={() => navigation.navigate('AboutTapPay')}
+        />
+        <View style={styles.menuDivider} />
+        <MenuItem
+          icon="🌐"
+          iconBg="#10B98120"
+          title="Network"
+          subtitle={`${MONAD_CONFIG.chainName} • Chain ${MONAD_CONFIG.chainId}`}
+          onPress={() => navigation.navigate('NetworkInfo')}
+        />
       </View>
 
       {/* Danger Zone */}
-      <Text style={[styles.sectionHeader, {color: '#FF5252'}]}>Danger Zone</Text>
-      <View style={[styles.card, {borderColor: '#4A1515'}]}>
-        <TouchableOpacity style={styles.dangerBtn} onPress={handleResetWallet}>
-          <Text style={styles.dangerBtnText}>Reset Wallet Data</Text>
-        </TouchableOpacity>
+      <Text style={[styles.sectionHeader, styles.sectionHeaderDanger]}>
+        DANGER ZONE
+      </Text>
+      <View style={[styles.menuGroup, styles.menuGroupDanger]}>
+        <MenuItem
+          icon="⚠️"
+          iconBg="#FF333320"
+          title="Reset Wallet"
+          subtitle="Remove all wallet data from device"
+          onPress={handleResetWallet}
+          isDestructive
+        />
+      </View>
+
+      {/* Footer */}
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>TapPay v0.0.1 • Monad Testnet</Text>
       </View>
     </ScrollView>
   );
 }
+
+// Import MONAD_CONFIG for display in menu subtitle
+import {MONAD_CONFIG} from '../config/monad';
 
 const styles = StyleSheet.create({
   container: {
@@ -227,155 +185,135 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 40,
   },
-  sectionHeader: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#8888AA',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginTop: 16,
-    marginBottom: 10,
-  },
-  card: {
+  profileCard: {
     backgroundColor: '#161622',
-    borderRadius: 18,
-    padding: 18,
+    borderRadius: 20,
+    padding: 20,
     borderWidth: 1,
     borderColor: '#222235',
-    marginBottom: 10,
+    marginBottom: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  usernameRow: {
+  profileLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
   },
   avatarCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#836EF930',
-    borderWidth: 1.5,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#836EF925',
+    borderWidth: 2,
     borderColor: '#836EF9',
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarText: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 22,
+    fontWeight: '800',
     color: '#FFFFFF',
   },
-  usernameMeta: {
+  profileMeta: {
     flex: 1,
   },
-  usernameTitle: {
-    fontSize: 17,
+  profileName: {
+    fontSize: 18,
     fontWeight: '700',
     color: '#FFFFFF',
     marginBottom: 2,
   },
-  usernameSubtitle: {
-    fontSize: 12,
-    color: '#8888AA',
-  },
-  label: {
-    fontSize: 12,
-    color: '#8888AA',
-    marginBottom: 6,
-  },
-  valueMono: {
+  profileAddress: {
     fontSize: 13,
-    color: '#FFFFFF',
+    color: '#8888AA',
     fontFamily: 'monospace',
-    lineHeight: 18,
-    marginBottom: 14,
   },
-  actionBtnPrimary: {
-    backgroundColor: '#836EF925',
-    borderColor: '#836EF980',
-    borderWidth: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: 'center',
+  sectionHeader: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#8888AA',
+    letterSpacing: 1.5,
+    marginTop: 8,
     marginBottom: 10,
+    marginLeft: 4,
   },
-  actionBtnPrimaryText: {
-    color: '#C4B5FD',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  actionBtnSecondary: {
-    backgroundColor: '#242438',
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  actionBtnSecondaryText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  warningBox: {
-    marginTop: 14,
-    backgroundColor: '#2A1A1A',
-    borderColor: '#FF5252',
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-  },
-  warningTitle: {
+  sectionHeaderDanger: {
     color: '#FF5252',
-    fontWeight: '700',
-    fontSize: 12,
-    marginBottom: 6,
   },
-  privateKeyMono: {
-    color: '#FFAAAA',
-    fontFamily: 'monospace',
-    fontSize: 12,
-    lineHeight: 16,
+  menuGroup: {
+    backgroundColor: '#161622',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#222235',
+    marginBottom: 10,
+    overflow: 'hidden',
   },
-  infoRow: {
+  menuGroupDanger: {
+    borderColor: '#3A1515',
+  },
+  menuItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1E1E30',
+    alignItems: 'center',
+    padding: 16,
   },
-  infoKey: {
-    color: '#8888AA',
-    fontSize: 14,
+  menuItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    flex: 1,
   },
-  infoVal: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  monoSmall: {
-    fontFamily: 'monospace',
-    fontSize: 11,
-    maxWidth: '60%',
-    textAlign: 'right',
-  },
-  linkRow: {
-    paddingVertical: 12,
-    marginTop: 4,
-  },
-  linkText: {
-    color: '#836EF9',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  dangerBtn: {
-    backgroundColor: '#FF333320',
-    borderColor: '#FF3333',
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingVertical: 12,
+  menuIconCircle: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  dangerBtnText: {
+  menuIcon: {
+    fontSize: 20,
+  },
+  menuMeta: {
+    flex: 1,
+  },
+  menuTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  menuTitleDanger: {
     color: '#FF5252',
-    fontWeight: '700',
-    fontSize: 14,
+  },
+  menuSubtitle: {
+    fontSize: 12,
+    color: '#8888AA',
+  },
+  menuSubtitleDanger: {
+    color: '#AA4444',
+  },
+  menuChevron: {
+    fontSize: 24,
+    color: '#555566',
+    fontWeight: '300',
+  },
+  menuChevronDanger: {
+    color: '#AA4444',
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: '#1E1E30',
+    marginHorizontal: 16,
+  },
+  footer: {
+    alignItems: 'center',
+    paddingVertical: 24,
+  },
+  footerText: {
+    fontSize: 12,
+    color: '#444455',
+    fontWeight: '500',
   },
 });

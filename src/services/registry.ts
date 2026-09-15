@@ -101,8 +101,12 @@ export async function releaseUsername(): Promise<{txHash: string | null; error?:
 export async function resolveUsername(username: string): Promise<string | null> {
   try {
     const contract = getRegistryContract();
-    const address = await contract.resolve(username);
-    return address;
+    const resolved = await contract.resolve(username);
+    // Zero address means username is not registered
+    if (!resolved || resolved === ethers.ZeroAddress) {
+      return null;
+    }
+    return resolved;
   } catch {
     return null;
   }
@@ -116,7 +120,11 @@ export async function reverseResolveAddress(address: string): Promise<string | n
   try {
     const contract = getRegistryContract();
     const username = await contract.reverseResolve(address);
-    return username || null;
+    // Empty string or falsy means no username registered
+    if (!username || username.trim() === '') {
+      return null;
+    }
+    return username;
   } catch {
     return null;
   }

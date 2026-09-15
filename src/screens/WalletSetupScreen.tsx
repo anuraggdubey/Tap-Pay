@@ -29,7 +29,7 @@ type Props = {
 };
 
 export default function WalletSetupScreen({navigation}: Props) {
-  const {createWallet, importWallet} = useWallet();
+  const {createWallet, importWallet, saveUsername} = useWallet();
   const [step, setStep] = useState<'welcome' | 'import' | 'username' | 'backup'>('welcome');
   const [privateKeyInput, setPrivateKeyInput] = useState('');
   const [newPrivateKey, setNewPrivateKey] = useState('');
@@ -100,19 +100,30 @@ export default function WalletSetupScreen({navigation}: Props) {
         return;
       }
 
-      // If wallet has testnet funds, register on-chain; otherwise reserve in state
+      // Try to register on-chain
+      let onChainSuccess = false;
       try {
-        await registerUsername(trimmed);
+        const result = await registerUsername(trimmed);
+        if (result.txHash) {
+          onChainSuccess = true;
+        }
       } catch {
-        // Faucet may not be funded yet during onboarding; continue to backup
+        // On-chain registration failed (contract not deployed, no funds, etc.)
+        // We'll still save locally
       }
+
+      // Always save username locally so it persists
+      await saveUsername(trimmed);
 
       setLoading(false);
       triggerHaptic.notificationSuccess();
       setStep('backup');
     } catch {
       setLoading(false);
-      // Advance to backup even if on-chain call is offline
+      // Save username locally even if on-chain lookup failed
+      if (trimmed) {
+        await saveUsername(trimmed);
+      }
       setStep('backup');
     }
   };

@@ -14,6 +14,9 @@ import UsernamePayScreen from '../screens/UsernamePayScreen';
 import TransactionStatusScreen from '../screens/TransactionStatusScreen';
 import TransactionHistoryScreen from '../screens/TransactionHistoryScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import AccountInfoScreen from '../screens/AccountInfoScreen';
+import AboutScreen from '../screens/AboutScreen';
+import NetworkScreen from '../screens/NetworkScreen';
 import {useWallet} from '../context/WalletContext';
 
 export type RootStackParamList = {
@@ -25,6 +28,9 @@ export type RootStackParamList = {
   TransactionStatus: {txHash: string; amount: string; recipient: string};
   TransactionHistory: undefined;
   Settings: undefined;
+  AccountInfo: undefined;
+  AboutTapPay: undefined;
+  NetworkInfo: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -98,6 +104,21 @@ export default function AppNavigator() {
           name="Settings"
           component={SettingsScreen}
           options={{title: 'Settings'}}
+        />
+        <Stack.Screen
+          name="AccountInfo"
+          component={AccountInfoScreen}
+          options={{title: 'Account Info'}}
+        />
+        <Stack.Screen
+          name="AboutTapPay"
+          component={AboutScreen}
+          options={{title: 'About TapPay'}}
+        />
+        <Stack.Screen
+          name="NetworkInfo"
+          component={NetworkScreen}
+          options={{title: 'Network'}}
         />
       </Stack.Navigator>
     </NavigationContainer>

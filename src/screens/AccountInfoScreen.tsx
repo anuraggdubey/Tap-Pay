@@ -21,6 +21,7 @@ import {RootStackParamList} from '../navigation/AppNavigator';
 import {triggerHaptic} from '../utils/haptics';
 import {validateUsername} from '../utils/validation';
 import {resolveUsername, registerUsername} from '../services/registry';
+import {KeyIcon} from '../components/AppIcons';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'AccountInfo'>;
@@ -259,7 +260,7 @@ export default function AccountInfoScreen({navigation}: Props) {
       <View style={[styles.card, styles.secretKeyCard]}>
         <View style={styles.secretKeyHeader}>
           <View style={styles.lockIconBox}>
-            <Text style={styles.lockIconText}>{showSecretKey ? '●' : '○'}</Text>
+            <KeyIcon size={16} color="#FFFFFF" />
           </View>
           <View style={styles.secretKeyMeta}>
             <Text style={styles.secretKeyTitle}>Private Key</Text>

@@ -1,8 +1,8 @@
 /**
  * SettingsScreen — Minimalist Inset-Grouped Settings
  * Strictly inspired by user reference Image 2 (Opal / Apple iOS Settings).
- * Clean monochromatic icons, inset rounded cards, hairlineWidth dividers,
- * and zero colored tag boxes.
+ * Pure geometric vector icons, inset rounded cards, hairlineWidth dividers,
+ * and absolutely ZERO emojis or colored tag boxes.
  */
 
 import React from 'react';
@@ -21,13 +21,21 @@ import {useWallet} from '../context/WalletContext';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import {triggerHaptic} from '../utils/haptics';
 import {truncateAddress} from '../utils/format';
+import {
+  UserIcon,
+  WalletCardIcon,
+  KeyIcon,
+  GlobeIcon,
+  InfoIcon,
+  PowerIcon,
+} from '../components/AppIcons';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList>;
 };
 
 interface SettingsRowProps {
-  iconGlyph: string;
+  renderIcon: () => React.ReactNode;
   title: string;
   value?: string;
   onPress: () => void;
@@ -35,7 +43,7 @@ interface SettingsRowProps {
 }
 
 function SettingsRow({
-  iconGlyph,
+  renderIcon,
   title,
   value,
   onPress,
@@ -55,13 +63,7 @@ function SettingsRow({
             styles.iconContainer,
             isDestructive && styles.iconContainerDestructive,
           ]}>
-          <Text
-            style={[
-              styles.iconGlyph,
-              isDestructive && styles.iconGlyphDestructive,
-            ]}>
-            {iconGlyph}
-          </Text>
+          {renderIcon()}
         </View>
         <Text
           style={[styles.rowTitle, isDestructive && styles.rowTitleDestructive]}>
@@ -141,21 +143,21 @@ export default function SettingsScreen({navigation}: Props) {
         <Text style={styles.groupHeading}>ACCOUNT</Text>
         <View style={styles.groupCard}>
           <SettingsRow
-            iconGlyph="👤"
+            renderIcon={() => <UserIcon size={16} color="#FFFFFF" />}
             title="Profile & Identity"
             value={username ? `@${username}` : 'Claim handle'}
             onPress={() => navigation.navigate('AccountInfo')}
           />
           <View style={styles.divider} />
           <SettingsRow
-            iconGlyph="💳"
+            renderIcon={() => <WalletCardIcon size={16} color="#FFFFFF" />}
             title="Wallet Address"
             value={address ? truncateAddress(address, 5, 4) : 'Not linked'}
             onPress={() => navigation.navigate('AccountInfo')}
           />
           <View style={styles.divider} />
           <SettingsRow
-            iconGlyph="🔑"
+            renderIcon={() => <KeyIcon size={16} color="#FFFFFF" />}
             title="Secret Key"
             value="Encrypted"
             onPress={() => navigation.navigate('AccountInfo')}
@@ -166,14 +168,14 @@ export default function SettingsScreen({navigation}: Props) {
         <Text style={styles.groupHeading}>NETWORK & SYSTEM</Text>
         <View style={styles.groupCard}>
           <SettingsRow
-            iconGlyph="🌐"
+            renderIcon={() => <GlobeIcon size={16} color="#FFFFFF" />}
             title="Network Details"
             value="RPC Live"
             onPress={() => navigation.navigate('NetworkInfo')}
           />
           <View style={styles.divider} />
           <SettingsRow
-            iconGlyph="ℹ"
+            renderIcon={() => <InfoIcon size={16} color="#FFFFFF" />}
             title="About TapPay"
             value="v0.0.1"
             onPress={() => navigation.navigate('AboutTapPay')}
@@ -184,7 +186,7 @@ export default function SettingsScreen({navigation}: Props) {
         <Text style={styles.groupHeading}>SECURITY</Text>
         <View style={styles.groupCard}>
           <SettingsRow
-            iconGlyph="⏻"
+            renderIcon={() => <PowerIcon size={16} color="#FF453A" />}
             title="Reset Wallet"
             onPress={handleResetWallet}
             isDestructive={true}
@@ -287,8 +289,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   iconContainer: {
-    width: 30,
-    height: 30,
+    width: 32,
+    height: 32,
     borderRadius: 8,
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
     alignItems: 'center',
@@ -296,13 +298,6 @@ const styles = StyleSheet.create({
   },
   iconContainerDestructive: {
     backgroundColor: 'rgba(255, 69, 58, 0.15)',
-  },
-  iconGlyph: {
-    fontSize: 14,
-    color: '#FFFFFF',
-  },
-  iconGlyphDestructive: {
-    color: '#FF453A',
   },
   rowTitle: {
     fontSize: 15,
@@ -335,6 +330,6 @@ const styles = StyleSheet.create({
   divider: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: '#222232',
-    marginLeft: 60,
+    marginLeft: 62,
   },
 });

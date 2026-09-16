@@ -1,5 +1,7 @@
 /**
  * NetworkScreen — Monad network details, RPC endpoints, faucet & explorer links
+ * Clean monochromatic styling matching Apple / Opal design system.
+ * Absolutely ZERO highlighted badge tags or emojis.
  */
 
 import React from 'react';
@@ -15,6 +17,7 @@ import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import {MONAD_CONFIG} from '../config/monad';
 import {triggerHaptic} from '../utils/haptics';
+import {FaucetIcon, ExplorerIcon, ExternalLinkIcon} from '../components/AppIcons';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'NetworkInfo'>;
@@ -74,7 +77,7 @@ export default function NetworkScreen({navigation}: Props) {
 
         <View style={styles.rpcRow}>
           <View style={styles.rpcLeft}>
-            <View style={[styles.rpcStatusDot, {backgroundColor: '#F59E0B'}]} />
+            <View style={[styles.rpcStatusDot, {backgroundColor: '#FF9F0A'}]} />
             <View>
               <Text style={styles.rpcLabel}>Fallback 1</Text>
               <Text style={styles.rpcUrl}>{MONAD_CONFIG.rpcUrls.fallback1}</Text>
@@ -86,7 +89,7 @@ export default function NetworkScreen({navigation}: Props) {
 
         <View style={styles.rpcRow}>
           <View style={styles.rpcLeft}>
-            <View style={[styles.rpcStatusDot, {backgroundColor: '#F59E0B'}]} />
+            <View style={[styles.rpcStatusDot, {backgroundColor: '#FF9F0A'}]} />
             <View>
               <Text style={styles.rpcLabel}>Fallback 2</Text>
               <Text style={styles.rpcUrl}>{MONAD_CONFIG.rpcUrls.fallback2}</Text>
@@ -112,26 +115,26 @@ export default function NetworkScreen({navigation}: Props) {
         </View>
       </View>
 
-      {/* Quick Links */}
-      <Text style={styles.sectionHeader}>QUICK LINKS</Text>
+      {/* Quick Links (Clean Monochromatic — No highlighted colored avatars) */}
+      <Text style={styles.sectionHeader}>NETWORK RESOURCES</Text>
       <View style={styles.card}>
         <TouchableOpacity
           style={styles.linkRow}
           activeOpacity={0.7}
           onPress={() => {
-            triggerHaptic.impactMedium();
+            triggerHaptic.selection();
             Linking.openURL(MONAD_CONFIG.faucetUrl);
           }}>
           <View style={styles.linkLeft}>
-            <View style={[styles.linkIconCircle, {backgroundColor: 'rgba(59, 130, 246, 0.15)'}]}>
-              <Text style={[styles.linkTagText, {color: '#3B82F6'}]}>FCT</Text>
+            <View style={styles.linkIconNeutral}>
+              <FaucetIcon size={16} color="#FFFFFF" />
             </View>
             <View>
               <Text style={styles.linkTitle}>Monad Faucet</Text>
-              <Text style={styles.linkSubtitle}>Get testnet MON tokens</Text>
+              <Text style={styles.linkSubtitle}>Request testnet MON tokens</Text>
             </View>
           </View>
-          <Text style={styles.chevron}>↗</Text>
+          <ExternalLinkIcon size={16} color="#8E8E93" />
         </TouchableOpacity>
 
         <View style={styles.rpcDivider} />
@@ -140,19 +143,19 @@ export default function NetworkScreen({navigation}: Props) {
           style={styles.linkRow}
           activeOpacity={0.7}
           onPress={() => {
-            triggerHaptic.impactMedium();
+            triggerHaptic.selection();
             Linking.openURL(MONAD_CONFIG.blockExplorer.url);
           }}>
           <View style={styles.linkLeft}>
-            <View style={[styles.linkIconCircle, {backgroundColor: 'rgba(16, 185, 129, 0.15)'}]}>
-              <Text style={[styles.linkTagText, {color: '#10B981'}]}>EXP</Text>
+            <View style={styles.linkIconNeutral}>
+              <ExplorerIcon size={16} color="#FFFFFF" />
             </View>
             <View>
               <Text style={styles.linkTitle}>{MONAD_CONFIG.blockExplorer.name}</Text>
               <Text style={styles.linkSubtitle}>View transactions & blocks</Text>
             </View>
           </View>
-          <Text style={styles.chevron}>↗</Text>
+          <ExternalLinkIcon size={16} color="#8E8E93" />
         </TouchableOpacity>
       </View>
 
@@ -197,7 +200,7 @@ const styles = StyleSheet.create({
   statusIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    backgroundColor: 'rgba(48, 209, 88, 0.12)',
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: 8,
@@ -208,12 +211,12 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#10B981',
+    backgroundColor: '#30D158',
   },
   statusText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#10B981',
+    color: '#30D158',
   },
   networkName: {
     fontSize: 22,
@@ -231,11 +234,11 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   card: {
-    backgroundColor: '#15151E',
-    borderRadius: 14,
+    backgroundColor: '#14141E',
+    borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#242433',
+    borderColor: '#222232',
     marginBottom: 10,
   },
   infoRow: {
@@ -244,16 +247,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#1E1E30',
+    borderBottomColor: '#1E1E2C',
   },
   infoKey: {
-    color: '#8888AA',
+    color: '#8E8E93',
     fontSize: 14,
   },
   infoVal: {
     color: '#FFFFFF',
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
+  },
+  chainIdBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  chainIdText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+    fontFamily: 'monospace',
   },
   monoSmall: {
     fontFamily: 'monospace',
@@ -261,117 +276,88 @@ const styles = StyleSheet.create({
     maxWidth: '55%',
     textAlign: 'right',
   },
-  chainIdBadge: {
-    backgroundColor: '#836EF920',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  chainIdText: {
-    color: '#C4B5FD',
-    fontSize: 13,
-    fontWeight: '700',
-    fontFamily: 'monospace',
-  },
   rpcRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     paddingVertical: 8,
   },
   rpcLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    flex: 1,
   },
   rpcStatusDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#10B981',
+    backgroundColor: '#30D158',
   },
   rpcLabel: {
-    fontSize: 13,
-    fontWeight: '600',
     color: '#FFFFFF',
-    marginBottom: 2,
+    fontSize: 14,
+    fontWeight: '600',
   },
   rpcUrl: {
-    fontSize: 11,
-    color: '#8888AA',
+    color: '#8E8E93',
+    fontSize: 12,
     fontFamily: 'monospace',
+    marginTop: 2,
   },
   rpcDivider: {
-    height: 1,
-    backgroundColor: '#1E1E30',
-    marginVertical: 8,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: '#1E1E2C',
+    marginVertical: 10,
   },
   linkRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingVertical: 6,
   },
   linkLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
+    gap: 12,
   },
-  linkIconCircle: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
+  linkIconNeutral: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  linkIcon: {
-    fontSize: 20,
-  },
-  linkTagText: {
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
   linkTitle: {
-    fontSize: 15,
-    fontWeight: '600',
     color: '#FFFFFF',
-    marginBottom: 2,
+    fontSize: 14,
+    fontWeight: '600',
   },
   linkSubtitle: {
+    color: '#8E8E93',
     fontSize: 12,
-    color: '#8888AA',
-  },
-  chevron: {
-    fontSize: 18,
-    color: '#836EF9',
-    fontWeight: '600',
+    marginTop: 2,
   },
   perfRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
     alignItems: 'center',
+    justifyContent: 'space-around',
     paddingVertical: 8,
   },
   perfItem: {
     alignItems: 'center',
-    flex: 1,
   },
   perfValue: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '800',
     color: '#FFFFFF',
-    marginBottom: 4,
   },
   perfLabel: {
-    fontSize: 12,
-    color: '#8888AA',
-    fontWeight: '500',
+    fontSize: 11,
+    color: '#8E8E93',
+    marginTop: 4,
+    fontWeight: '600',
   },
   perfDivider: {
     width: 1,
-    height: 36,
-    backgroundColor: '#2A2A3E',
+    height: 32,
+    backgroundColor: '#222232',
   },
 });

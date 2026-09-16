@@ -25,7 +25,13 @@ import {truncateAddress, formatMon, formatTimestamp} from '../utils/format';
 import {triggerHaptic} from '../utils/haptics';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import BrandLogo from '../components/BrandLogo';
-import {ContactlessWave, CardChip, CheckCircleIcon} from '../components/AppIcons';
+import {
+  ContactlessWave,
+  CardChip,
+  CheckCircleIcon,
+  RefreshIcon,
+  SettingsIcon,
+} from '../components/AppIcons';
 import {getTransactionHistory, initHistory, TransactionRecord} from '../services/history';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -99,13 +105,13 @@ export default function HomeScreen() {
               style={styles.headerIconBtn}
               onPress={onRefresh}
               activeOpacity={0.7}>
-              <Text style={styles.headerGlyph}>↻</Text>
+              <RefreshIcon size={16} color="#FFFFFF" />
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.headerIconBtn}
               onPress={() => (navigation.navigate as any)('Settings')}
               activeOpacity={0.7}>
-              <Text style={styles.headerGlyph}>⚙</Text>
+              <SettingsIcon size={16} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
         </View>

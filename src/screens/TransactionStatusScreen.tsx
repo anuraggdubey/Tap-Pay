@@ -13,6 +13,7 @@ import {waitForReceipt} from '../services/wallet';
 import {useWallet} from '../context/WalletContext';
 import {triggerHaptic} from '../utils/haptics';
 import {updateTransactionStatus} from '../services/history';
+import {CheckGlyph, CrossIcon} from '../components/AppIcons';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'TransactionStatus'>;
@@ -95,7 +96,7 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
                 styles.checkmarkCircle,
                 {transform: [{scale: checkmarkScale}]},
               ]}>
-              <Text style={styles.checkmarkIcon}>✓</Text>
+              <CheckGlyph size={36} color="#FFFFFF" />
             </Animated.View>
             <Text style={styles.statusText}>Payment Confirmed!</Text>
             <Text style={styles.hint}>Settled on Monad Testnet</Text>
@@ -105,7 +106,7 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
         {status === 'failed' && (
           <>
             <View style={styles.failCircle}>
-              <Text style={styles.failIcon}>✕</Text>
+              <CrossIcon size={32} color="#FFFFFF" />
             </View>
             <Text style={styles.statusText}>Transaction Failed</Text>
             {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}

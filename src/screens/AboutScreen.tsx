@@ -16,6 +16,15 @@ import {RootStackParamList} from '../navigation/AppNavigator';
 import {triggerHaptic} from '../utils/haptics';
 import BrandLogo from '../components/BrandLogo';
 
+import {
+  ContactlessWave,
+  UserIcon,
+  KeyIcon,
+  GlobeIcon,
+  InfoIcon,
+  ExternalLinkIcon,
+} from '../components/AppIcons';
+
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'AboutTapPay'>;
 };
@@ -39,8 +48,8 @@ export default function AboutScreen({navigation}: Props) {
       <Text style={styles.sectionHeader}>FEATURES</Text>
       <View style={styles.card}>
         <View style={styles.featureRow}>
-          <View style={[styles.featureTagBadge, {backgroundColor: 'rgba(131, 110, 249, 0.15)'}]}>
-            <Text style={[styles.featureTagText, {color: '#836EF9'}]}>NFC</Text>
+          <View style={styles.featureIconBox}>
+            <ContactlessWave size={18} color="#FFFFFF" />
           </View>
           <View style={styles.featureMeta}>
             <Text style={styles.featureTitle}>Contactless Tap-to-Pay</Text>
@@ -53,8 +62,8 @@ export default function AboutScreen({navigation}: Props) {
         <View style={styles.featureDivider} />
 
         <View style={styles.featureRow}>
-          <View style={[styles.featureTagBadge, {backgroundColor: 'rgba(59, 130, 246, 0.15)'}]}>
-            <Text style={[styles.featureTagText, {color: '#3B82F6'}]}>@</Text>
+          <View style={styles.featureIconBox}>
+            <UserIcon size={18} color="#FFFFFF" />
           </View>
           <View style={styles.featureMeta}>
             <Text style={styles.featureTitle}>Username Pay</Text>
@@ -67,8 +76,8 @@ export default function AboutScreen({navigation}: Props) {
         <View style={styles.featureDivider} />
 
         <View style={styles.featureRow}>
-          <View style={[styles.featureTagBadge, {backgroundColor: 'rgba(16, 185, 129, 0.15)'}]}>
-            <Text style={[styles.featureTagText, {color: '#10B981'}]}>KEY</Text>
+          <View style={styles.featureIconBox}>
+            <KeyIcon size={18} color="#FFFFFF" />
           </View>
           <View style={styles.featureMeta}>
             <Text style={styles.featureTitle}>Hardware Keystore</Text>
@@ -81,8 +90,8 @@ export default function AboutScreen({navigation}: Props) {
         <View style={styles.featureDivider} />
 
         <View style={styles.featureRow}>
-          <View style={[styles.featureTagBadge, {backgroundColor: 'rgba(245, 158, 11, 0.15)'}]}>
-            <Text style={[styles.featureTagText, {color: '#F59E0B'}]}>TPS</Text>
+          <View style={styles.featureIconBox}>
+            <GlobeIcon size={18} color="#FFFFFF" />
           </View>
           <View style={styles.featureMeta}>
             <Text style={styles.featureTitle}>Monad Throughput</Text>
@@ -125,15 +134,15 @@ export default function AboutScreen({navigation}: Props) {
             Linking.openURL('https://monad.xyz');
           }}>
           <View style={styles.linkLeft}>
-            <View style={[styles.featureTagBadge, {backgroundColor: 'rgba(131, 110, 249, 0.15)'}]}>
-              <Text style={[styles.featureTagText, {color: '#836EF9'}]}>MND</Text>
+            <View style={styles.featureIconBox}>
+              <GlobeIcon size={16} color="#FFFFFF" />
             </View>
             <View>
               <Text style={styles.linkTitle}>Monad Blockchain</Text>
               <Text style={styles.linkSubtitle}>monad.xyz</Text>
             </View>
           </View>
-          <Text style={styles.chevron}>↗</Text>
+          <ExternalLinkIcon size={16} color="#8E8E93" />
         </TouchableOpacity>
 
         <View style={styles.featureDivider} />
@@ -146,15 +155,15 @@ export default function AboutScreen({navigation}: Props) {
             Linking.openURL('https://docs.monad.xyz');
           }}>
           <View style={styles.linkLeft}>
-            <View style={[styles.featureTagBadge, {backgroundColor: 'rgba(59, 130, 246, 0.15)'}]}>
-              <Text style={[styles.featureTagText, {color: '#3B82F6'}]}>DOC</Text>
+            <View style={styles.featureIconBox}>
+              <InfoIcon size={16} color="#FFFFFF" />
             </View>
             <View>
               <Text style={styles.linkTitle}>Monad Documentation</Text>
               <Text style={styles.linkSubtitle}>docs.monad.xyz</Text>
             </View>
           </View>
-          <Text style={styles.chevron}>↗</Text>
+          <ExternalLinkIcon size={16} color="#8E8E93" />
         </TouchableOpacity>
       </View>
 
@@ -251,17 +260,13 @@ const styles = StyleSheet.create({
     gap: 14,
     paddingVertical: 6,
   },
-  featureTagBadge: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
+  featureIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  featureTagText: {
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.5,
   },
   featureMeta: {
     flex: 1,

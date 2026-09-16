@@ -1,5 +1,8 @@
 /**
- * SettingsScreen — Navigation hub for app settings and wallet management
+ * SettingsScreen — Minimalist Inset-Grouped Settings
+ * Strictly inspired by user reference Image 2 (Opal / Apple iOS Settings).
+ * Clean monochromatic icons, inset rounded cards, hairlineWidth dividers,
+ * and zero colored tag boxes.
  */
 
 import React from 'react';
@@ -11,10 +14,11 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+
 import {useWallet} from '../context/WalletContext';
 import {RootStackParamList} from '../navigation/AppNavigator';
-import {MONAD_CONFIG} from '../config/monad';
 import {triggerHaptic} from '../utils/haptics';
 import {truncateAddress} from '../utils/format';
 
@@ -22,67 +26,72 @@ type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList>;
 };
 
-interface MenuItemProps {
-  tag: string;
-  tagColor: string;
-  tagBg: string;
+interface SettingsRowProps {
+  iconGlyph: string;
   title: string;
-  subtitle: string;
+  value?: string;
   onPress: () => void;
   isDestructive?: boolean;
 }
 
-function MenuItem({
-  tag,
-  tagColor,
-  tagBg,
+function SettingsRow({
+  iconGlyph,
   title,
-  subtitle,
+  value,
   onPress,
-  isDestructive,
-}: MenuItemProps) {
+  isDestructive = false,
+}: SettingsRowProps) {
   return (
     <TouchableOpacity
-      style={styles.menuItem}
-      activeOpacity={0.6}
+      style={styles.rowItem}
+      activeOpacity={0.65}
       onPress={() => {
-        triggerHaptic.impactMedium();
+        triggerHaptic.selection();
         onPress();
       }}>
-      <View style={styles.menuItemLeft}>
-        <View style={[styles.menuTagBadge, {backgroundColor: tagBg}]}>
-          <Text style={[styles.menuTagText, {color: tagColor}]}>{tag}</Text>
-        </View>
-        <View style={styles.menuMeta}>
-          <Text
-            style={[styles.menuTitle, isDestructive && styles.menuTitleDanger]}>
-            {title}
-          </Text>
+      <View style={styles.rowLeft}>
+        <View
+          style={[
+            styles.iconContainer,
+            isDestructive && styles.iconContainerDestructive,
+          ]}>
           <Text
             style={[
-              styles.menuSubtitle,
-              isDestructive && styles.menuSubtitleDanger,
+              styles.iconGlyph,
+              isDestructive && styles.iconGlyphDestructive,
             ]}>
-            {subtitle}
+            {iconGlyph}
           </Text>
         </View>
+        <Text
+          style={[styles.rowTitle, isDestructive && styles.rowTitleDestructive]}>
+          {title}
+        </Text>
       </View>
-      <Text
-        style={[styles.menuChevron, isDestructive && styles.menuChevronDanger]}>
-        ›
-      </Text>
+
+      <View style={styles.rowRight}>
+        {value ? <Text style={styles.rowValue}>{value}</Text> : null}
+        <Text
+          style={[
+            styles.rowChevron,
+            isDestructive && styles.rowChevronDestructive,
+          ]}>
+          ›
+        </Text>
+      </View>
     </TouchableOpacity>
   );
 }
 
 export default function SettingsScreen({navigation}: Props) {
+  const insets = useSafeAreaInsets();
   const {address, username, resetWallet} = useWallet();
 
   const handleResetWallet = () => {
     triggerHaptic.notificationError();
     Alert.alert(
       'Reset Wallet',
-      'This will remove your wallet credentials and username from this device. Make sure you have backed up your private key!',
+      'This will remove your wallet credentials and username from this device. Ensure you have backed up your private key.',
       [
         {text: 'Cancel', style: 'cancel'},
         {
@@ -101,226 +110,231 @@ export default function SettingsScreen({navigation}: Props) {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Profile Card */}
-      <View style={styles.profileCard}>
-        <View style={styles.profileLeft}>
-          <View style={styles.avatarCircle}>
-            <Text style={styles.avatarText}>
-              {(username || 'U').charAt(0).toUpperCase()}
-            </Text>
+    <View style={styles.screenWrapper}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={[
+          styles.content,
+          {paddingTop: insets.top + 12, paddingBottom: 120},
+        ]}
+        showsVerticalScrollIndicator={false}>
+        {/* Large Clean Title */}
+        <Text style={styles.pageTitle}>Settings</Text>
+
+        {/* Network Status Card (Image 2 Top Card) */}
+        <View style={styles.statusCard}>
+          <View style={styles.statusCardLeft}>
+            <View style={styles.statusLiveDot} />
+            <View>
+              <Text style={styles.statusTitle}>Monad Testnet</Text>
+              <Text style={styles.statusSubtitle}>
+                Chain ID 10143 • ~1s Finality
+              </Text>
+            </View>
           </View>
-          <View style={styles.profileMeta}>
-            <Text style={styles.profileName}>
-              {username ? `@${username}` : 'No Username Claimed'}
-            </Text>
-            <Text style={styles.profileAddress}>
-              {address ? truncateAddress(address, 6, 4) : 'Not connected'}
-            </Text>
+          <View style={styles.activePill}>
+            <Text style={styles.activePillText}>ACTIVE</Text>
           </View>
         </View>
-      </View>
 
-      {/* Account Section */}
-      <Text style={styles.sectionHeader}>ACCOUNT</Text>
-      <View style={styles.menuGroup}>
-        <MenuItem
-          tag="ID"
-          tagColor="#836EF9"
-          tagBg="rgba(131, 110, 249, 0.12)"
-          title="Account Info"
-          subtitle="Username claim, address & secret key"
-          onPress={() => navigation.navigate('AccountInfo')}
-        />
-      </View>
+        {/* Inset Group 1: ACCOUNT */}
+        <Text style={styles.groupHeading}>ACCOUNT</Text>
+        <View style={styles.groupCard}>
+          <SettingsRow
+            iconGlyph="👤"
+            title="Profile & Identity"
+            value={username ? `@${username}` : 'Claim handle'}
+            onPress={() => navigation.navigate('AccountInfo')}
+          />
+          <View style={styles.divider} />
+          <SettingsRow
+            iconGlyph="💳"
+            title="Wallet Address"
+            value={address ? truncateAddress(address, 5, 4) : 'Not linked'}
+            onPress={() => navigation.navigate('AccountInfo')}
+          />
+          <View style={styles.divider} />
+          <SettingsRow
+            iconGlyph="🔑"
+            title="Secret Key"
+            value="Encrypted"
+            onPress={() => navigation.navigate('AccountInfo')}
+          />
+        </View>
 
-      {/* App Section */}
-      <Text style={styles.sectionHeader}>APP</Text>
-      <View style={styles.menuGroup}>
-        <MenuItem
-          tag="TP"
-          tagColor="#F59E0B"
-          tagBg="rgba(245, 158, 11, 0.12)"
-          title="About TapPay"
-          subtitle="Architecture, features & security"
-          onPress={() => navigation.navigate('AboutTapPay')}
-        />
-        <View style={styles.menuDivider} />
-        <MenuItem
-          tag="NET"
-          tagColor="#10B981"
-          tagBg="rgba(16, 185, 129, 0.12)"
-          title="Network"
-          subtitle={`${MONAD_CONFIG.chainName} • Chain ${MONAD_CONFIG.chainId}`}
-          onPress={() => navigation.navigate('NetworkInfo')}
-        />
-      </View>
+        {/* Inset Group 2: NETWORK & SYSTEM */}
+        <Text style={styles.groupHeading}>NETWORK & SYSTEM</Text>
+        <View style={styles.groupCard}>
+          <SettingsRow
+            iconGlyph="🌐"
+            title="Network Details"
+            value="RPC Live"
+            onPress={() => navigation.navigate('NetworkInfo')}
+          />
+          <View style={styles.divider} />
+          <SettingsRow
+            iconGlyph="ℹ"
+            title="About TapPay"
+            value="v0.0.1"
+            onPress={() => navigation.navigate('AboutTapPay')}
+          />
+        </View>
 
-      {/* Danger Zone */}
-      <Text style={[styles.sectionHeader, styles.sectionHeaderDanger]}>
-        SECURITY ZONE
-      </Text>
-      <View style={[styles.menuGroup, styles.menuGroupDanger]}>
-        <MenuItem
-          tag="RST"
-          tagColor="#EF4444"
-          tagBg="rgba(239, 68, 68, 0.12)"
-          title="Reset Wallet"
-          subtitle="Remove wallet and credentials from device"
-          onPress={handleResetWallet}
-          isDestructive
-        />
-      </View>
-
-      {/* Footer */}
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>TapPay • Monad Testnet</Text>
-      </View>
-    </ScrollView>
+        {/* Inset Group 3: SECURITY */}
+        <Text style={styles.groupHeading}>SECURITY</Text>
+        <View style={styles.groupCard}>
+          <SettingsRow
+            iconGlyph="⏻"
+            title="Reset Wallet"
+            onPress={handleResetWallet}
+            isDestructive={true}
+          />
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screenWrapper: {
     flex: 1,
     backgroundColor: '#09090D',
   },
-  content: {
-    padding: 18,
-    paddingBottom: 40,
-  },
-  profileCard: {
-    backgroundColor: '#15151E',
-    borderRadius: 16,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: '#242433',
-    marginBottom: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  profileLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-  },
-  avatarCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#1E1E2D',
-    borderWidth: 1,
-    borderColor: '#6E54FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarText: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  profileMeta: {
+  container: {
     flex: 1,
   },
-  profileName: {
-    fontSize: 17,
-    fontWeight: '700',
+  content: {
+    paddingHorizontal: 18,
+  },
+  pageTitle: {
+    fontSize: 32,
+    fontWeight: '800',
     color: '#FFFFFF',
-    marginBottom: 2,
-    letterSpacing: -0.2,
+    letterSpacing: -0.6,
+    marginBottom: 16,
   },
-  profileAddress: {
-    fontSize: 12,
-    color: '#8E8E93',
-    fontFamily: 'monospace',
-  },
-  sectionHeader: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#71717A',
-    letterSpacing: 1,
-    marginTop: 8,
-    marginBottom: 8,
-    marginLeft: 4,
-  },
-  sectionHeaderDanger: {
-    color: '#EF4444',
-  },
-  menuGroup: {
-    backgroundColor: '#15151E',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#242433',
-    marginBottom: 14,
-    overflow: 'hidden',
-  },
-  menuGroupDanger: {
-    borderColor: 'rgba(239, 68, 68, 0.25)',
-  },
-  menuItem: {
+  statusCard: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#14141E',
+    borderWidth: 1,
+    borderColor: '#222232',
+    borderRadius: 16,
     padding: 16,
+    marginBottom: 26,
   },
-  menuItemLeft: {
+  statusCardLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    flex: 1,
   },
-  menuTagBadge: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
+  statusLiveDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#30D158',
   },
-  menuTagText: {
-    fontSize: 11,
+  statusTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  statusSubtitle: {
+    fontSize: 12,
+    color: '#8E8E93',
+    marginTop: 2,
+  },
+  activePill: {
+    backgroundColor: 'rgba(48, 209, 88, 0.14)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  activePillText: {
+    color: '#30D158',
+    fontSize: 10,
     fontWeight: '800',
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
   },
-  menuMeta: {
+  groupHeading: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#636366',
+    letterSpacing: 0.8,
+    marginBottom: 8,
+    marginLeft: 12,
+  },
+  groupCard: {
+    backgroundColor: '#14141E',
+    borderWidth: 1,
+    borderColor: '#222232',
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 24,
+  },
+  rowItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  rowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
     flex: 1,
   },
-  menuTitle: {
+  iconContainer: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconContainerDestructive: {
+    backgroundColor: 'rgba(255, 69, 58, 0.15)',
+  },
+  iconGlyph: {
+    fontSize: 14,
+    color: '#FFFFFF',
+  },
+  iconGlyphDestructive: {
+    color: '#FF453A',
+  },
+  rowTitle: {
     fontSize: 15,
     fontWeight: '600',
     color: '#FFFFFF',
-    marginBottom: 2,
+    letterSpacing: -0.2,
   },
-  menuTitleDanger: {
-    color: '#EF4444',
+  rowTitleDestructive: {
+    color: '#FF453A',
   },
-  menuSubtitle: {
-    fontSize: 12,
+  rowRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  rowValue: {
+    fontSize: 14,
     color: '#8E8E93',
+    fontWeight: '500',
   },
-  menuSubtitleDanger: {
-    color: '#F87171',
-  },
-  menuChevron: {
-    fontSize: 22,
-    color: '#4A4A60',
+  rowChevron: {
+    fontSize: 20,
+    color: '#545458',
     fontWeight: '300',
   },
-  menuChevronDanger: {
-    color: '#EF4444',
+  rowChevronDestructive: {
+    color: '#FF453A',
+    opacity: 0.7,
   },
-  menuDivider: {
-    height: 1,
-    backgroundColor: '#242433',
-    marginHorizontal: 16,
-  },
-  footer: {
-    alignItems: 'center',
-    paddingVertical: 20,
-  },
-  footerText: {
-    fontSize: 12,
-    color: '#525266',
-    fontWeight: '500',
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: '#222232',
+    marginLeft: 60,
   },
 });

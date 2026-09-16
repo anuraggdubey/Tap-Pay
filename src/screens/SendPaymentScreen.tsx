@@ -16,6 +16,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {ethers} from 'ethers';
 import {useWallet} from '../context/WalletContext';
@@ -41,6 +42,7 @@ type Props = {
 type PayMode = 'username' | 'address';
 
 export default function SendPaymentScreen({navigation}: Props) {
+  const insets = useSafeAreaInsets();
   const {address, balance, refreshBalance} = useWallet();
   const [mode, setMode] = useState<PayMode>('username');
 
@@ -61,43 +63,43 @@ export default function SendPaymentScreen({navigation}: Props) {
   const [insufficientModalVisible, setInsufficientModalVisible] = useState(false);
   const [balanceCheckData, setBalanceCheckData] = useState<BalanceCheckResult | null>(null);
 
-  // Reset recipient when switching modes
   const switchMode = (newMode: PayMode) => {
-    triggerHaptic.impactMedium();
+    triggerHaptic.selection();
     setMode(newMode);
     setResolvedAddress(null);
     setResolvedUsername(null);
     setUsernameInput('');
     setAddressInput('');
-    setAmount('');
-    setEstimatedGasWei(null);
   };
 
-  // Search username on-chain
+  // Search username on registry
   const handleSearchUsername = async () => {
     const trimmed = usernameInput.trim().toLowerCase();
     const validation = validateUsername(trimmed);
     if (!validation.valid) {
+      triggerHaptic.notificationError();
       Alert.alert('Invalid Username', validation.error);
       return;
     }
 
+    triggerHaptic.impactMedium();
     setSearching(true);
     try {
-      const addr = await resolveUsername(trimmed);
-      if (addr && addr !== ethers.ZeroAddress) {
-        triggerHaptic.notificationSuccess();
-        setResolvedAddress(addr);
-        setResolvedUsername(trimmed);
-      } else {
+      const resolved = await resolveUsername(trimmed);
+      setSearching(false);
+
+      if (!resolved) {
         triggerHaptic.notificationError();
         Alert.alert('Not Found', `@${trimmed} is not registered on Monad.`);
+        return;
       }
+      triggerHaptic.notificationSuccess();
+      setResolvedAddress(resolved);
+      setResolvedUsername(trimmed);
     } catch (err: any) {
+      setSearching(false);
       triggerHaptic.notificationError();
       Alert.alert('Lookup Failed', err?.message || 'Could not query username registry.');
-    } finally {
-      setSearching(false);
     }
   };
 
@@ -217,8 +219,18 @@ export default function SendPaymentScreen({navigation}: Props) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          {paddingTop: insets.top + 12, paddingBottom: 120},
+        ]}
+        showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled">
+
+        {/* Page Header */}
+        <View style={styles.header}>
+          <Text style={styles.pageTitle}>Send Payment</Text>
+          <Text style={styles.pageSubtitle}>Direct transfer on Monad testnet</Text>
+        </View>
 
         {/* Mode Toggle */}
         <View style={styles.modeToggle}>
@@ -445,31 +457,45 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 40,
   },
+  header: {
+    marginBottom: 20,
+  },
+  pageTitle: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: -0.6,
+  },
+  pageSubtitle: {
+    fontSize: 13,
+    color: '#8E8E93',
+    marginTop: 2,
+  },
   modeToggle: {
     flexDirection: 'row',
-    backgroundColor: '#15151E',
-    borderRadius: 12,
+    backgroundColor: '#14141E',
+    borderRadius: 14,
     padding: 3,
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: '#242433',
+    borderColor: '#222232',
   },
   modeTab: {
     flex: 1,
     paddingVertical: 10,
-    borderRadius: 9,
+    borderRadius: 11,
     alignItems: 'center',
   },
   modeTabActive: {
-    backgroundColor: '#6E54FF',
+    backgroundColor: '#FFFFFF',
   },
   modeTabText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#71717A',
+    color: '#8E8E93',
   },
   modeTabTextActive: {
-    color: '#FFFFFF',
+    color: '#000000',
     fontWeight: '700',
   },
   sectionLabel: {
@@ -483,22 +509,22 @@ const styles = StyleSheet.create({
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#15151E',
-    borderRadius: 12,
+    backgroundColor: '#14141E',
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#242433',
+    borderColor: '#222232',
     marginBottom: 16,
   },
   inputPrefix: {
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderRightWidth: 1,
-    borderRightColor: '#242433',
+    borderRightColor: '#222232',
   },
   inputPrefixText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#6E54FF',
+    color: '#FFFFFF',
   },
   recipientInput: {
     flex: 1,
@@ -511,10 +537,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 9,
     marginRight: 8,
-    backgroundColor: '#20202E',
-    borderRadius: 8,
+    backgroundColor: '#1F1F2C',
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#2F2F44',
+    borderColor: '#2D2D3E',
   },
   searchBtnText: {
     fontSize: 13,
@@ -524,18 +550,18 @@ const styles = StyleSheet.create({
   recipientCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#15151E',
-    borderRadius: 14,
+    backgroundColor: '#14141E',
+    borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#242433',
+    borderColor: '#222232',
     marginBottom: 4,
   },
   recipientAvatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#6E54FF',
+    backgroundColor: '#262638',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -556,41 +582,43 @@ const styles = StyleSheet.create({
   },
   recipientAddr: {
     fontSize: 12,
-    color: '#71717A',
+    color: '#8E8E93',
     fontFamily: 'monospace',
   },
   verifiedBadge: {
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    backgroundColor: 'rgba(48, 209, 88, 0.14)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.25)',
   },
   verifiedText: {
     fontSize: 10,
-    fontWeight: '700',
-    color: '#10B981',
+    fontWeight: '800',
+    color: '#30D158',
     letterSpacing: 0.5,
   },
   amountContainer: {
     alignItems: 'center',
     marginBottom: 16,
+    backgroundColor: '#14141E',
+    borderRadius: 16,
+    paddingVertical: 24,
+    borderWidth: 1,
+    borderColor: '#222232',
   },
   amountInput: {
-    fontSize: 44,
+    fontSize: 48,
     fontWeight: '800',
     color: '#FFFFFF',
     textAlign: 'center',
-    paddingVertical: 10,
+    paddingVertical: 6,
     width: '100%',
   },
   amountCurrency: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#71717A',
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#8E8E93',
     letterSpacing: 1,
-    marginTop: -4,
   },
   presetsRow: {
     flexDirection: 'row',
@@ -599,16 +627,16 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   presetChip: {
-    backgroundColor: '#15151E',
+    backgroundColor: '#14141E',
     borderWidth: 1,
-    borderColor: '#242433',
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
+    borderColor: '#222232',
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
   presetChipActive: {
-    backgroundColor: '#6E54FF',
-    borderColor: '#6E54FF',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#FFFFFF',
   },
   presetChipText: {
     color: '#8E8E93',
@@ -616,15 +644,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   presetChipTextActive: {
-    color: '#FFFFFF',
+    color: '#000000',
     fontWeight: '800',
   },
   maxChip: {
-    backgroundColor: '#1C2620',
-    borderColor: '#23382D',
+    backgroundColor: 'rgba(48, 209, 88, 0.12)',
+    borderColor: 'rgba(48, 209, 88, 0.25)',
   },
   maxChipText: {
-    color: '#10B981',
+    color: '#30D158',
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 0.5,
@@ -632,39 +660,40 @@ const styles = StyleSheet.create({
   infoRow: {
     flexDirection: 'row',
     gap: 10,
-    marginBottom: 28,
+    marginBottom: 24,
   },
   infoPill: {
     flex: 1,
-    backgroundColor: '#15151E',
-    borderRadius: 12,
+    backgroundColor: '#14141E',
+    borderRadius: 14,
     paddingVertical: 12,
     paddingHorizontal: 14,
     borderWidth: 1,
-    borderColor: '#242433',
+    borderColor: '#222232',
   },
   infoLabel: {
     fontSize: 10,
     color: '#71717A',
     marginBottom: 4,
-    fontWeight: '600',
+    fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   infoValue: {
     fontSize: 13,
     color: '#FFFFFF',
-    fontWeight: '600',
+    fontWeight: '700',
   },
   sendButton: {
-    backgroundColor: '#6E54FF',
-    paddingVertical: 16,
-    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 18,
+    borderRadius: 16,
     alignItems: 'center',
+    marginTop: 10,
   },
   sendButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#000000',
   },
 });

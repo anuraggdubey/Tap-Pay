@@ -9,6 +9,21 @@ import {Vibration, Platform} from 'react-native';
 
 export const triggerHaptic = {
   /**
+   * Selection: Subtle micro-tap for tab switches, chips, and toggles
+   */
+  selection: () => {
+    try {
+      if (Platform.OS === 'android') {
+        Vibration.vibrate(15);
+      } else {
+        Vibration.vibrate();
+      }
+    } catch {
+      // Ignore vibration errors
+    }
+  },
+
+  /**
    * ImpactMedium: Triggered on NFC tap detection or read start
    */
   impactMedium: () => {

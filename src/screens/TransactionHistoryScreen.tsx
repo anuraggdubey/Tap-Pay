@@ -1,5 +1,6 @@
 /**
- * TransactionHistoryScreen — Dedicated history page with filter tabs
+ * TransactionHistoryScreen — Dedicated activity feed with clean filter pills
+ * Cohesive with Apple Card / Opal dark aesthetic.
  */
 
 import React, {useState, useEffect, useCallback} from 'react';
@@ -11,6 +12,7 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../navigation/AppNavigator';
@@ -27,6 +29,7 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type FilterTab = 'all' | 'sent' | 'received';
 
 export default function TransactionHistoryScreen() {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp>();
   const [history, setHistory] = useState<TransactionRecord[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -53,8 +56,8 @@ export default function TransactionHistoryScreen() {
   };
 
   const filteredHistory = history.filter(tx => {
-    if (filter === 'sent') { return tx.direction === 'sent'; }
-    if (filter === 'received') { return tx.direction === 'received'; }
+    if (filter === 'sent') return tx.direction === 'sent';
+    if (filter === 'received') return tx.direction === 'received';
     return true;
   });
 
@@ -71,7 +74,7 @@ export default function TransactionHistoryScreen() {
         style={styles.txRow}
         activeOpacity={0.7}
         onPress={() => {
-          triggerHaptic.impactMedium();
+          triggerHaptic.selection();
           navigation.navigate('TransactionStatus', {
             txHash: item.txHash,
             amount: item.amount,
@@ -82,22 +85,16 @@ export default function TransactionHistoryScreen() {
           <View
             style={[
               styles.directionBadge,
-              {backgroundColor: isSent ? '#FF444412' : '#10B98112'},
+              isSent ? styles.badgeSent : styles.badgeReceived,
             ]}>
-            <Text
-              style={[
-                styles.txDirectionIcon,
-                {color: isSent ? '#FF6B6B' : '#10B981'},
-              ]}>
-              {isSent ? '↑' : '↓'}
-            </Text>
+            <Text style={styles.directionGlyph}>{isSent ? '↑' : '↓'}</Text>
           </View>
 
           <View style={styles.txMeta}>
             <Text style={styles.txName}>
               {item.counterpartyUsername
                 ? `@${item.counterpartyUsername}`
-                : truncateAddress(item.counterparty)}
+                : truncateAddress(item.counterparty, 6, 4)}
             </Text>
             <View style={styles.txSubRow}>
               <Text style={styles.txTime}>{formatTimestamp(item.timestamp)}</Text>
@@ -106,10 +103,10 @@ export default function TransactionHistoryScreen() {
                   styles.statusDot,
                   {
                     backgroundColor: isConfirmed
-                      ? '#10B981'
+                      ? '#30D158'
                       : isPending
-                      ? '#F59E0B'
-                      : '#EF4444',
+                      ? '#FF9F0A'
+                      : '#FF453A',
                   },
                 ]}
               />
@@ -118,10 +115,10 @@ export default function TransactionHistoryScreen() {
                   styles.statusText,
                   {
                     color: isConfirmed
-                      ? '#10B981'
+                      ? '#30D158'
                       : isPending
-                      ? '#F59E0B'
-                      : '#EF4444',
+                      ? '#FF9F0A'
+                      : '#FF453A',
                   },
                 ]}>
                 {isConfirmed ? 'Confirmed' : isPending ? 'Pending' : 'Failed'}
@@ -133,7 +130,7 @@ export default function TransactionHistoryScreen() {
         <Text
           style={[
             styles.txAmount,
-            {color: isSent ? '#FF6B6B' : '#10B981'},
+            isSent ? styles.amountSent : styles.amountReceived,
           ]}>
           {isSent ? '-' : '+'}
           {item.amount} MON
@@ -143,25 +140,44 @@ export default function TransactionHistoryScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, {paddingTop: insets.top + 12}]}>
+      {/* Clean Header Title */}
+      <View style={styles.header}>
+        <Text style={styles.pageTitle}>Transactions</Text>
+        <Text style={styles.pageSubtitle}>Activity on Monad testnet</Text>
+      </View>
+
       {/* Filter Tabs */}
       <View style={styles.filterRow}>
         {(['all', 'sent', 'received'] as FilterTab[]).map(tab => {
-          const count = tab === 'all' ? history.length : tab === 'sent' ? sentCount : receivedCount;
+          const count =
+            tab === 'all'
+              ? history.length
+              : tab === 'sent'
+              ? sentCount
+              : receivedCount;
           const isActive = filter === tab;
           return (
             <TouchableOpacity
               key={tab}
               style={[styles.filterTab, isActive && styles.filterTabActive]}
               onPress={() => {
-                triggerHaptic.impactMedium();
+                triggerHaptic.selection();
                 setFilter(tab);
               }}
               activeOpacity={0.7}>
-              <Text style={[styles.filterTabText, isActive && styles.filterTabTextActive]}>
+              <Text
+                style={[
+                  styles.filterTabText,
+                  isActive && styles.filterTabTextActive,
+                ]}>
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
               </Text>
-              <Text style={[styles.filterCount, isActive && styles.filterCountActive]}>
+              <Text
+                style={[
+                  styles.filterCount,
+                  isActive && styles.filterCountActive,
+                ]}>
                 {count}
               </Text>
             </TouchableOpacity>
@@ -184,8 +200,8 @@ export default function TransactionHistoryScreen() {
           </Text>
           <Text style={styles.emptyHint}>
             {filter === 'all'
-              ? 'Your payment history will appear here'
-              : `Transactions you've ${filter} will appear here`}
+              ? 'Your payment activity will appear here'
+              : `Transactions you have ${filter} will appear here`}
           </Text>
         </View>
       ) : (
@@ -193,13 +209,14 @@ export default function TransactionHistoryScreen() {
           data={filteredHistory}
           renderItem={renderItem}
           keyExtractor={item => item.id}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[styles.list, {paddingBottom: 120}]}
+          showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor="#6E54FF"
-              colors={['#6E54FF']}
+              tintColor="#FFFFFF"
+              colors={['#FFFFFF']}
             />
           }
         />
@@ -213,11 +230,25 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#09090D',
   },
+  header: {
+    paddingHorizontal: 20,
+    marginBottom: 14,
+  },
+  pageTitle: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: -0.6,
+  },
+  pageSubtitle: {
+    fontSize: 13,
+    color: '#8E8E93',
+    marginTop: 2,
+  },
   filterRow: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 8,
+    paddingHorizontal: 20,
+    marginBottom: 14,
     gap: 8,
   },
   filterTab: {
@@ -225,15 +256,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: '#15151E',
+    borderRadius: 20,
+    backgroundColor: '#14141E',
     borderWidth: 1,
-    borderColor: '#242433',
+    borderColor: '#222232',
     gap: 6,
   },
   filterTabActive: {
-    backgroundColor: '#1E1E2D',
-    borderColor: '#6E54FF',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#FFFFFF',
   },
   filterTabText: {
     fontSize: 13,
@@ -241,36 +272,34 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
   },
   filterTabTextActive: {
-    color: '#6E54FF',
+    color: '#000000',
   },
   filterCount: {
     fontSize: 11,
     fontWeight: '700',
     color: '#71717A',
-    backgroundColor: '#101018',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     paddingHorizontal: 6,
     paddingVertical: 1,
-    borderRadius: 4,
-    overflow: 'hidden',
+    borderRadius: 10,
   },
   filterCountActive: {
-    color: '#6E54FF',
-    backgroundColor: 'rgba(110, 84, 255, 0.15)',
+    color: '#000000',
+    backgroundColor: 'rgba(0, 0, 0, 0.12)',
   },
   list: {
-    padding: 16,
-    paddingBottom: 24,
+    paddingHorizontal: 20,
   },
   txRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#15151E',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 8,
+    backgroundColor: '#14141E',
+    borderRadius: 16,
+    padding: 15,
+    marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#242433',
+    borderColor: '#222232',
   },
   txLeft: {
     flexDirection: 'row',
@@ -281,20 +310,27 @@ const styles = StyleSheet.create({
   directionBadge: {
     width: 38,
     height: 38,
-    borderRadius: 10,
+    borderRadius: 19,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  txDirectionIcon: {
+  badgeSent: {
+    backgroundColor: 'rgba(255, 69, 58, 0.15)',
+  },
+  badgeReceived: {
+    backgroundColor: 'rgba(48, 209, 88, 0.15)',
+  },
+  directionGlyph: {
     fontSize: 16,
     fontWeight: '700',
+    color: '#FFFFFF',
   },
   txMeta: {
     flex: 1,
   },
   txName: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
     color: '#FFFFFF',
     marginBottom: 3,
   },
@@ -310,7 +346,7 @@ const styles = StyleSheet.create({
   statusDot: {
     width: 5,
     height: 5,
-    borderRadius: 3,
+    borderRadius: 2.5,
   },
   statusText: {
     fontSize: 11,
@@ -319,6 +355,12 @@ const styles = StyleSheet.create({
   txAmount: {
     fontSize: 15,
     fontWeight: '700',
+  },
+  amountSent: {
+    color: '#FFFFFF',
+  },
+  amountReceived: {
+    color: '#30D158',
   },
   emptyContainer: {
     flex: 1,
@@ -329,13 +371,13 @@ const styles = StyleSheet.create({
   emptyIconBox: {
     width: 56,
     height: 56,
-    borderRadius: 14,
-    backgroundColor: '#15151E',
+    borderRadius: 16,
+    backgroundColor: '#14141E',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#242433',
+    borderColor: '#222232',
   },
   emptyIconText: {
     fontSize: 22,

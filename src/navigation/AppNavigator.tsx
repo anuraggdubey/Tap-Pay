@@ -1,12 +1,24 @@
 /**
- * AppNavigator — Bottom tab navigation + stack screens
+ * AppNavigator — Modern Floating Capsule Tab Navigation + Clean Stack
+ * Inspired by Apple & iOS floating navigation bars (Image 1).
+ * 100% responsive across Google Pixel, Samsung One UI, Xiaomi/Redmi, and iOS.
  */
 
 import React from 'react';
-import {View, Text, StyleSheet} from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Platform,
+} from 'react-native';
 import {NavigationContainer, DefaultTheme} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
-import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
+import {
+  createBottomTabNavigator,
+  BottomTabBarProps,
+} from '@react-navigation/bottom-tabs';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import WalletSetupScreen from '../screens/WalletSetupScreen';
 import HomeScreen from '../screens/HomeScreen';
@@ -20,6 +32,8 @@ import AccountInfoScreen from '../screens/AccountInfoScreen';
 import AboutScreen from '../screens/AboutScreen';
 import NetworkScreen from '../screens/NetworkScreen';
 import {useWallet} from '../context/WalletContext';
+import {HomeIcon, PayIcon, HistoryIcon, SettingsIcon} from '../components/AppIcons';
+import {triggerHaptic} from '../utils/haptics';
 
 export type RootStackParamList = {
   WalletSetup: undefined;
@@ -31,6 +45,8 @@ export type RootStackParamList = {
   AccountInfo: undefined;
   AboutTapPay: undefined;
   NetworkInfo: undefined;
+  History: undefined;
+  Settings: undefined;
 };
 
 export type TabParamList = {
@@ -48,106 +64,111 @@ const TapPayTheme = {
   colors: {
     ...DefaultTheme.colors,
     background: '#09090D',
-    card: '#15151E',
+    card: '#14141C',
     text: '#FFFFFF',
-    border: '#242433',
-    primary: '#6E54FF',
+    border: '#1F1F2C',
+    primary: '#FFFFFF',
   },
 };
 
-// Custom tab bar icon components (no emojis, flat tactile indicators)
-function TabIcon({label, focused}: {label: string; focused: boolean}) {
-  const color = focused ? '#6E54FF' : '#71717A';
-
-  const iconMap: Record<string, {char: string; bg: string}> = {
-    Home: {char: 'H', bg: focused ? 'rgba(110, 84, 255, 0.12)' : 'transparent'},
-    Pay: {char: 'P', bg: focused ? 'rgba(110, 84, 255, 0.12)' : 'transparent'},
-    History: {char: 'T', bg: focused ? 'rgba(110, 84, 255, 0.12)' : 'transparent'},
-    Settings: {char: 'S', bg: focused ? 'rgba(110, 84, 255, 0.12)' : 'transparent'},
-  };
-
-  const icon = iconMap[label] || {char: '•', bg: 'transparent'};
+/**
+ * FloatingTabBar — Capsule navigation floating in the air (Image 1)
+ * Uses dynamic insets so it will NEVER collide with Android 3-button nav or iOS gesture pill.
+ */
+function FloatingTabBar({state, descriptors, navigation}: BottomTabBarProps) {
+  const insets = useSafeAreaInsets();
+  // Lift above system navigation bar (3-button nav on Android is ~48dp, gesture pill is ~16-24dp)
+  const bottomOffset = Math.max(insets.bottom, 12) + 8;
 
   return (
-    <View style={[tabIconStyles.container, {backgroundColor: icon.bg}]}>
-      <Text style={[tabIconStyles.icon, {color}]}>{icon.char}</Text>
+    <View
+      pointerEvents="box-none"
+      style={[styles.floatingContainer, {bottom: bottomOffset}]}>
+      <View style={styles.capsulePill}>
+        {state.routes.map((route, index) => {
+          const {options} = descriptors[route.key];
+          const label =
+            options.tabBarLabel !== undefined
+              ? options.tabBarLabel
+              : options.title !== undefined
+              ? options.title
+              : route.name;
+
+          const isFocused = state.index === index;
+
+          const onPress = () => {
+            triggerHaptic.selection();
+            const event = navigation.emit({
+              type: 'tabPress',
+              target: route.key,
+              canPreventDefault: true,
+            });
+
+            if (!isFocused && !event.defaultPrevented) {
+              navigation.navigate(route.name);
+            }
+          };
+
+          return (
+            <TouchableOpacity
+              key={route.key}
+              accessibilityRole="button"
+              accessibilityState={isFocused ? {selected: true} : {}}
+              accessibilityLabel={options.tabBarAccessibilityLabel}
+              testID={`tab-${route.name.toLowerCase()}`}
+              onPress={onPress}
+              activeOpacity={0.7}
+              style={[
+                styles.tabItem,
+                isFocused && styles.tabItemFocused,
+              ]}>
+              <View style={styles.iconWrapper}>
+                {route.name === 'Home' && <HomeIcon size={20} focused={isFocused} />}
+                {route.name === 'Pay' && <PayIcon size={20} focused={isFocused} />}
+                {route.name === 'History' && <HistoryIcon size={20} focused={isFocused} />}
+                {route.name === 'Settings' && <SettingsIcon size={20} focused={isFocused} />}
+              </View>
+              <Text
+                style={[
+                  styles.tabLabel,
+                  isFocused ? styles.tabLabelFocused : styles.tabLabelMuted,
+                ]}>
+                {label as string}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
     </View>
   );
 }
 
-const tabIconStyles = StyleSheet.create({
-  container: {
-    width: 32,
-    height: 24,
-    borderRadius: 6,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  icon: {
-    fontSize: 13,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-});
-
 function MainTabs() {
   return (
     <Tab.Navigator
+      tabBar={props => <FloatingTabBar {...props} />}
       screenOptions={{
-        headerStyle: {backgroundColor: '#15151E'},
-        headerTintColor: '#FFFFFF',
-        headerTitleStyle: {fontWeight: '700'},
-        tabBarStyle: {
-          backgroundColor: '#111118',
-          borderTopColor: '#242433',
-          borderTopWidth: 1,
-          paddingTop: 6,
-          paddingBottom: 8,
-          height: 58,
-        },
-        tabBarActiveTintColor: '#6E54FF',
-        tabBarInactiveTintColor: '#71717A',
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '600',
-          marginTop: 2,
-        },
+        headerShown: false,
       }}>
       <Tab.Screen
         name="Home"
         component={HomeScreen}
-        options={{
-          title: 'TapPay',
-          tabBarLabel: 'Home',
-          tabBarIcon: ({focused}) => <TabIcon label="Home" focused={focused} />,
-        }}
+        options={{tabBarLabel: 'Home'}}
       />
       <Tab.Screen
         name="Pay"
         component={SendPaymentScreen}
-        options={{
-          title: 'Send Payment',
-          tabBarLabel: 'Pay',
-          tabBarIcon: ({focused}) => <TabIcon label="Pay" focused={focused} />,
-        }}
+        options={{tabBarLabel: 'Pay'}}
       />
       <Tab.Screen
         name="History"
         component={TransactionHistoryScreen}
-        options={{
-          title: 'Transactions',
-          tabBarLabel: 'History',
-          tabBarIcon: ({focused}) => <TabIcon label="History" focused={focused} />,
-        }}
+        options={{tabBarLabel: 'History'}}
       />
       <Tab.Screen
         name="Settings"
         component={SettingsScreen}
-        options={{
-          title: 'Settings',
-          tabBarLabel: 'Settings',
-          tabBarIcon: ({focused}) => <TabIcon label="Settings" focused={focused} />,
-        }}
+        options={{tabBarLabel: 'Settings'}}
       />
     </Tab.Navigator>
   );
@@ -165,10 +186,10 @@ export default function AppNavigator() {
       <Stack.Navigator
         initialRouteName={isInitialized ? 'MainTabs' : 'WalletSetup'}
         screenOptions={{
-          headerStyle: {backgroundColor: '#12121A'},
+          headerStyle: {backgroundColor: '#0F0F16'},
           headerTintColor: '#FFFFFF',
-          headerTitleStyle: {fontWeight: '700'},
-          contentStyle: {backgroundColor: '#0A0A0F'},
+          headerTitleStyle: {fontWeight: '700', fontSize: 17},
+          contentStyle: {backgroundColor: '#09090D'},
           animation: 'slide_from_right',
         }}>
         <Stack.Screen
@@ -184,17 +205,17 @@ export default function AppNavigator() {
         <Stack.Screen
           name="SendTap"
           component={SendTapScreen}
-          options={{title: 'Send via Tap'}}
+          options={{title: 'Send via Tap', headerBackTitle: 'Back'}}
         />
         <Stack.Screen
           name="ReceiveTap"
           component={ReceiveTapScreen}
-          options={{title: 'Receive via Tap'}}
+          options={{title: 'Receive via Tap', headerBackTitle: 'Back'}}
         />
         <Stack.Screen
           name="SendPayment"
           component={SendPaymentScreen}
-          options={{title: 'Send Payment'}}
+          options={{title: 'Send Payment', headerBackTitle: 'Back'}}
         />
         <Stack.Screen
           name="TransactionStatus"
@@ -204,19 +225,82 @@ export default function AppNavigator() {
         <Stack.Screen
           name="AccountInfo"
           component={AccountInfoScreen}
-          options={{title: 'Account Info'}}
+          options={{title: 'Account Info', headerBackTitle: 'Back'}}
         />
         <Stack.Screen
           name="AboutTapPay"
           component={AboutScreen}
-          options={{title: 'About TapPay'}}
+          options={{title: 'About TapPay', headerBackTitle: 'Back'}}
         />
         <Stack.Screen
           name="NetworkInfo"
           component={NetworkScreen}
-          options={{title: 'Network'}}
+          options={{title: 'Network', headerBackTitle: 'Back'}}
         />
       </Stack.Navigator>
     </NavigationContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  floatingContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  capsulePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(20, 20, 28, 0.94)',
+    paddingHorizontal: 8,
+    paddingVertical: 7,
+    borderRadius: 36,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    width: '92%',
+    maxWidth: 420,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: {width: 0, height: 10},
+        shadowOpacity: 0.45,
+        shadowRadius: 18,
+      },
+      android: {
+        elevation: 14,
+      },
+    }),
+  },
+  tabItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    borderRadius: 24,
+  },
+  tabItemFocused: {
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+  },
+  iconWrapper: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
+  },
+  tabLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: -0.2,
+  },
+  tabLabelFocused: {
+    color: '#FFFFFF',
+  },
+  tabLabelMuted: {
+    color: '#8E8E93',
+  },
+});

@@ -1,8 +1,8 @@
 /**
- * WalletSetupScreen — 3-Step Onboarding Flow
- * 1. Create or Import Wallet (Android Keystore hardware-backed)
- * 2. Claim Username (Monad on-chain identity)
- * 3. Private Key Backup Warning & Verification
+ * WalletSetupScreen — Minimalist High-End Wallet Onboarding
+ * Strictly inspired by user reference Image 3 (Fuse Web3 onboarding style).
+ * Features massive typography, pure obsidian canvas, freestanding logo,
+ * solid white CTA pill, and clean unhighlighted backup verification.
  */
 
 import React, {useState} from 'react';
@@ -17,7 +17,9 @@ import {
   ScrollView,
   Clipboard,
 } from 'react-native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+
 import {useWallet} from '../context/WalletContext';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import {validateUsername} from '../utils/validation';
@@ -30,6 +32,7 @@ type Props = {
 };
 
 export default function WalletSetupScreen({navigation}: Props) {
+  const insets = useSafeAreaInsets();
   const {createWallet, importWallet, saveUsername} = useWallet();
   const [step, setStep] = useState<'welcome' | 'import' | 'username' | 'backup'>('welcome');
   const [privateKeyInput, setPrivateKeyInput] = useState('');
@@ -38,6 +41,7 @@ export default function WalletSetupScreen({navigation}: Props) {
   const [usernameInput, setUsernameInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [copiedKey, setCopiedKey] = useState(false);
+  const [copiedAddress, setCopiedAddress] = useState(false);
 
   // Step 1: Create New Wallet
   const handleCreate = async () => {
@@ -49,7 +53,6 @@ export default function WalletSetupScreen({navigation}: Props) {
     if (wallet) {
       setNewPrivateKey(wallet.privateKey);
       setNewAddress(wallet.address);
-      // Advance to Step 2: Username Claim
       setStep('username');
     } else {
       triggerHaptic.notificationError();
@@ -71,7 +74,6 @@ export default function WalletSetupScreen({navigation}: Props) {
 
     if (success) {
       setNewPrivateKey(privateKeyInput.trim());
-      // Advance to Step 2: Username Claim
       setStep('username');
     } else {
       triggerHaptic.notificationError();
@@ -79,7 +81,7 @@ export default function WalletSetupScreen({navigation}: Props) {
     }
   };
 
-  // Step 2: Username Claim or Skip
+  // Step 2: Username Claim
   const handleClaimUsername = async () => {
     const trimmed = usernameInput.trim().toLowerCase();
     const validation = validateUsername(trimmed);
@@ -92,7 +94,6 @@ export default function WalletSetupScreen({navigation}: Props) {
     triggerHaptic.impactMedium();
     setLoading(true);
     try {
-      // Check availability on-chain
       const existing = await resolveUsername(trimmed);
       if (existing) {
         setLoading(false);
@@ -101,23 +102,18 @@ export default function WalletSetupScreen({navigation}: Props) {
         return;
       }
 
-      // Try to register on-chain
       try {
         await registerUsername(trimmed);
       } catch {
-        // On-chain registration failed (contract not deployed, no gas yet, etc.)
-        // We'll still save locally
+        // On-chain registration fallback
       }
 
-      // Always save username locally so it persists
       await saveUsername(trimmed);
-
       setLoading(false);
       triggerHaptic.notificationSuccess();
       setStep('backup');
     } catch {
       setLoading(false);
-      // Save username locally even if on-chain lookup failed
       if (trimmed) {
         await saveUsername(trimmed);
       }
@@ -126,7 +122,7 @@ export default function WalletSetupScreen({navigation}: Props) {
   };
 
   const handleSkipUsername = () => {
-    triggerHaptic.impactMedium();
+    triggerHaptic.selection();
     setStep('backup');
   };
 
@@ -138,409 +134,349 @@ export default function WalletSetupScreen({navigation}: Props) {
     setTimeout(() => setCopiedKey(false), 2000);
   };
 
+  const handleCopyAddress = () => {
+    triggerHaptic.impactMedium();
+    Clipboard.setString(newAddress);
+    setCopiedAddress(true);
+    setTimeout(() => setCopiedAddress(false), 2000);
+  };
+
   const handleFinishOnboarding = () => {
     triggerHaptic.notificationSuccess();
     navigation.replace('MainTabs');
   };
 
-  // Step 1: Import View
+  // 1. Import Key Screen
   if (step === 'import') {
     return (
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <View style={styles.headerBadge}>
-          <Text style={styles.headerBadgeText}>IMPORT WALLET</Text>
-        </View>
-        <Text style={styles.title}>Enter Private Key</Text>
-        <Text style={styles.subtitle}>Paste your 64-character hexadecimal key to restore your wallet</Text>
+      <View style={[styles.screenWrapper, {paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20}]}>
+        <ScrollView contentContainerStyle={styles.innerContent} showsVerticalScrollIndicator={false}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => setStep('welcome')}
+            activeOpacity={0.7}>
+            <Text style={styles.backText}>‹ Back</Text>
+          </TouchableOpacity>
 
-        <TextInput
-          style={styles.input}
-          placeholder="0x..."
-          placeholderTextColor="#555"
-          value={privateKeyInput}
-          onChangeText={setPrivateKeyInput}
-          autoCapitalize="none"
-          autoCorrect={false}
-          secureTextEntry
-        />
+          <Text style={styles.viewTitle}>Import Wallet</Text>
+          <Text style={styles.viewSubtitle}>
+            Enter your 64-character private key to restore your wallet on Monad.
+          </Text>
 
-        <TouchableOpacity
-          style={[styles.button, styles.primaryButton]}
-          onPress={handleImport}
-          disabled={loading}>
-          {loading ? (
-            <ActivityIndicator color="#FFF" />
-          ) : (
-            <Text style={styles.buttonText}>Import & Continue</Text>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.linkButton}
-          onPress={() => setStep('welcome')}>
-          <Text style={styles.linkText}>Back to Welcome</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    );
-  }
-
-  // Step 2: Username Claim View
-  if (step === 'username') {
-    return (
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <View style={styles.stepBadge}>
-          <Text style={styles.stepBadgeText}>STEP 2 OF 3</Text>
-        </View>
-        <Text style={styles.title}>Claim Your @handle</Text>
-        <Text style={styles.subtitle}>
-          Choose your unique identity for instant, zero-address payments on Monad.
-        </Text>
-
-        <View style={styles.usernameInputWrapper}>
-          <Text style={styles.atSymbol}>@</Text>
           <TextInput
-            style={styles.usernameInput}
-            placeholder="alice"
-            placeholderTextColor="#555"
-            value={usernameInput}
-            onChangeText={setUsernameInput}
+            style={styles.textInput}
+            placeholder="0x..."
+            placeholderTextColor="#545458"
+            value={privateKeyInput}
+            onChangeText={setPrivateKeyInput}
             autoCapitalize="none"
             autoCorrect={false}
+            secureTextEntry
           />
-        </View>
 
-        <TouchableOpacity
-          style={[styles.button, styles.primaryButton]}
-          onPress={handleClaimUsername}
-          disabled={loading}>
-          {loading ? (
-            <ActivityIndicator color="#FFF" />
-          ) : (
-            <Text style={styles.buttonText}>Claim Username</Text>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.linkButton}
-          onPress={handleSkipUsername}>
-          <Text style={styles.linkText}>Skip for now</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    );
-  }
-
-  // Step 3: Private Key Backup Warning View
-  if (step === 'backup') {
-    return (
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <View style={styles.stepBadge}>
-          <Text style={styles.stepBadgeText}>STEP 3 OF 3</Text>
-        </View>
-        <Text style={styles.title}>Back Up Secret Key</Text>
-        <Text style={styles.subtitle}>
-          Your private key is protected by Android Keystore. Save this key offline — if you lose this device, funds cannot be recovered.
-        </Text>
-
-        {newAddress ? (
-          <View style={styles.keyBox}>
-            <Text style={styles.keyLabel}>Your Address</Text>
-            <Text style={styles.keyValue} selectable>{newAddress}</Text>
-          </View>
-        ) : null}
-
-        <View style={styles.keyBox}>
-          <Text style={styles.keyLabel}>Your Private Key (Never Share)</Text>
-          <Text style={styles.keyValue} selectable>{newPrivateKey}</Text>
-          <TouchableOpacity style={styles.copyBtn} onPress={handleCopyKey}>
-            <Text style={styles.copyBtnText}>
-              {copiedKey ? 'Copied to Clipboard' : 'Copy Private Key'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.warningCard}>
-          <View style={styles.warningDot} />
-          <Text style={styles.warningText}>
-            Store this offline. TapPay never logs or transmits your private key.
-          </Text>
-        </View>
-
-        <TouchableOpacity
-          style={[styles.button, styles.primaryButton]}
-          onPress={handleFinishOnboarding}>
-          <Text style={styles.buttonText}>I've Saved It — Enter TapPay</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    );
-  }
-
-  // Step 1: Welcome View
-  return (
-    <View style={styles.container}>
-      <View style={styles.welcomeContent}>
-        {/* Freestanding Unboxed TapPay Brand Emblem */}
-        <BrandLogo size={104} style={{marginBottom: 20}} />
-
-        <Text style={styles.brandTitle}>TapPay</Text>
-        <Text style={styles.brandSubtitle}>
-          Near-instant contactless crypto on Monad
-        </Text>
-
-        <View style={styles.featurePills}>
-          <View style={styles.featurePill}>
-            <Text style={styles.featurePillText}>~1s Monad Finality</Text>
-          </View>
-          <View style={styles.featurePill}>
-            <Text style={styles.featurePillText}>NFC HCE & @handle</Text>
-          </View>
-        </View>
-
-        <View style={styles.actionSection}>
           <TouchableOpacity
-            style={[styles.button, styles.primaryButton]}
-            onPress={handleCreate}
-            disabled={loading}>
+            style={styles.primaryPillButton}
+            onPress={handleImport}
+            disabled={loading}
+            activeOpacity={0.85}>
             {loading ? (
-              <ActivityIndicator color="#FFF" />
+              <ActivityIndicator color="#000000" />
             ) : (
-              <Text style={styles.buttonText}>Create New Wallet</Text>
+              <Text style={styles.primaryPillText}>Import & Continue</Text>
+            )}
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
+    );
+  }
+
+  // 2. Username Claim Screen
+  if (step === 'username') {
+    return (
+      <View style={[styles.screenWrapper, {paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20}]}>
+        <ScrollView contentContainerStyle={styles.innerContent} showsVerticalScrollIndicator={false}>
+          <Text style={styles.stepIndicator}>STEP 1 OF 2</Text>
+          <Text style={styles.viewTitle}>Choose Username</Text>
+          <Text style={styles.viewSubtitle}>
+            Your unique Web3 handle on Monad. Friends can send funds directly to @username without messy hex addresses.
+          </Text>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.atSymbol}>@</Text>
+            <TextInput
+              style={styles.usernameInput}
+              placeholder="alex"
+              placeholderTextColor="#545458"
+              value={usernameInput}
+              onChangeText={setUsernameInput}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </View>
+
+          <TouchableOpacity
+            style={styles.primaryPillButton}
+            onPress={handleClaimUsername}
+            disabled={loading}
+            activeOpacity={0.85}>
+            {loading ? (
+              <ActivityIndicator color="#000000" />
+            ) : (
+              <Text style={styles.primaryPillText}>Claim Username</Text>
             )}
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.button, styles.secondaryButton]}
-            onPress={() => setStep('import')}>
-            <Text style={styles.secondaryButtonText}>
-              Import Private Key
-            </Text>
+            style={styles.secondaryTextButton}
+            onPress={handleSkipUsername}
+            activeOpacity={0.7}>
+            <Text style={styles.secondaryText}>Skip for now</Text>
           </TouchableOpacity>
-        </View>
+        </ScrollView>
+      </View>
+    );
+  }
+
+  // 3. Private Key Backup Screen (Clean, unhighlighted, high-legibility)
+  if (step === 'backup') {
+    return (
+      <View style={[styles.screenWrapper, {paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20}]}>
+        <ScrollView contentContainerStyle={styles.innerContent} showsVerticalScrollIndicator={false}>
+          <Text style={styles.stepIndicator}>STEP 2 OF 2</Text>
+          <Text style={styles.viewTitle}>Back Up Credentials</Text>
+          <Text style={styles.viewSubtitle}>
+            Your keys are secured in Android Keystore. Save your credentials offline. If you lose access to this device, funds cannot be restored.
+          </Text>
+
+          {newAddress ? (
+            <View style={styles.credentialCard}>
+              <View style={styles.credentialHeader}>
+                <Text style={styles.credentialLabel}>PUBLIC ADDRESS</Text>
+                <TouchableOpacity onPress={handleCopyAddress} activeOpacity={0.7}>
+                  <Text style={styles.copyActionText}>
+                    {copiedAddress ? 'COPIED' : 'COPY'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.credentialValueMono} selectable>
+                {newAddress}
+              </Text>
+            </View>
+          ) : null}
+
+          <View style={styles.credentialCard}>
+            <View style={styles.credentialHeader}>
+              <Text style={styles.credentialLabel}>PRIVATE KEY (NEVER SHARE)</Text>
+              <TouchableOpacity onPress={handleCopyKey} activeOpacity={0.7}>
+                <Text style={styles.copyActionText}>
+                  {copiedKey ? 'COPIED' : 'COPY'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.credentialValueMono} selectable>
+              {newPrivateKey}
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.primaryPillButton}
+            onPress={handleFinishOnboarding}
+            activeOpacity={0.85}>
+            <Text style={styles.primaryPillText}>I've Saved It — Enter TapPay</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
+    );
+  }
+
+  // Step 0: Welcome Screen (Strictly matching Image 3 — Fuse style)
+  return (
+    <View style={[styles.screenWrapper, {paddingTop: insets.top + 40, paddingBottom: insets.bottom + 20}]}>
+      <View style={styles.welcomeHeroContainer}>
+        {/* Freestanding Unboxed Minimalist Brand Logo (Top Center) */}
+        <BrandLogo size={56} style={{marginBottom: 30}} />
+
+        {/* Massive Fuse-style typography */}
+        <Text style={styles.welcomeSubtitle}>Welcome to</Text>
+        <Text style={styles.welcomeTitle}>TapPay</Text>
+      </View>
+
+      {/* Bottom Action Section */}
+      <View style={styles.bottomCtaSection}>
+        <TouchableOpacity
+          style={styles.primaryPillButton}
+          onPress={handleCreate}
+          disabled={loading}
+          activeOpacity={0.85}>
+          {loading ? (
+            <ActivityIndicator color="#000000" />
+          ) : (
+            <Text style={styles.primaryPillText}>Create New Wallet</Text>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.secondaryTextButton}
+          onPress={() => setStep('import')}
+          activeOpacity={0.7}>
+          <Text style={styles.secondaryText}>Recover Existing Wallet</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screenWrapper: {
     flex: 1,
-    backgroundColor: '#09090D',
+    backgroundColor: '#000000',
+    paddingHorizontal: 24,
+    justifyContent: 'space-between',
   },
-  content: {
-    padding: 22,
-    paddingTop: 50,
-  },
-  welcomeContent: {
+  welcomeHeroContainer: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    justifyContent: 'center',
   },
-  brandTitle: {
-    fontSize: 30,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: -0.5,
+  welcomeSubtitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#8E8E93',
+    letterSpacing: -0.3,
     marginBottom: 6,
   },
-  brandSubtitle: {
-    fontSize: 14,
+  welcomeTitle: {
+    fontSize: 56,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: -1.5,
+  },
+  bottomCtaSection: {
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  primaryPillButton: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 18,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  primaryPillText: {
+    color: '#000000',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: -0.3,
+  },
+  secondaryTextButton: {
+    paddingVertical: 10,
+  },
+  secondaryText: {
     color: '#8E8E93',
-    textAlign: 'center',
-    marginBottom: 20,
-    lineHeight: 20,
-  },
-  featurePills: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 44,
-  },
-  featurePill: {
-    backgroundColor: '#15151E',
-    borderColor: '#242433',
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  featurePillText: {
-    fontSize: 11,
-    color: '#A1A1AA',
+    fontSize: 14,
     fontWeight: '600',
   },
-  actionSection: {
-    width: '100%',
+  innerContent: {
+    paddingTop: 10,
+    paddingBottom: 30,
   },
-  headerBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#15151E',
-    borderWidth: 1,
-    borderColor: '#242433',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
-    marginBottom: 16,
+  backButton: {
+    marginBottom: 20,
   },
-  headerBadgeText: {
-    fontSize: 10,
+  backText: {
+    fontSize: 16,
+    color: '#8E8E93',
+    fontWeight: '600',
+  },
+  stepIndicator: {
+    fontSize: 11,
     fontWeight: '700',
-    color: '#6E54FF',
+    color: '#636366',
     letterSpacing: 1,
+    marginBottom: 8,
   },
-  stepBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#15151E',
-    borderWidth: 1,
-    borderColor: '#242433',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
-    marginBottom: 16,
-  },
-  stepBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#6E54FF',
-    letterSpacing: 1,
-  },
-  title: {
-    fontSize: 24,
+  viewTitle: {
+    fontSize: 32,
     fontWeight: '800',
     color: '#FFFFFF',
+    letterSpacing: -0.8,
     marginBottom: 8,
-    letterSpacing: -0.5,
   },
-  subtitle: {
+  viewSubtitle: {
     fontSize: 14,
     color: '#8E8E93',
-    marginBottom: 24,
     lineHeight: 20,
+    marginBottom: 28,
   },
-  input: {
-    backgroundColor: '#15151E',
-    borderRadius: 12,
-    padding: 16,
+  textInput: {
+    backgroundColor: '#121216',
+    borderWidth: 1,
+    borderColor: '#22222C',
+    borderRadius: 16,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
     color: '#FFFFFF',
     fontSize: 15,
-    borderWidth: 1,
-    borderColor: '#242433',
-    marginBottom: 20,
     fontFamily: 'monospace',
+    marginBottom: 24,
   },
-  usernameInputWrapper: {
+  inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#15151E',
-    borderRadius: 12,
+    backgroundColor: '#121216',
     borderWidth: 1,
-    borderColor: '#242433',
-    paddingHorizontal: 16,
-    marginBottom: 20,
+    borderColor: '#22222C',
+    borderRadius: 16,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    marginBottom: 24,
   },
   atSymbol: {
-    fontSize: 18,
-    color: '#6E54FF',
+    fontSize: 20,
     fontWeight: '700',
-    marginRight: 6,
+    color: '#FFFFFF',
+    marginRight: 8,
   },
   usernameInput: {
     flex: 1,
-    paddingVertical: 14,
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
+    padding: 0,
   },
-  button: {
-    height: 52,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-    width: '100%',
-  },
-  primaryButton: {
-    backgroundColor: '#6E54FF',
-  },
-  secondaryButton: {
-    backgroundColor: '#15151E',
+  credentialCard: {
+    backgroundColor: '#121216',
     borderWidth: 1,
-    borderColor: '#282836',
+    borderColor: '#22222C',
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 18,
   },
-  buttonText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  secondaryButtonText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  linkButton: {
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  linkText: {
-    color: '#71717A',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  keyBox: {
-    backgroundColor: '#15151E',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: '#242433',
-  },
-  keyLabel: {
-    fontSize: 11,
-    color: '#71717A',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginBottom: 6,
-    fontWeight: '700',
-  },
-  keyValue: {
-    fontSize: 12,
-    color: '#FFFFFF',
-    fontFamily: 'monospace',
-    lineHeight: 18,
-  },
-  copyBtn: {
-    marginTop: 10,
-    paddingVertical: 8,
-    alignItems: 'center',
-    backgroundColor: '#20202E',
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#2F2F44',
-  },
-  copyBtnText: {
-    fontSize: 12,
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  warningCard: {
+  credentialHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1F1414',
-    borderWidth: 1,
-    borderColor: '#382020',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 20,
-    gap: 10,
+    justifyContent: 'space-between',
+    marginBottom: 10,
   },
-  warningDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#EF4444',
+  credentialLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#636366',
+    letterSpacing: 0.8,
   },
-  warningText: {
-    flex: 1,
+  copyActionText: {
     fontSize: 11,
-    color: '#EF4444',
-    lineHeight: 16,
+    fontWeight: '800',
+    color: '#30D158',
+    letterSpacing: 0.6,
+  },
+  credentialValueMono: {
+    color: '#E5E7EB',
+    fontSize: 13,
+    fontFamily: 'monospace',
+    lineHeight: 18,
   },
 });

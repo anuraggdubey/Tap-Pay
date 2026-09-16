@@ -1,6 +1,6 @@
 /**
- * ReceiveTapScreen — NFC reader mode, cryptographic signature verification,
- * reverse username resolution, and biometric payment acceptance.
+ * ReceiveTapScreen — NFC reader mode, signature verification,
+ * accept handshake, and incoming payment confirmation.
  */
 
 import React, {useState, useEffect, useRef, useCallback} from 'react';
@@ -16,7 +16,7 @@ import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useWallet} from '../context/WalletContext';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import {formatMon, truncateAddress} from '../utils/format';
-import {PaymentOffer, encodeAcceptResponse} from '../utils/apdu';
+import {PaymentOffer} from '../utils/apdu';
 import {
   initNfc,
   isNfcSupported,
@@ -27,94 +27,117 @@ import {
 } from '../services/nfcReader';
 import {loadPrivateKey} from '../services/wallet';
 import {reverseResolve} from '../services/registry';
+import {
+  broadcastReceiverAccept,
+  cancelTapSession,
+  waitForIncomingPayment,
+} from '../services/tapPayment';
+import {waitForHceRead, stopHceSession} from '../services/hce';
+import {recordTransaction} from '../services/history';
 import NfcNotAvailableModal from '../components/NfcNotAvailableModal';
 import {PulsingRadar} from '../components/PulsingRadar';
 import {triggerHaptic} from '../utils/haptics';
+import {buttons, colors, screen} from '../theme';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'ReceiveTap'>;
 };
 
+type ReceivePhase = 'scanning' | 'review' | 'completing' | 'confirming';
+
 export default function ReceiveTapScreen({navigation}: Props) {
-  const {address} = useWallet();
-  const [scanning, setScanning] = useState(true);
+  const {address, balance, refreshBalance} = useWallet();
+  const [phase, setPhase] = useState<ReceivePhase>('scanning');
   const [accepting, setAccepting] = useState(false);
   const [offer, setOffer] = useState<PaymentOffer | null>(null);
   const [senderUsername, setSenderUsername] = useState<string | null>(null);
   const [nfcModalVisible, setNfcModalVisible] = useState(false);
-  const [statusMessage, setStatusMessage] = useState<string>('Hold your phone near the sender\'s phone');
+  const [statusMessage, setStatusMessage] = useState(
+    "Hold your phone near the sender's phone",
+  );
 
   const isMountedRef = useRef(true);
+  const scanningRef = useRef(true);
 
-  // Reader scanning loop
   const startScanning = useCallback(async () => {
-    if (!isMountedRef.current) {
+    if (!isMountedRef.current || !scanningRef.current) {
       return;
     }
 
-    setScanning(true);
-    setStatusMessage('Hold your phone near the sender\'s phone');
+    setPhase('scanning');
+    setStatusMessage("Hold your phone near the sender's phone");
 
     try {
       const response = await readPaymentOffer();
-      if (!isMountedRef.current) {
+      if (!isMountedRef.current || !scanningRef.current) {
         return;
       }
 
       if (response.status === 'SUCCESS' && response.offer) {
         triggerHaptic.impactMedium();
         setOffer(response.offer);
-        setScanning(false);
+        setPhase('review');
+        scanningRef.current = false;
 
-        // Reverse resolve sender username if on-chain
         try {
           const username = await reverseResolve(response.offer.senderAddress);
           if (isMountedRef.current && username) {
             setSenderUsername(username);
           }
         } catch {
-          // Keep sender address if username lookup fails
+          // Username lookup is optional
         }
-      } else if (response.status === 'DISCONNECTED') {
+        return;
+      }
+
+      if (response.status === 'DISCONNECTED') {
         setStatusMessage('Tap interrupted. Move phones closer and hold still.');
-        // Retry scanning automatically after brief pause
         setTimeout(() => {
-          if (isMountedRef.current && scanning) {
+          if (isMountedRef.current && scanningRef.current) {
             startScanning();
           }
         }, 1200);
-      } else if (response.status === 'SIGNATURE_INVALID') {
+        return;
+      }
+
+      if (response.status === 'SIGNATURE_INVALID') {
         triggerHaptic.notificationError();
         Alert.alert(
           'Security Warning',
-          'Could not verify the sender\'s cryptographic signature. Payment rejected for safety.',
+          "Could not verify the sender's cryptographic signature. Payment rejected.",
           [{text: 'OK', onPress: () => startScanning()}],
         );
-      } else if (response.status === 'INVALID_PAYLOAD') {
+        return;
+      }
+
+      if (response.status === 'INVALID_PAYLOAD') {
         triggerHaptic.notificationError();
         Alert.alert(
           'Invalid Data',
-          response.errorMessage || 'Corrupted or invalid payment data received.',
+          response.errorMessage || 'Corrupted payment data received.',
           [{text: 'Retry', onPress: () => startScanning()}],
         );
-      } else if (response.status !== 'CANCELLED') {
-        // Transient error — retry after brief delay
+        return;
+      }
+
+      if (response.status !== 'CANCELLED') {
         setTimeout(() => {
-          if (isMountedRef.current && scanning) {
+          if (isMountedRef.current && scanningRef.current) {
             startScanning();
           }
         }, 1000);
       }
-    } catch (err: any) {
-      if (isMountedRef.current) {
+    } catch {
+      if (isMountedRef.current && scanningRef.current) {
         setStatusMessage('Scanning resumed. Bring phones together.');
+        setTimeout(() => startScanning(), 1000);
       }
     }
-  }, [scanning]);
+  }, []);
 
-  // Initial NFC check & start scan
   useEffect(() => {
     isMountedRef.current = true;
+    scanningRef.current = true;
 
     (async () => {
       await initNfc();
@@ -145,45 +168,83 @@ export default function ReceiveTapScreen({navigation}: Props) {
 
     return () => {
       isMountedRef.current = false;
+      scanningRef.current = false;
       cancelNfcRead();
+      stopHceSession();
     };
-  }, []);
+  }, [startScanning]);
 
-  // Handle Biometric-gated Accept
   const handleAccept = async () => {
-    if (!offer) {
+    if (!offer || !address) {
       return;
     }
 
     setAccepting(true);
 
     try {
-      // 1. Biometric verification prompt for receiver
       const auth = await loadPrivateKey('Confirm Biometrics to Accept Payment');
       if (!auth) {
         setAccepting(false);
-        // User cancelled biometric prompt
         return;
       }
 
-      // 2. Encode 20-byte ACCEPT binary response with receiver address
-      if (address) {
-        encodeAcceptResponse(address);
+      setPhase('completing');
+
+      const started = await broadcastReceiverAccept(address, offer.sessionId);
+      if (!started) {
+        throw new Error('Failed to broadcast accept response over NFC.');
       }
 
-      triggerHaptic.notificationSuccess();
-      setAccepting(false);
+      triggerHaptic.impactMedium();
 
-      // 3. Navigate to TransactionStatus to track confirmation
-      navigation.navigate('TransactionStatus', {
-        txHash: '0x...waiting_broadcast',
-        amount: formatMon(offer.amountWei),
+      const readBySender = await waitForHceRead(60_000);
+      if (!readBySender) {
+        Alert.alert(
+          'Tap Required',
+          'Hold phones together so the sender can read your acceptance.',
+          [{text: 'Retry', onPress: () => handleAccept()}],
+        );
+        setAccepting(false);
+        setPhase('review');
+        return;
+      }
+
+      setPhase('confirming');
+      await stopHceSession();
+
+      const previousBalance = balance;
+      const confirmed = await waitForIncomingPayment(
+        address,
+        previousBalance,
+        offer.amountWei,
+      );
+
+      refreshBalance();
+      triggerHaptic.notificationSuccess();
+
+      recordTransaction({
+        direction: 'received',
+        counterparty: offer.senderAddress,
+        counterpartyUsername: senderUsername || undefined,
+        amount: formatMon(offer.amountWei).replace(' MON', ''),
+        status: confirmed ? 'confirmed' : 'pending',
+        txHash: confirmed ? `tap-${offer.sessionId}` : 'pending',
+      });
+
+      navigation.replace('TransactionStatus', {
+        txHash: confirmed ? `tap-${offer.sessionId}` : 'pending',
+        amount: formatMon(offer.amountWei).replace(' MON', ''),
         recipient: offer.senderAddress,
+        direction: 'received',
+        counterpartyUsername: senderUsername || undefined,
+        waitForBalance: !confirmed,
+        expectedAmountWei: offer.amountWei.toString(),
       });
     } catch (error: any) {
       triggerHaptic.notificationError();
       setAccepting(false);
-      Alert.alert('Acceptance Error', error?.message || 'Failed to authorize payment receipt.');
+      setPhase('review');
+      Alert.alert('Acceptance Error', error?.message || 'Failed to complete tap payment.');
     }
   };
 
@@ -191,23 +252,33 @@ export default function ReceiveTapScreen({navigation}: Props) {
     triggerHaptic.impactMedium();
     setOffer(null);
     setSenderUsername(null);
+    scanningRef.current = true;
     startScanning();
   };
 
-  if (scanning) {
+  if (phase === 'scanning') {
     return (
-      <View style={styles.container}>
-        <View style={styles.scanContainer}>
-          <PulsingRadar label="RECEIVE" color="#10B981" size={96} active={scanning} />
+      <View style={screen.container}>
+        <View style={screen.centered}>
+          <PulsingRadar label="RECEIVE" color={colors.success} size={96} active />
 
-          <Text style={styles.scanTitle}>Ready to Receive</Text>
-          <Text style={styles.scanSubtitle}>{statusMessage}</Text>
-          <View style={styles.hintBadge}>
-            <Text style={styles.hintText}>NFC Reader Active</Text>
+          <Text style={screen.title}>Ready to Receive</Text>
+          <Text style={screen.subtitle}>{statusMessage}</Text>
+
+          <View style={[screen.badge, {borderColor: 'rgba(16, 185, 129, 0.25)'}]}>
+            <Text style={[screen.badgeText, {color: colors.success}]}>
+              NFC Reader Active
+            </Text>
+          </View>
+
+          <View style={styles.stepsCard}>
+            <Text style={styles.stepsTitle}>Receiver steps</Text>
+            <Text style={styles.stepItem}>1. Hold phone near sender until offer appears</Text>
+            <Text style={styles.stepItem}>2. Review amount and tap Accept</Text>
+            <Text style={styles.stepItem}>3. Tap phones together again to confirm</Text>
           </View>
         </View>
 
-        {/* NFC Hardware Modal */}
         <NfcNotAvailableModal
           visible={nfcModalVisible}
           onClose={() => setNfcModalVisible(false)}
@@ -220,18 +291,41 @@ export default function ReceiveTapScreen({navigation}: Props) {
     );
   }
 
+  if (phase === 'completing' || phase === 'confirming') {
+    return (
+      <View style={screen.container}>
+        <View style={screen.centered}>
+          <PulsingRadar
+            label="RECEIVE"
+            color={colors.success}
+            size={96}
+            active={phase === 'completing'}
+          />
+          <Text style={screen.title}>
+            {phase === 'completing' ? 'Hold Phones Together' : 'Confirming Payment'}
+          </Text>
+          <Text style={screen.subtitle}>
+            {phase === 'completing'
+              ? 'Your acceptance is broadcasting.\nKeep phones close until the sender reads it.'
+              : 'Waiting for Monad to confirm the incoming payment…'}
+          </Text>
+          <ActivityIndicator color={colors.success} style={{marginTop: 24}} />
+        </View>
+      </View>
+    );
+  }
+
   if (offer) {
     return (
-      <View style={styles.container}>
-        <View style={styles.offerContainer}>
+      <View style={screen.container}>
+        <View style={screen.centered}>
           <View style={styles.verifiedBadge}>
             <Text style={styles.verifiedBadgeText}>Verified • ECDSA Signed</Text>
           </View>
 
-          <Text style={styles.offerLabel}>Incoming Payment</Text>
+          <Text style={screen.sectionLabel}>Incoming Payment</Text>
           <Text style={styles.offerAmount}>{formatMon(offer.amountWei)}</Text>
 
-          {/* Sender Info Card */}
           <View style={styles.senderCard}>
             <View style={styles.avatarCircle}>
               <Text style={styles.avatarLetter}>
@@ -248,23 +342,24 @@ export default function ReceiveTapScreen({navigation}: Props) {
             </View>
           </View>
 
-          {/* Action Buttons */}
           <TouchableOpacity
-            style={[styles.acceptButton, accepting && styles.disabledButton]}
+            style={[buttons.success, accepting && buttons.disabled, {width: '100%'}]}
             onPress={handleAccept}
-            disabled={accepting}>
+            disabled={accepting}
+            activeOpacity={0.85}>
             {accepting ? (
-              <ActivityIndicator color="#FFFFFF" />
+              <ActivityIndicator color={colors.text} />
             ) : (
-              <Text style={styles.acceptText}>Accept Payment</Text>
+              <Text style={buttons.primaryText}>Accept Payment</Text>
             )}
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.rejectButton}
+            style={[buttons.secondary, {width: '100%', marginTop: 12}]}
             onPress={handleReject}
-            disabled={accepting}>
-            <Text style={styles.rejectText}>Reject</Text>
+            disabled={accepting}
+            activeOpacity={0.85}>
+            <Text style={buttons.secondaryText}>Reject</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -275,50 +370,25 @@ export default function ReceiveTapScreen({navigation}: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#09090D',
-  },
-  scanContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-  },
-  scanTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    marginBottom: 8,
-    letterSpacing: -0.3,
-  },
-  scanSubtitle: {
-    fontSize: 14,
-    color: '#8E8E93',
-    textAlign: 'center',
-    lineHeight: 20,
-    maxWidth: 280,
-  },
-  hintBadge: {
+  stepsCard: {
     marginTop: 28,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    backgroundColor: '#15151E',
-    borderRadius: 8,
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    padding: 16,
+    width: '100%',
     borderWidth: 1,
-    borderColor: '#242433',
+    borderColor: colors.border,
   },
-  hintText: {
-    fontSize: 12,
+  stepsTitle: {
+    fontSize: 13,
     fontWeight: '700',
-    color: '#10B981',
-    letterSpacing: 0.5,
+    color: colors.text,
+    marginBottom: 8,
   },
-  offerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
+  stepItem: {
+    fontSize: 12,
+    color: colors.textMuted,
+    lineHeight: 20,
   },
   verifiedBadge: {
     backgroundColor: 'rgba(16, 185, 129, 0.1)',
@@ -332,34 +402,26 @@ const styles = StyleSheet.create({
   verifiedBadgeText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#10B981',
+    color: colors.success,
     letterSpacing: 0.5,
-  },
-  offerLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#71717A',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 6,
   },
   offerAmount: {
     fontSize: 44,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: colors.text,
     marginBottom: 24,
     letterSpacing: -0.5,
   },
   senderCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#15151E',
+    backgroundColor: colors.surface,
     padding: 16,
     borderRadius: 14,
     width: '100%',
     marginBottom: 28,
     borderWidth: 1,
-    borderColor: '#242433',
+    borderColor: colors.border,
   },
   avatarCircle: {
     width: 44,
@@ -367,7 +429,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     backgroundColor: '#1E1E2D',
     borderWidth: 1,
-    borderColor: '#6E54FF',
+    borderColor: colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
@@ -375,7 +437,7 @@ const styles = StyleSheet.create({
   avatarLetter: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: colors.text,
   },
   senderMeta: {
     flex: 1,
@@ -383,43 +445,12 @@ const styles = StyleSheet.create({
   senderUsername: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.text,
     marginBottom: 2,
   },
   senderAddress: {
     fontSize: 12,
-    color: '#8E8E93',
+    color: colors.textMuted,
     fontFamily: 'monospace',
-  },
-  acceptButton: {
-    backgroundColor: '#10B981',
-    paddingVertical: 16,
-    width: '100%',
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  disabledButton: {
-    opacity: 0.6,
-  },
-  acceptText: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: -0.2,
-  },
-  rejectButton: {
-    width: '100%',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    backgroundColor: '#15151E',
-    borderWidth: 1,
-    borderColor: '#242433',
-  },
-  rejectText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#EF4444',
   },
 });

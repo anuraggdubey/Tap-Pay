@@ -161,6 +161,9 @@ export function decodePaymentOffer(data: Uint8Array): PaymentOffer | null {
   return {version, amountWei, senderAddress, sessionId, signature};
 }
 
+export const ACCEPT_PAYLOAD_SIZE = 36; // 20-byte address + 16-byte session UUID
+export const ACCEPT_NDEF_PREFIX = 'ACPT';
+
 /**
  * Encode a receiver's accept response (20 bytes — just their address)
  */
@@ -185,6 +188,112 @@ export function decodeAcceptResponse(data: Uint8Array): string | null {
     addrHex += data[i].toString(16).padStart(2, '0');
   }
   return addrHex;
+}
+
+/**
+ * Encode accept payload bound to a tap session (address + session UUID)
+ */
+export function encodeAcceptPayload(
+  receiverAddress: string,
+  sessionId: string,
+): Uint8Array {
+  const buffer = new Uint8Array(ACCEPT_PAYLOAD_SIZE);
+  const addrBytes = encodeAcceptResponse(receiverAddress);
+  buffer.set(addrBytes, 0);
+
+  const uuidHex = sessionId.replace(/-/g, '');
+  for (let i = 0; i < 16; i++) {
+    buffer[20 + i] = parseInt(uuidHex.substring(i * 2, i * 2 + 2), 16);
+  }
+
+  return buffer;
+}
+
+/**
+ * Decode accept payload back to receiver address + session UUID
+ */
+export function decodeAcceptPayload(
+  data: Uint8Array,
+): {receiverAddress: string; sessionId: string} | null {
+  if (data.length < ACCEPT_PAYLOAD_SIZE) {
+    return null;
+  }
+
+  const receiverAddress = decodeAcceptResponse(data.slice(0, 20));
+  if (!receiverAddress) {
+    return null;
+  }
+
+  let uuidHex = '';
+  for (let i = 20; i < ACCEPT_PAYLOAD_SIZE; i++) {
+    uuidHex += data[i].toString(16).padStart(2, '0');
+  }
+
+  const sessionId = [
+    uuidHex.substring(0, 8),
+    uuidHex.substring(8, 12),
+    uuidHex.substring(12, 16),
+    uuidHex.substring(16, 20),
+    uuidHex.substring(20, 32),
+  ].join('-');
+
+  return {receiverAddress, sessionId};
+}
+
+/**
+ * Encode accept payload for NDEF/HCE transport (prefixed hex string)
+ */
+export function encodeAcceptNdefContent(
+  receiverAddress: string,
+  sessionId: string,
+): string {
+  const bytes = encodeAcceptPayload(receiverAddress, sessionId);
+  const hex = Array.from(bytes)
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+  return `${ACCEPT_NDEF_PREFIX}${hex}`;
+}
+
+/**
+ * Decode accept payload from NDEF/HCE transport string
+ */
+export function decodeAcceptNdefContent(
+  text: string,
+): {receiverAddress: string; sessionId: string} | null {
+  if (!text.startsWith(ACCEPT_NDEF_PREFIX)) {
+    return null;
+  }
+
+  const hex = text.slice(ACCEPT_NDEF_PREFIX.length);
+  const bytes = new Uint8Array(
+    hex.match(/.{1,2}/g)?.map((byte: string) => parseInt(byte, 16)) || [],
+  );
+
+  return decodeAcceptPayload(bytes);
+}
+
+/**
+ * Encode payment offer bytes as NDEF hex content
+ */
+export function encodeOfferNdefContent(payloadBytes: Uint8Array): string {
+  return Array.from(payloadBytes)
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+/**
+ * Decode payment offer bytes from NDEF hex content
+ */
+export function decodeOfferNdefContent(text: string): Uint8Array | null {
+  if (!text || text.startsWith(ACCEPT_NDEF_PREFIX)) {
+    return null;
+  }
+
+  const bytes = new Uint8Array(
+    text.match(/.{1,2}/g)?.map((byte: string) => parseInt(byte, 16)) || [],
+  );
+
+  return bytes.length >= PAYLOAD_SIZE ? bytes : null;
 }
 
 // APDU Status Words

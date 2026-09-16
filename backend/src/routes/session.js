@@ -80,6 +80,51 @@ router.get("/:id", (req, res) => {
 });
 
 /**
+ * POST /api/v1/session/:id/accept
+ * Register receiver acceptance (called by receiver after NFC tap + biometric)
+ */
+router.post("/:id/accept", (req, res) => {
+  const { receiverAddress } = req.body;
+  const session = db.prepare("SELECT * FROM sessions WHERE id = ?").get(req.params.id);
+
+  if (!session) {
+    return res.status(404).json({ error: "session_not_found" });
+  }
+
+  if (session.status === "expired" || new Date(session.expires_at) < new Date()) {
+    db.prepare("UPDATE sessions SET status = 'expired' WHERE id = ?").run(session.id);
+    return res.status(410).json({ error: "session_expired" });
+  }
+
+  if (!receiverAddress) {
+    return res.status(400).json({
+      error: "missing_fields",
+      details: "receiverAddress is required",
+    });
+  }
+
+  if (receiverAddress.toLowerCase() === session.sender_address.toLowerCase()) {
+    return res.status(400).json({
+      error: "invalid_receiver",
+      details: "Sender and receiver cannot be the same address",
+    });
+  }
+
+  db.prepare(
+    "UPDATE sessions SET receiver_address = ?, status = 'accepted' WHERE id = ?"
+  ).run(receiverAddress.toLowerCase(), session.id);
+
+  const updated = db.prepare("SELECT * FROM sessions WHERE id = ?").get(session.id);
+  emitSessionUpdate(updated);
+
+  return res.json({
+    sessionId: updated.id,
+    status: updated.status,
+    receiverAddress: updated.receiver_address,
+  });
+});
+
+/**
  * POST /api/v1/session/:id/complete
  * Mark session as broadcasting (called by sender after tx broadcast)
  */

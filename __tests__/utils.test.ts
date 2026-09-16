@@ -4,6 +4,10 @@ import {
   decodePaymentOffer,
   encodeAcceptResponse,
   decodeAcceptResponse,
+  encodeAcceptPayload,
+  decodeAcceptPayload,
+  encodeAcceptNdefContent,
+  decodeAcceptNdefContent,
   computePayloadHash,
   verifyPaymentOffer,
   PaymentOffer,
@@ -44,6 +48,22 @@ describe('APDU Encoding/Decoding & Cryptographic Verification', () => {
 
     const decoded = decodeAcceptResponse(encoded);
     expect(decoded?.toLowerCase()).toBe(receiver.toLowerCase());
+  });
+
+  test('correctly encodes and decodes accept payload with session binding', () => {
+    const receiver = '0xabcdef1234567890abcdef1234567890abcdef12';
+    const sessionId = 'd290f1ee-6c54-4b01-90e6-d701748f0851';
+    const encoded = encodeAcceptPayload(receiver, sessionId);
+    expect(encoded.length).toBe(36);
+
+    const decoded = decodeAcceptPayload(encoded);
+    expect(decoded?.receiverAddress.toLowerCase()).toBe(receiver.toLowerCase());
+    expect(decoded?.sessionId.toLowerCase()).toBe(sessionId.toLowerCase());
+
+    const ndef = encodeAcceptNdefContent(receiver, sessionId);
+    const fromNdef = decodeAcceptNdefContent(ndef);
+    expect(fromNdef?.receiverAddress.toLowerCase()).toBe(receiver.toLowerCase());
+    expect(fromNdef?.sessionId.toLowerCase()).toBe(sessionId.toLowerCase());
   });
 
   test('computes deterministic keccak256 hash of payment payload', () => {

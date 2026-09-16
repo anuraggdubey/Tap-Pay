@@ -5,7 +5,7 @@
  * dual balance/terminal metric cards, and clean transaction feed.
  */
 
-import React, {useState, useCallback, useEffect} from 'react';
+import React, {useState, useCallback, useEffect, useMemo} from 'react';
 import {
   View,
   Text,
@@ -33,6 +33,8 @@ import {
   SettingsIcon,
 } from '../components/AppIcons';
 import {getTransactionHistory, initHistory, TransactionRecord} from '../services/history';
+import {initNfc, isNfcEnabled, isNfcSupported} from '../services/nfcReader';
+import {colors} from '../theme';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -44,6 +46,14 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [recentTx, setRecentTx] = useState<TransactionRecord[]>([]);
+  const [nfcReady, setNfcReady] = useState(false);
+
+  const terminalStatus = useMemo(() => {
+    if (nfcReady) {
+      return {label: 'NFC Ready', caption: 'Ready to tap', ready: true};
+    }
+    return {label: 'NFC Off', caption: 'Enable NFC in settings', ready: false};
+  }, [nfcReady]);
 
   const loadRecent = useCallback(() => {
     const list = getTransactionHistory();
@@ -53,6 +63,15 @@ export default function HomeScreen() {
   useEffect(() => {
     initHistory().then(() => loadRecent());
   }, [loadRecent]);
+
+  useEffect(() => {
+    (async () => {
+      await initNfc();
+      const supported = await isNfcSupported();
+      const enabled = supported ? await isNfcEnabled() : false;
+      setNfcReady(supported && enabled);
+    })();
+  }, []);
 
   const onRefresh = useCallback(async () => {
     triggerHaptic.impactMedium();
@@ -230,10 +249,24 @@ export default function HomeScreen() {
           {/* Terminal / NFC Status Tile */}
           <View style={styles.metricTile}>
             <Text style={styles.metricLabel}>Terminal Status</Text>
-            <Text style={styles.metricValue}>NFC Ready</Text>
+            <Text style={styles.metricValue}>{terminalStatus.label}</Text>
             <View style={styles.checkRow}>
-              <CheckCircleIcon size={24} color="#30D158" bg="rgba(48, 209, 88, 0.15)" />
-              <Text style={styles.terminalReadyText}>Ready to tap</Text>
+              <CheckCircleIcon
+                size={24}
+                color={terminalStatus.ready ? colors.successSoft : colors.textMuted}
+                bg={
+                  terminalStatus.ready
+                    ? 'rgba(48, 209, 88, 0.15)'
+                    : 'rgba(142, 142, 147, 0.15)'
+                }
+              />
+              <Text
+                style={[
+                  styles.terminalReadyText,
+                  !terminalStatus.ready && {color: colors.textMuted},
+                ]}>
+                {terminalStatus.caption}
+              </Text>
             </View>
           </View>
         </View>

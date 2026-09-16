@@ -1,8 +1,9 @@
 /**
- * SendTapScreen — Enter amount, pre-check balance & gas, arm HCE, show "Hold phones together"
+ * SendTapScreen — NFC contactless send flow
+ * Enter amount → sign → arm HCE → detect tap → receive accept → broadcast on-chain
  */
 
-import React, {useState, useEffect, useCallback, useRef} from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import {
   View,
   Text,
@@ -22,49 +23,89 @@ import {
   checkSufficientBalance,
   estimateGasCost,
   BalanceCheckResult,
+  signMessage,
 } from '../services/wallet';
-import {startHceSession, stopHceSession} from '../services/hce';
 import {isNfcSupported, isNfcEnabled, openNfcSettings} from '../services/nfcReader';
-import {encodePaymentOffer, computePayloadHash} from '../utils/apdu';
-import {signMessage} from '../services/wallet';
+import {computePayloadHash} from '../utils/apdu';
+import {APDU_VERSION} from '../config/monad';
+import {
+  armSenderTap,
+  buildPaymentOffer,
+  cancelTapSession,
+  completeSenderTap,
+  createSessionId,
+  ArmedTapSession,
+  TapSenderPhase,
+} from '../services/tapPayment';
+import {recordTransaction} from '../services/history';
 import InsufficientBalanceModal from '../components/InsufficientBalanceModal';
 import NfcNotAvailableModal from '../components/NfcNotAvailableModal';
 import {PulsingRadar} from '../components/PulsingRadar';
 import {triggerHaptic} from '../utils/haptics';
+import {buttons, colors, screen} from '../theme';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'SendTap'>;
 };
 
-// Fallback recipient address for gas estimation pre-check
 const DUMMY_RECIPIENT = '0x000000000000000000000000000000000000dEaD';
 
+const PHASE_COPY: Record<TapSenderPhase, {title: string; subtitle: string}> = {
+  idle: {title: '', subtitle: ''},
+  armed: {
+    title: 'Hold Phones Together',
+    subtitle: 'Bring your phone close to the receiver.\nYour payment offer is broadcasting via NFC.',
+  },
+  offer_read: {
+    title: 'Payment Detected',
+    subtitle: 'Receiver found your offer.\nWaiting for them to accept…',
+  },
+  waiting_accept: {
+    title: 'Waiting for Acceptance',
+    subtitle: 'Ask the receiver to tap Accept, then hold phones together again.',
+  },
+  broadcasting: {
+    title: 'Sending Payment',
+    subtitle: 'Broadcasting transaction to Monad testnet…',
+  },
+  completed: {
+    title: 'Payment Sent',
+    subtitle: 'Transaction submitted successfully.',
+  },
+  failed: {
+    title: 'Payment Failed',
+    subtitle: 'The tap session could not be completed.',
+  },
+};
+
 export default function SendTapScreen({navigation}: Props) {
-  const {address, balance} = useWallet();
+  const {address, balance, refreshBalance} = useWallet();
   const [amount, setAmount] = useState('');
-  const [isArmed, setIsArmed] = useState(false);
+  const [phase, setPhase] = useState<TapSenderPhase>('idle');
   const [loading, setLoading] = useState(false);
   const [estimatedGasWei, setEstimatedGasWei] = useState<bigint | null>(null);
   const [timeLeft, setTimeLeft] = useState(120);
+  const [activeAmount, setActiveAmount] = useState('');
 
-  // Insufficient Balance Modal State
   const [balanceModalVisible, setBalanceModalVisible] = useState(false);
   const [balanceCheckData, setBalanceCheckData] = useState<BalanceCheckResult | null>(null);
   const [nfcModalVisible, setNfcModalVisible] = useState(false);
 
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const sessionRef = useRef<ArmedTapSession | null>(null);
+  const isMountedRef = useRef(true);
 
-  // Clean up HCE session on screen unmount
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
-      stopHceSession();
+      isMountedRef.current = false;
+      cancelTapSession();
       if (countdownRef.current) {
         clearInterval(countdownRef.current);
       }
     };
   }, []);
 
-  // Real-time gas estimation when amount changes
   useEffect(() => {
     const val = validateAmount(amount);
     if (!val.valid || !address) {
@@ -80,14 +121,28 @@ export default function SendTapScreen({navigation}: Props) {
           setEstimatedGasWei(gasInfo.gasCostWei);
         }
       } catch {
-        // Silently ignore gas preview errors
+        // Ignore gas preview errors
       }
     }, 400);
 
     return () => clearTimeout(timer);
   }, [amount, address]);
 
-  // Handle Arming the HCE Payload
+  const clearCountdown = () => {
+    if (countdownRef.current) {
+      clearInterval(countdownRef.current);
+      countdownRef.current = null;
+    }
+  };
+
+  const handleCancel = async () => {
+    clearCountdown();
+    await cancelTapSession();
+    sessionRef.current = null;
+    setPhase('idle');
+    setActiveAmount('');
+  };
+
   const handleArm = async () => {
     const validation = validateAmount(amount);
     if (!validation.valid) {
@@ -100,7 +155,6 @@ export default function SendTapScreen({navigation}: Props) {
       return;
     }
 
-    // 0. Verify NFC Hardware Support & Activation
     const nfcSupported = await isNfcSupported();
     if (!nfcSupported) {
       setNfcModalVisible(true);
@@ -111,7 +165,7 @@ export default function SendTapScreen({navigation}: Props) {
     if (!nfcEnabled) {
       Alert.alert(
         'NFC Disabled',
-        'NFC is turned off in your device settings. Please turn on NFC to use Tap Pay.',
+        'NFC is turned off. Please enable NFC to use Tap Pay.',
         [
           {text: 'Cancel', style: 'cancel'},
           {text: 'Open Settings', onPress: () => openNfcSettings()},
@@ -124,70 +178,107 @@ export default function SendTapScreen({navigation}: Props) {
 
     try {
       const amountWei = ethers.parseEther(amount);
-
-      // 1. Mandatory Pre-Flight Balance Check
       const check = await checkSufficientBalance(address, DUMMY_RECIPIENT, amountWei);
       if (!check.canAfford) {
-        setLoading(false);
         setBalanceCheckData(check);
         setBalanceModalVisible(true);
         return;
       }
 
-      // 2. Generate unique session ID (UUID v4)
-      const sessionIdHex = ethers.hexlify(ethers.randomBytes(16)).replace('0x', '');
-      const sessionId = `${sessionIdHex.slice(0, 8)}-${sessionIdHex.slice(8, 12)}-4${sessionIdHex.slice(13, 16)}-8${sessionIdHex.slice(17, 20)}-${sessionIdHex.slice(20, 32)}`;
-
-      // 3. Create ECDSA signature over the payload intent (Biometric-gated)
-      const payloadHash = computePayloadHash(0x01, amountWei, address, sessionId);
+      const sessionId = createSessionId();
+      const payloadHash = computePayloadHash(APDU_VERSION, amountWei, address, sessionId);
       const signature = await signMessage(
         ethers.getBytes(payloadHash),
         'Confirm Biometrics to Authorize TapPay Payment',
       );
 
       if (!signature) {
-        setLoading(false);
-        // User cancelled biometric prompt
         return;
       }
 
-      // 4. Binary APDU encoding (134-byte PAYMENT_OFFER)
-      const encodedPayload = encodePaymentOffer({
-        version: 0x01,
+      const {offer, encodedPayload} = buildPaymentOffer(
+        APDU_VERSION,
         amountWei,
-        senderAddress: address,
+        address,
         sessionId,
         signature,
-      });
+      );
 
-      // 5. Start HCE session with 120s auto-expiry
-      const started = await startHceSession(encodedPayload);
-      if (!started) {
-        setLoading(false);
-        Alert.alert('NFC Unavailable', 'Failed to start NFC card emulation. Please ensure NFC is enabled in Android settings.');
+      const armed = await armSenderTap(encodedPayload);
+      if (!armed) {
+        Alert.alert(
+          'NFC Unavailable',
+          'Failed to start NFC card emulation. Please ensure NFC is enabled.',
+        );
         return;
       }
 
-      // 6. Enter armed state with countdown and haptic feedback
-      setIsArmed(true);
+      const session: ArmedTapSession = {
+        sessionId,
+        amountWei,
+        amountDisplay: amount,
+        encodedPayload,
+        offer,
+      };
+      sessionRef.current = session;
+      setActiveAmount(amount);
+      setPhase('armed');
       setTimeLeft(120);
       triggerHaptic.impactMedium();
 
-      if (countdownRef.current) {
-        clearInterval(countdownRef.current);
-      }
-
+      clearCountdown();
       countdownRef.current = setInterval(() => {
         setTimeLeft(prev => {
           if (prev <= 1) {
             handleCancel();
             triggerHaptic.notificationError();
-            Alert.alert('Session Expired', 'Tap session timed out after 120 seconds. Please try again.');
+            Alert.alert('Session Expired', 'Tap session timed out. Please try again.');
             return 0;
           }
           return prev - 1;
         });
       }, 1000);
+
+      completeSenderTap(session, nextPhase => {
+        if (isMountedRef.current) {
+          setPhase(nextPhase);
+        }
+      }).then(async result => {
+        if (!isMountedRef.current) {
+          return;
+        }
+
+        clearCountdown();
+        const displayAmount = session.amountDisplay;
+
+        if (result.txHash && result.receiverAddress) {
+          triggerHaptic.notificationSuccess();
+          refreshBalance();
+          recordTransaction({
+            direction: 'sent',
+            counterparty: result.receiverAddress,
+            amount: displayAmount,
+            status: 'pending',
+            txHash: result.txHash,
+          });
+
+          navigation.replace('TransactionStatus', {
+            txHash: result.txHash,
+            amount: displayAmount,
+            recipient: result.receiverAddress,
+            direction: 'sent',
+          });
+          return;
+        }
+
+        triggerHaptic.notificationError();
+        setPhase('failed');
+        Alert.alert(
+          'Tap Payment Failed',
+          result.error || 'Could not complete the NFC payment.',
+          [{text: 'OK', onPress: () => handleCancel()}],
+        );
+      });
     } catch (err: any) {
       triggerHaptic.notificationError();
       Alert.alert('Setup Error', err?.message || 'Failed to prepare payment tap.');
@@ -196,42 +287,53 @@ export default function SendTapScreen({navigation}: Props) {
     }
   };
 
-  const handleCancel = async () => {
-    if (countdownRef.current) {
-      clearInterval(countdownRef.current);
-      countdownRef.current = null;
-    }
-    await stopHceSession();
-    setIsArmed(false);
-  };
+  if (phase !== 'idle') {
+    const copy = PHASE_COPY[phase];
+    const isWaiting = ['armed', 'offer_read', 'waiting_accept'].includes(phase);
+    const isBusy = phase === 'broadcasting';
 
-  if (isArmed) {
     return (
-      <View style={styles.container}>
-        <View style={styles.tapContainer}>
-          <PulsingRadar label="SEND" color="#836EF9" size={96} active={isArmed} />
+      <View style={screen.container}>
+        <View style={screen.centered}>
+          <PulsingRadar
+            label="SEND"
+            color={colors.accentSoft}
+            size={96}
+            active={isWaiting}
+          />
 
-          <Text style={styles.tapTitle}>Hold Phones Together</Text>
-          <Text style={styles.tapSubtitle}>
-            Sending {amount} MON{'\n'}Waiting for receiver's phone to tap...
-          </Text>
+          <Text style={styles.tapTitle}>{copy.title}</Text>
+          <Text style={screen.subtitle}>{copy.subtitle}</Text>
 
-          <View style={styles.timerBadge}>
-            <Text style={styles.timerText}>Auto-expires in {timeLeft}s</Text>
-          </View>
+          {activeAmount && (
+            <View style={styles.amountBadge}>
+              <Text style={styles.amountBadgeLabel}>Sending</Text>
+              <Text style={styles.amountBadgeValue}>{activeAmount} MON</Text>
+            </View>
+          )}
 
-          <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
-            <Text style={styles.cancelText}>Cancel Tap</Text>
-          </TouchableOpacity>
+          {isWaiting && (
+            <View style={styles.timerBadge}>
+              <Text style={styles.timerText}>Auto-expires in {timeLeft}s</Text>
+            </View>
+          )}
+
+          {isBusy && <ActivityIndicator color={colors.accent} style={{marginTop: 20}} />}
+
+          {!isBusy && (
+            <TouchableOpacity style={buttons.ghostDanger} onPress={handleCancel}>
+              <Text style={buttons.ghostDangerText}>Cancel Tap</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={screen.container}>
       <View style={styles.content}>
-        <Text style={styles.label}>Amount (MON)</Text>
+        <Text style={screen.sectionLabel}>Amount (MON)</Text>
         <TextInput
           style={styles.amountInput}
           placeholder="0.00"
@@ -242,30 +344,33 @@ export default function SendTapScreen({navigation}: Props) {
           autoFocus
         />
 
-        {/* Live Gas Fee Estimate */}
         {estimatedGasWei !== null && (
-          <Text style={styles.gasHint}>
-            Est. Gas: ~{formatMon(estimatedGasWei)} (Monad)
-          </Text>
+          <Text style={styles.gasHint}>Est. Gas: ~{formatMon(estimatedGasWei)}</Text>
         )}
 
-        <Text style={styles.balanceHint}>
-          Available Balance: {formatMon(balance)}
-        </Text>
+        <Text style={styles.balanceHint}>Available: {formatMon(balance)}</Text>
+
+        <View style={styles.stepsCard}>
+          <Text style={styles.stepsTitle}>How Tap Pay works</Text>
+          <Text style={styles.stepItem}>1. Enter amount and tap Ready</Text>
+          <Text style={styles.stepItem}>2. Hold phones together — receiver scans</Text>
+          <Text style={styles.stepItem}>3. Receiver accepts — tap again to confirm</Text>
+          <Text style={styles.stepItem}>4. Payment broadcasts on Monad</Text>
+        </View>
 
         <TouchableOpacity
-          style={[styles.sendButton, loading && {opacity: 0.6}]}
+          style={[buttons.primary, loading && buttons.disabled]}
           onPress={handleArm}
-          disabled={loading}>
+          disabled={loading}
+          activeOpacity={0.85}>
           {loading ? (
-            <ActivityIndicator color="#FFF" />
+            <ActivityIndicator color={colors.text} />
           ) : (
-            <Text style={styles.sendButtonText}>Ready to Tap</Text>
+            <Text style={buttons.primaryText}>Ready to Tap</Text>
           )}
         </TouchableOpacity>
       </View>
 
-      {/* Insufficient Balance Modal */}
       {balanceCheckData && (
         <InsufficientBalanceModal
           visible={balanceModalVisible}
@@ -276,7 +381,6 @@ export default function SendTapScreen({navigation}: Props) {
         />
       )}
 
-      {/* NFC Hardware Not Available Modal */}
       <NfcNotAvailableModal
         visible={nfcModalVisible}
         onClose={() => setNfcModalVisible(false)}
@@ -290,19 +394,94 @@ export default function SendTapScreen({navigation}: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: '#09090D'},
-  content: {flex: 1, justifyContent: 'center', paddingHorizontal: 22},
-  label: {fontSize: 11, color: '#71717A', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1, fontWeight: '700'},
-  amountInput: {fontSize: 48, fontWeight: '800', color: '#FFFFFF', textAlign: 'center', marginBottom: 8, paddingVertical: 10},
-  gasHint: {fontSize: 12, color: '#6E54FF', textAlign: 'center', marginBottom: 6, fontWeight: '600'},
-  balanceHint: {fontSize: 13, color: '#71717A', textAlign: 'center', marginBottom: 32},
-  sendButton: {backgroundColor: '#6E54FF', height: 52, borderRadius: 12, justifyContent: 'center', alignItems: 'center'},
-  sendButtonText: {fontSize: 16, fontWeight: '700', color: '#FFFFFF'},
-  tapContainer: {flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24},
-  tapTitle: {fontSize: 22, fontWeight: '800', color: '#FFFFFF', marginBottom: 8},
-  tapSubtitle: {fontSize: 14, color: '#8E8E93', textAlign: 'center', lineHeight: 20},
-  timerBadge: {marginTop: 20, paddingVertical: 5, paddingHorizontal: 12, backgroundColor: '#15151E', borderRadius: 8, borderWidth: 1, borderColor: '#242433'},
-  timerText: {fontSize: 12, color: '#8E8E93', fontWeight: '600'},
-  cancelButton: {marginTop: 24, paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8, borderWidth: 1, borderColor: '#331D1D', backgroundColor: '#1C1212'},
-  cancelText: {fontSize: 13, color: '#EF4444', fontWeight: '600'},
+  content: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 22,
+  },
+  amountInput: {
+    fontSize: 48,
+    fontWeight: '800',
+    color: colors.text,
+    textAlign: 'center',
+    marginBottom: 8,
+    paddingVertical: 10,
+  },
+  gasHint: {
+    fontSize: 12,
+    color: colors.accentSoft,
+    textAlign: 'center',
+    marginBottom: 6,
+    fontWeight: '600',
+  },
+  balanceHint: {
+    fontSize: 13,
+    color: colors.textSubtle,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  stepsCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  stepsTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 10,
+  },
+  stepItem: {
+    fontSize: 12,
+    color: colors.textMuted,
+    lineHeight: 20,
+    marginBottom: 2,
+  },
+  tapTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: colors.text,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  amountBadge: {
+    marginTop: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+  },
+  amountBadgeLabel: {
+    fontSize: 11,
+    color: colors.textSubtle,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 2,
+  },
+  amountBadgeValue: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: colors.text,
+  },
+  timerBadge: {
+    marginTop: 16,
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    backgroundColor: colors.surface,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  timerText: {
+    fontSize: 12,
+    color: colors.textMuted,
+    fontWeight: '600',
+  },
 });

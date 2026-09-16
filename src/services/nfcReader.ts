@@ -1,18 +1,25 @@
 /**
- * NFC Reader Service — Receiver-side NFC tag discovery & verification
+ * NFC Reader Service — Receiver/sender-side NFC tag discovery
  *
- * Uses react-native-nfc-manager to discover and read the sender's
- * HCE-emulated card, extracting and cryptographically verifying the binary payment payload.
+ * Reads payment offers and accept responses from HCE-emulated Type 4 tags.
  */
 
 import NfcManager, {NfcTech, Ndef} from 'react-native-nfc-manager';
-import {decodePaymentOffer, verifyPaymentOffer, PaymentOffer} from '../utils/apdu';
+import {SESSION_TIMEOUT_MS} from '../config/monad';
+import {
+  decodePaymentOffer,
+  decodeAcceptNdefContent,
+  decodeOfferNdefContent,
+  verifyPaymentOffer,
+  PaymentOffer,
+} from '../utils/apdu';
 
 export type NfcReadStatus =
   | 'SUCCESS'
   | 'DISCONNECTED'
   | 'INVALID_PAYLOAD'
   | 'SIGNATURE_INVALID'
+  | 'SESSION_MISMATCH'
   | 'CANCELLED'
   | 'ERROR';
 
@@ -20,6 +27,33 @@ export interface NfcReadResponse {
   status: NfcReadStatus;
   offer: PaymentOffer | null;
   errorMessage?: string;
+}
+
+export interface NfcAcceptResponse {
+  status: NfcReadStatus;
+  receiverAddress: string | null;
+  sessionId: string | null;
+  errorMessage?: string;
+}
+
+const READ_TIMEOUT_MS = 15000;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function isUserCancelled(error: any): boolean {
+  const errorStr = error?.message || error?.toString() || '';
+  return errorStr.includes('cancelled') || errorStr.includes('user cancelled');
+}
+
+function isDisconnect(error: any): boolean {
+  const errorStr = error?.message || error?.toString() || '';
+  return (
+    errorStr.includes('Tag was lost') ||
+    errorStr.includes('disconnect') ||
+    errorStr.includes('transceive fail')
+  );
 }
 
 /**
@@ -69,17 +103,54 @@ export async function openNfcSettings(): Promise<void> {
 }
 
 /**
- * Start listening for an NFC tag (receiver mode)
- * Reads the sender's HCE payload, decodes binary PaymentOffer, and verifies ECDSA signature
+ * Extract plain text from the first NDEF record
+ */
+function decodeNdefText(tag: {ndefMessage?: Array<{payload: number[] | Uint8Array}>}): string | null {
+  const record = tag?.ndefMessage?.[0];
+  if (!record?.payload) {
+    return null;
+  }
+
+  try {
+    const payload = new Uint8Array(record.payload as number[]);
+    return Ndef.text.decodePayload(payload);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Request NFC technology with NDEF fallback to IsoDep
+ */
+async function requestNfcTechnology(): Promise<void> {
+  try {
+    await NfcManager.requestTechnology(NfcTech.Ndef, {
+      alertMessage: 'Hold phones together',
+    });
+  } catch {
+    await NfcManager.requestTechnology(NfcTech.IsoDep, {
+      alertMessage: 'Hold phones together',
+    });
+  }
+}
+
+/**
+ * Read NDEF payload from an active NFC session
+ */
+async function readNdefText(): Promise<string | null> {
+  await requestNfcTechnology();
+  const tag = await NfcManager.getTag();
+  return decodeNdefText(tag || {});
+}
+
+/**
+ * Start listening for an NFC tag and read a payment offer
  */
 export async function readPaymentOffer(): Promise<NfcReadResponse> {
   try {
-    // Request NFC Ndef technology
-    await NfcManager.requestTechnology(NfcTech.Ndef);
+    const text = await readNdefText();
 
-    const tag = await NfcManager.getTag();
-
-    if (!tag?.ndefMessage || tag.ndefMessage.length === 0) {
+    if (!text) {
       return {
         status: 'INVALID_PAYLOAD',
         offer: null,
@@ -87,24 +158,15 @@ export async function readPaymentOffer(): Promise<NfcReadResponse> {
       };
     }
 
-    // Extract text payload from NDEF message
-    const record = tag.ndefMessage[0];
-    const text = Ndef.text.decodePayload(new Uint8Array(record.payload));
-
-    if (!text) {
+    const bytes = decodeOfferNdefContent(text);
+    if (!bytes) {
       return {
         status: 'INVALID_PAYLOAD',
         offer: null,
-        errorMessage: 'Empty payload received from card.',
+        errorMessage: 'Empty or invalid payload received from sender.',
       };
     }
 
-    // Decode hex back to binary bytes
-    const bytes = new Uint8Array(
-      text.match(/.{1,2}/g)?.map((byte: string) => parseInt(byte, 16)) || [],
-    );
-
-    // Decode binary payload to PaymentOffer
     const offer = decodePaymentOffer(bytes);
     if (!offer) {
       return {
@@ -114,13 +176,13 @@ export async function readPaymentOffer(): Promise<NfcReadResponse> {
       };
     }
 
-    // Cryptographic signature verification
     const isValidSignature = verifyPaymentOffer(offer);
     if (!isValidSignature) {
       return {
         status: 'SIGNATURE_INVALID',
         offer: null,
-        errorMessage: 'Could not verify sender cryptographic signature. Payment rejected for safety.',
+        errorMessage:
+          'Could not verify sender cryptographic signature. Payment rejected for safety.',
       };
     }
 
@@ -129,27 +191,118 @@ export async function readPaymentOffer(): Promise<NfcReadResponse> {
       offer,
     };
   } catch (error: any) {
-    const errorStr = error?.message || error?.toString() || '';
-    if (errorStr.includes('cancelled') || errorStr.includes('user cancelled')) {
+    if (isUserCancelled(error)) {
       return {status: 'CANCELLED', offer: null};
     }
-    if (errorStr.includes('Tag was lost') || errorStr.includes('disconnect') || errorStr.includes('transceive fail')) {
+    if (isDisconnect(error)) {
       return {
         status: 'DISCONNECTED',
         offer: null,
-        errorMessage: 'Tap interrupted. Move phones closer and try again.',
+        errorMessage: 'Tap interrupted. Move phones closer and hold still.',
       };
     }
     console.error('NFC read error:', error);
     return {
       status: 'ERROR',
       offer: null,
-      errorMessage: errorStr || 'NFC read failure. Please tap again.',
+      errorMessage: error?.message || 'NFC read failure. Please tap again.',
     };
   } finally {
-    // Clean up NFC session
     NfcManager.cancelTechnologyRequest().catch(() => {});
   }
+}
+
+/**
+ * Read receiver accept response from NFC (sender side, after offer was read)
+ */
+export async function readAcceptResponse(
+  expectedSessionId: string,
+): Promise<NfcAcceptResponse> {
+  try {
+    const text = await readNdefText();
+
+    if (!text) {
+      return {
+        status: 'INVALID_PAYLOAD',
+        receiverAddress: null,
+        sessionId: null,
+        errorMessage: 'No accept response received. Ask receiver to accept and tap again.',
+      };
+    }
+
+    const accept = decodeAcceptNdefContent(text);
+    if (!accept) {
+      return {
+        status: 'INVALID_PAYLOAD',
+        receiverAddress: null,
+        sessionId: null,
+        errorMessage: 'Invalid accept response from receiver.',
+      };
+    }
+
+    if (accept.sessionId.toLowerCase() !== expectedSessionId.toLowerCase()) {
+      return {
+        status: 'SESSION_MISMATCH',
+        receiverAddress: null,
+        sessionId: accept.sessionId,
+        errorMessage: 'Accept response does not match this tap session.',
+      };
+    }
+
+    return {
+      status: 'SUCCESS',
+      receiverAddress: accept.receiverAddress,
+      sessionId: accept.sessionId,
+    };
+  } catch (error: any) {
+    if (isUserCancelled(error)) {
+      return {status: 'CANCELLED', receiverAddress: null, sessionId: null};
+    }
+    if (isDisconnect(error)) {
+      return {
+        status: 'DISCONNECTED',
+        receiverAddress: null,
+        sessionId: null,
+        errorMessage: 'Tap interrupted while reading accept. Hold phones together.',
+      };
+    }
+    return {
+      status: 'ERROR',
+      receiverAddress: null,
+      sessionId: null,
+      errorMessage: error?.message || 'Failed to read accept response.',
+    };
+  } finally {
+    NfcManager.cancelTechnologyRequest().catch(() => {});
+  }
+}
+
+/**
+ * Poll NFC reader until accept response is received or timeout expires
+ */
+export async function pollForAcceptResponse(
+  expectedSessionId: string,
+  timeoutMs = SESSION_TIMEOUT_MS,
+): Promise<NfcAcceptResponse> {
+  const deadline = Date.now() + timeoutMs;
+
+  while (Date.now() < deadline) {
+    const response = await readAcceptResponse(expectedSessionId);
+    if (response.status === 'SUCCESS') {
+      return response;
+    }
+    if (response.status === 'CANCELLED') {
+      return response;
+    }
+    await sleep(800);
+  }
+
+  return {
+    status: 'ERROR',
+    receiverAddress: null,
+    sessionId: null,
+    errorMessage: 'Timed out waiting for receiver to accept the payment.',
+  };
 }
 
 /**

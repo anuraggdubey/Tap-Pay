@@ -41,7 +41,15 @@ export type RootStackParamList = {
   SendTap: undefined;
   ReceiveTap: undefined;
   SendPayment: undefined;
-  TransactionStatus: {txHash: string; amount: string; recipient: string};
+  TransactionStatus: {
+    txHash: string;
+    amount: string;
+    recipient: string;
+    direction?: 'sent' | 'received';
+    counterpartyUsername?: string;
+    waitForBalance?: boolean;
+    expectedAmountWei?: string;
+  };
   AccountInfo: undefined;
   AboutTapPay: undefined;
   NetworkInfo: undefined;

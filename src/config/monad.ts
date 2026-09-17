@@ -24,12 +24,12 @@ export const MONAD_CONFIG = {
 
   // Contract addresses — fill these after deployment
   contracts: {
-    usernameRegistry: '' as `0x${string}`,
-    tapPayLedger: '' as `0x${string}`,
+    usernameRegistry: '0x680433E2c8275Da3132DE78791aDb5d2D5293164' as `0x${string}`,
+    tapPayLedger: '0x117e0e6cff340DA4f33af4845F709Ad92a278e5A' as `0x${string}`,
   },
 
   // Backend API (for session management + username caching)
-  apiBaseUrl: '', // e.g. 'https://your-backend.com/api/v1'
+  apiBaseUrl: 'http://192.168.7.101:3001/api/v1', // Physical device over local Wi-Fi
 };
 
 // AID for NFC HCE — hex for "TapPay" with 0xF0 prefix (proprietary AID)

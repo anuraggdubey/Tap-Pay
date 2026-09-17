@@ -31,7 +31,7 @@ export function validateAmount(amount: string): {valid: boolean; error?: string}
 }
 
 /**
- * Validate a username per contract rules (3-20 chars, a-z 0-9 _ only)
+ * Validate a username per rules (3-20 chars, a-z 0-9 only)
  */
 export function validateUsername(username: string): {valid: boolean; error?: string} {
   if (!username || username.trim() === '') {
@@ -46,8 +46,8 @@ export function validateUsername(username: string): {valid: boolean; error?: str
     return {valid: false, error: 'Username must be 20 characters or less'};
   }
 
-  if (!/^[a-z0-9_]+$/.test(username)) {
-    return {valid: false, error: 'Only lowercase letters, numbers, and underscores allowed'};
+  if (!/^[a-z0-9]+$/.test(username)) {
+    return {valid: false, error: 'Only lowercase letters and numbers allowed'};
   }
 
   return {valid: true};

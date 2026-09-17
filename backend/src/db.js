@@ -21,7 +21,7 @@ db.exec(`
     username      TEXT PRIMARY KEY,
     wallet_address TEXT NOT NULL UNIQUE,
     registered_at TEXT NOT NULL DEFAULT (datetime('now')),
-    tx_hash       TEXT NOT NULL
+    normalized_username TEXT NOT NULL UNIQUE
   );
 
   CREATE TABLE IF NOT EXISTS sessions (

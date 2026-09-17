@@ -42,6 +42,7 @@ export default function WalletSetupScreen({navigation}: Props) {
   const [loading, setLoading] = useState(false);
   const [copiedKey, setCopiedKey] = useState(false);
   const [copiedAddress, setCopiedAddress] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
 
   // Step 1: Create New Wallet
   const handleCreate = async () => {
@@ -93,27 +94,32 @@ export default function WalletSetupScreen({navigation}: Props) {
 
     triggerHaptic.impactMedium();
     setLoading(true);
+    setSuggestions([]);
+
     try {
-      const existing = await resolveUsername(trimmed);
-      if (existing) {
+      const result = await registerUsername(trimmed);
+
+      if (result.error) {
         setLoading(false);
         triggerHaptic.notificationError();
-        Alert.alert('Username Taken', `@${trimmed} is already registered on Monad. Please choose another.`);
+        
+        if (result.suggestions && result.suggestions.length > 0) {
+          setSuggestions(result.suggestions);
+          Alert.alert('Username Taken', `@${trimmed} is taken. Try one of the suggestions below.`);
+        } else {
+          Alert.alert('Registration Failed', result.error);
+        }
         return;
       }
 
-      try {
-        await registerUsername(trimmed);
-      } catch {
-        // On-chain registration fallback
-      }
-
+      // Always save username locally so it persists
       await saveUsername(trimmed);
       setLoading(false);
       triggerHaptic.notificationSuccess();
       setStep('backup');
     } catch {
       setLoading(false);
+      // Save username locally even if network failed
       if (trimmed) {
         await saveUsername(trimmed);
       }
@@ -208,11 +214,30 @@ export default function WalletSetupScreen({navigation}: Props) {
               placeholder="alex"
               placeholderTextColor="#545458"
               value={usernameInput}
-              onChangeText={setUsernameInput}
+              onChangeText={(text) => {
+                setUsernameInput(text);
+                if (suggestions.length > 0) setSuggestions([]);
+              }}
               autoCapitalize="none"
               autoCorrect={false}
             />
           </View>
+
+          {suggestions.length > 0 && (
+            <View style={styles.suggestionsContainer}>
+              <Text style={styles.suggestionsTitle}>Suggestions:</Text>
+              <View style={styles.suggestionsList}>
+                {suggestions.map((suggestion) => (
+                  <TouchableOpacity
+                    key={suggestion}
+                    style={styles.suggestionChip}
+                    onPress={() => setUsernameInput(suggestion)}>
+                    <Text style={styles.suggestionText}>@{suggestion}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
 
           <TouchableOpacity
             style={styles.primaryPillButton}
@@ -478,5 +503,33 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: 'monospace',
     lineHeight: 18,
+  },
+  suggestionsContainer: {
+    marginBottom: 24,
+  },
+  suggestionsTitle: {
+    fontSize: 12,
+    color: '#8E8E93',
+    marginBottom: 10,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
+  suggestionsList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  suggestionChip: {
+    backgroundColor: '#1C1C1E',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#2C2C2E',
+  },
+  suggestionText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

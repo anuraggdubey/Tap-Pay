@@ -3,17 +3,12 @@ const config = require("../config");
 const db = require("../db");
 
 // Minimal ABIs — events only
-const REGISTRY_ABI = [
-  "event UsernameRegistered(string username, address indexed owner)",
-  "event UsernameReleased(string username, address indexed owner)",
-];
 
 const LEDGER_ABI = [
   "event PaymentLogged(address indexed from, address indexed to, uint256 amount, bytes32 sessionId, uint256 timestamp)",
 ];
 
 let provider = null;
-let registryContract = null;
 let ledgerContract = null;
 
 /**
@@ -52,34 +47,6 @@ function startEventIndexer() {
 
   const p = getProvider();
 
-  // ── Username Registry Events ──
-  registryContract = new ethers.Contract(
-    config.usernameRegistryAddress,
-    REGISTRY_ABI,
-    p
-  );
-
-  registryContract.on("UsernameRegistered", (username, owner) => {
-    console.log(`[eventIndexer] UsernameRegistered: ${username} → ${owner}`);
-    try {
-      db.prepare(
-        `INSERT OR REPLACE INTO usernames (username, wallet_address, tx_hash)
-         VALUES (?, ?, 'indexed')`
-      ).run(username, owner.toLowerCase());
-    } catch (err) {
-      console.error("[eventIndexer] Failed to cache username:", err.message);
-    }
-  });
-
-  registryContract.on("UsernameReleased", (username, owner) => {
-    console.log(`[eventIndexer] UsernameReleased: ${username} by ${owner}`);
-    try {
-      db.prepare("DELETE FROM usernames WHERE username = ?").run(username);
-    } catch (err) {
-      console.error("[eventIndexer] Failed to remove username:", err.message);
-    }
-  });
-
   // ── TapPay Ledger Events ──
   ledgerContract = new ethers.Contract(
     config.tapPayLedgerAddress,
@@ -112,7 +79,6 @@ function startEventIndexer() {
   });
 
   console.log("[eventIndexer] Listening for on-chain events...");
-  console.log(`  UsernameRegistry: ${config.usernameRegistryAddress}`);
   console.log(`  TapPayLedger:     ${config.tapPayLedgerAddress}`);
 }
 
@@ -120,9 +86,6 @@ function startEventIndexer() {
  * Stop event listeners (for graceful shutdown)
  */
 function stopEventIndexer() {
-  if (registryContract) {
-    registryContract.removeAllListeners();
-  }
   if (ledgerContract) {
     ledgerContract.removeAllListeners();
   }

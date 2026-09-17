@@ -2,10 +2,6 @@ const { ethers } = require("ethers");
 const config = require("../config");
 
 // Minimal ABIs — only the events/functions we need
-const REGISTRY_ABI = [
-  "event UsernameRegistered(string username, address indexed owner)",
-  "event UsernameReleased(string username, address indexed owner)",
-];
 
 const LEDGER_ABI = [
   "event PaymentLogged(address indexed from, address indexed to, uint256 amount, bytes32 sessionId, uint256 timestamp)",
@@ -28,38 +24,7 @@ function createProvider() {
   throw new Error("All RPC endpoints failed");
 }
 
-/**
- * Verify that a txHash contains a real UsernameRegistered event matching the claimed data
- * @returns {boolean} Whether the on-chain event matches
- */
-async function verifyUsernameRegistration(txHash, expectedUsername, expectedAddress) {
-  try {
-    const provider = createProvider();
-    const receipt = await provider.getTransactionReceipt(txHash);
-    if (!receipt || receipt.status !== 1) return false;
 
-    const iface = new ethers.Interface(REGISTRY_ABI);
-
-    for (const log of receipt.logs) {
-      try {
-        const parsed = iface.parseLog({ topics: log.topics, data: log.data });
-        if (
-          parsed &&
-          parsed.name === "UsernameRegistered" &&
-          parsed.args[0] === expectedUsername &&
-          parsed.args[1].toLowerCase() === expectedAddress.toLowerCase()
-        ) {
-          return true;
-        }
-      } catch {
-        // Not our event, skip
-      }
-    }
-    return false;
-  } catch {
-    return false;
-  }
-}
 
 /**
  * Verify that a txHash contains a real PaymentLogged event and return the status
@@ -97,4 +62,4 @@ async function verifyPayment(txHash) {
   }
 }
 
-module.exports = { createProvider, verifyUsernameRegistration, verifyPayment };
+module.exports = { createProvider, verifyPayment };

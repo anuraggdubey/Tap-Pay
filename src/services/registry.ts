@@ -1,97 +1,58 @@
 /**
- * Registry Service — UsernameRegistry contract interactions
+ * Registry Service — Centralized Backend Interactions
  *
- * Handles on-chain username registration, resolution, and reverse lookup
- * via the deployed UsernameRegistry smart contract on Monad testnet.
+ * Handles username registration, resolution, and reverse lookup
+ * via the TapPay centralized backend.
  */
 
 import {ethers} from 'ethers';
 import {getProvider, loadPrivateKey} from './wallet';
 import {MONAD_CONFIG} from '../config/monad';
 
-// Minimal ABI for UsernameRegistry — only the functions we call
-const REGISTRY_ABI = [
-  'function register(string calldata username) external',
-  'function release() external',
-  'function resolve(string calldata username) external view returns (address)',
-  'function reverseResolve(address user) external view returns (string)',
-  'event UsernameRegistered(string username, address indexed owner)',
-  'event UsernameReleased(string username, address indexed owner)',
-  'error InvalidUsernameLength(uint256 length)',
-  'error InvalidCharacter(bytes1 char, uint256 position)',
-  'error UsernameTaken(string username)',
-  'error AlreadyRegistered(address user)',
-  'error NotRegistered(address user)',
-];
-
 /**
- * Get a read-only contract instance
- */
-function getRegistryContract(): ethers.Contract {
-  const provider = getProvider();
-  return new ethers.Contract(
-    MONAD_CONFIG.contracts.usernameRegistry,
-    REGISTRY_ABI,
-    provider,
-  );
-}
-
-/**
- * Get a write-enabled contract instance (with signer)
- */
-async function getRegistryContractWithSigner(): Promise<ethers.Contract | null> {
-  const key = await loadPrivateKey();
-  if (!key) {
-    return null;
-  }
-  const provider = getProvider();
-  const wallet = new ethers.Wallet(key, provider);
-  return new ethers.Contract(
-    MONAD_CONFIG.contracts.usernameRegistry,
-    REGISTRY_ABI,
-    wallet,
-  );
-}
-
-/**
- * Register a username on-chain
- * @returns Transaction hash on success, or error message
+ * Register a username on the backend
+ * @returns Object with username on success, or error/suggestions on failure
  */
 export async function registerUsername(
   username: string,
-): Promise<{txHash: string | null; error?: string}> {
+): Promise<{username?: string; address?: string; error?: string; suggestions?: string[]}> {
   try {
-    const contract = await getRegistryContractWithSigner();
-    if (!contract) {
-      return {txHash: null, error: 'Wallet not found'};
+    const key = await loadPrivateKey();
+    if (!key) {
+      return {error: 'Wallet not found'};
+    }
+    const provider = getProvider();
+    const wallet = new ethers.Wallet(key, provider);
+    const address = wallet.address;
+
+    const response = await fetch(`${MONAD_CONFIG.apiBaseUrl}/username/register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({username, address}),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        error: data.error || 'Registration failed',
+        suggestions: data.suggestions || undefined,
+      };
     }
 
-    const tx = await contract.register(username);
-    return {txHash: tx.hash};
+    return {username: data.username, address: data.address};
   } catch (error: any) {
-    // Parse custom Solidity errors
-    if (error.reason) {
-      return {txHash: null, error: error.reason};
-    }
-    return {txHash: null, error: error.message || 'Registration failed'};
+    return {error: error.message || 'Network error'};
   }
 }
 
 /**
- * Release your current username on-chain
+ * Release your current username (Mocked - needs backend support if desired later)
  */
-export async function releaseUsername(): Promise<{txHash: string | null; error?: string}> {
-  try {
-    const contract = await getRegistryContractWithSigner();
-    if (!contract) {
-      return {txHash: null, error: 'Wallet not found'};
-    }
-
-    const tx = await contract.release();
-    return {txHash: tx.hash};
-  } catch (error: any) {
-    return {txHash: null, error: error.reason || error.message || 'Release failed'};
-  }
+export async function releaseUsername(): Promise<{error?: string}> {
+  return {error: 'Releasing usernames is not currently supported'};
 }
 
 /**
@@ -100,13 +61,10 @@ export async function releaseUsername(): Promise<{txHash: string | null; error?:
  */
 export async function resolveUsername(username: string): Promise<string | null> {
   try {
-    const contract = getRegistryContract();
-    const resolved = await contract.resolve(username);
-    // Zero address means username is not registered
-    if (!resolved || resolved === ethers.ZeroAddress) {
-      return null;
-    }
-    return resolved;
+    const response = await fetch(`${MONAD_CONFIG.apiBaseUrl}/username/resolve/${username}`);
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data.address || null;
   } catch {
     return null;
   }
@@ -118,13 +76,10 @@ export async function resolveUsername(username: string): Promise<string | null> 
  */
 export async function reverseResolveAddress(address: string): Promise<string | null> {
   try {
-    const contract = getRegistryContract();
-    const username = await contract.reverseResolve(address);
-    // Empty string or falsy means no username registered
-    if (!username || username.trim() === '') {
-      return null;
-    }
-    return username;
+    const response = await fetch(`${MONAD_CONFIG.apiBaseUrl}/username/reverse/${address}`);
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data.username || null;
   } catch {
     return null;
   }
@@ -134,4 +89,3 @@ export async function reverseResolveAddress(address: string): Promise<string | n
  * Alias for reverseResolveAddress
  */
 export const reverseResolve = reverseResolveAddress;
-

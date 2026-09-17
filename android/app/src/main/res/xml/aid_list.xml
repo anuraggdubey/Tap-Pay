@@ -2,8 +2,9 @@
                    android:description="@string/app_name"
                    android:requireDeviceUnlock="false">
   <aid-group android:category="other"
-             android:description="@string/app_name">
-    <!-- NFC Type 4 Tag Emulation AID -->
+             android:description="@string/app_name"
+             android:priority="1000">
+    <!-- NFC Type 4 Tag Emulation AID (NFC Forum NDEF Tag Application) -->
     <aid-filter android:name="D2760000850101" />
   </aid-group>
 </host-apdu-service>

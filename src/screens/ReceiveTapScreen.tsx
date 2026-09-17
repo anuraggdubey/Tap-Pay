@@ -24,6 +24,9 @@ import {
   openNfcSettings,
   readPaymentOffer,
   cancelNfcRead,
+  startContinuousHceScan,
+  stopContinuousHceScan,
+  isNativeTapReaderAvailable,
 } from '../services/nfcReader';
 import {loadPrivateKey} from '../services/wallet';
 import {reverseResolve} from '../services/registry';
@@ -178,12 +181,17 @@ export default function ReceiveTapScreen({navigation}: Props) {
         return;
       }
 
+      if (isNativeTapReaderAvailable()) {
+        await startContinuousHceScan();
+      }
+
       startScanning();
     })();
 
     return () => {
       isMountedRef.current = false;
       scanningRef.current = false;
+      stopContinuousHceScan();
       cancelNfcRead();
       stopHceSession();
     };
@@ -204,6 +212,9 @@ export default function ReceiveTapScreen({navigation}: Props) {
       }
 
       setPhase('completing');
+
+      // Receiver must stop reader mode before broadcasting accept via HCE
+      await stopContinuousHceScan();
 
       const started = await broadcastReceiverAccept(address, offer.sessionId);
       if (!started) {
@@ -282,7 +293,7 @@ export default function ReceiveTapScreen({navigation}: Props) {
 
           <View style={[screen.badge, {borderColor: 'rgba(16, 185, 129, 0.25)'}]}>
             <Text style={[screen.badgeText, {color: colors.success}]}>
-              NFC Reader Active
+              {isNativeTapReaderAvailable() ? 'Native NFC Reader Active' : 'NFC Reader Active'}
             </Text>
           </View>
 

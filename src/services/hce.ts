@@ -60,8 +60,11 @@ export async function startHceSession(
 
     await session.setApplication(tag);
     await session.setEnabled(true);
-    scheduleExpiry();
 
+    // Brief pause for Android to register HCE service
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    scheduleExpiry();
     return true;
   } catch (error) {
     console.error('Failed to start HCE session:', error);

@@ -9,7 +9,7 @@ import {
   stopHceSession,
   waitForHceRead,
 } from './hce';
-import {pollForAcceptResponse, cancelNfcRead} from './nfcReader';
+import {pollForAcceptResponse, cancelNfcRead, prepareSenderForHce, stopContinuousHceScan} from './nfcReader';
 import {getBalance, sendPayment} from './wallet';
 import {encodePaymentOffer, PaymentOffer} from '../utils/apdu';
 
@@ -74,6 +74,10 @@ export async function completeSenderTap(
   session: ArmedTapSession,
   onPhaseChange?: (phase: TapSenderPhase) => void,
 ): Promise<{txHash: string | null; receiverAddress: string | null; error?: string}> {
+  // Sender must NOT be in reader mode — only HCE card emulation
+  await prepareSenderForHce();
+  await stopContinuousHceScan();
+
   // Register read listener BEFORE enabling HCE (prevents missing fast reads)
   const offerReadPromise = waitForHceRead();
 

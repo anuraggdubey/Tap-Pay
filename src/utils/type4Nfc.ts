@@ -73,9 +73,14 @@ export async function readType4HceText(): Promise<string | null> {
     // Optional on some devices
   }
 
-  const selectApp = await NfcManager.isoDepHandler.transceive(TYPE4_NDEF_APP_AID);
+  let selectApp = await NfcManager.isoDepHandler.transceive(TYPE4_NDEF_APP_AID);
   if (!apduOk(selectApp)) {
-    throw new Error('HCE card not found. Ensure sender has Tap Pay open on Send screen.');
+    // Retry without Le byte — some devices send 12-byte SELECT
+    const selectNoLe = TYPE4_NDEF_APP_AID.slice(0, 12);
+    selectApp = await NfcManager.isoDepHandler.transceive(selectNoLe);
+    if (!apduOk(selectApp)) {
+      throw new Error('HCE card not found. Ensure sender has Tap Pay open on Send screen.');
+    }
   }
 
   const selectFile = await NfcManager.isoDepHandler.transceive(TYPE4_SELECT_NDEF_FILE);

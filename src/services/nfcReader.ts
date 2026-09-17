@@ -1,10 +1,20 @@
 /**
- * NFC Reader Service — Reads HCE-emulated Type 4 tags via IsoDep APDUs
+ * NFC Reader Service — Reads HCE-emulated Type 4 tags
+ *
+ * Android: uses native TapNfcReaderModule (enableReaderMode) for phone-to-phone.
+ * Fallback: IsoDep APDU reader via react-native-nfc-manager.
  */
 
 import NfcManager from 'react-native-nfc-manager';
 import {SESSION_TIMEOUT_MS} from '../config/monad';
 import {readType4HceTextWithTimeout} from '../utils/type4Nfc';
+import {
+  startNativeReaderMode,
+  stopNativeReaderMode,
+  subscribeNativeTagRead,
+  isNativeTapReaderAvailable,
+  prepareSenderNfc,
+} from './tapNfcNative';
 import {
   decodePaymentOffer,
   decodeAcceptNdefContent,
@@ -36,10 +46,27 @@ export interface NfcAcceptResponse {
   errorMessage?: string;
 }
 
-const SCAN_TIMEOUT_MS = 12_000;
+const SCAN_TIMEOUT_MS = 15_000;
+
+let _continuousUnsubscribe: (() => void) | null = null;
+let _nativeReaderRunning = false;
+let _scanResolver: ((text: string) => void) | null = null;
+let _scanRejecter: ((error: Error) => void) | null = null;
+let _scanTimer: ReturnType<typeof setTimeout> | null = null;
+
+export {isNativeTapReaderAvailable} from './tapNfcNative';
 
 function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function clearScanWaiter() {
+  if (_scanTimer) {
+    clearTimeout(_scanTimer);
+    _scanTimer = null;
+  }
+  _scanResolver = null;
+  _scanRejecter = null;
 }
 
 function isUserCancelled(error: any): boolean {
@@ -62,9 +89,6 @@ function isTimeout(error: any): boolean {
   return errorStr.includes('timeout') || errorStr.includes('Timeout');
 }
 
-/**
- * Initialize NFC Manager
- */
 export async function initNfc(): Promise<boolean> {
   try {
     await NfcManager.start();
@@ -100,10 +124,116 @@ export async function openNfcSettings(): Promise<void> {
 }
 
 /**
- * Read NDEF text from an HCE-emulated Type 4 card (IsoDep + APDU)
+ * Prepare sender phone — disable reader mode so HCE can broadcast
  */
-async function readHceNdefText(): Promise<string | null> {
-  return await readType4HceTextWithTimeout(SCAN_TIMEOUT_MS);
+export async function prepareSenderForHce(): Promise<void> {
+  await prepareSenderNfc();
+  await cancelNfcRead();
+}
+
+/**
+ * Start continuous native reader mode (Android) — call once on Receive screen
+ */
+export async function startContinuousHceScan(): Promise<boolean> {
+  if (!isNativeTapReaderAvailable()) {
+    return false;
+  }
+
+  if (_nativeReaderRunning) {
+    return true;
+  }
+
+  _continuousUnsubscribe = subscribeNativeTagRead(
+    text => {
+      if (_scanResolver) {
+        const resolve = _scanResolver;
+        clearScanWaiter();
+        resolve(text);
+      }
+    },
+    () => {
+      // Non-fatal scan errors — keep listening
+    },
+  );
+
+  const started = await startNativeReaderMode();
+  _nativeReaderRunning = started;
+  return started;
+}
+
+/**
+ * Stop continuous native reader mode
+ */
+export async function stopContinuousHceScan(): Promise<void> {
+  clearScanWaiter();
+  if (_continuousUnsubscribe) {
+    _continuousUnsubscribe();
+    _continuousUnsubscribe = null;
+  }
+  if (_nativeReaderRunning) {
+    await stopNativeReaderMode();
+    _nativeReaderRunning = false;
+  }
+  await cancelNfcRead();
+}
+
+/**
+ * Wait for next HCE tag read (uses native reader if available)
+ */
+async function waitForHceNdefText(timeoutMs = SCAN_TIMEOUT_MS): Promise<string> {
+  if (isNativeTapReaderAvailable()) {
+    if (!_nativeReaderRunning) {
+      const started = await startContinuousHceScan();
+      if (!started) {
+        throw new Error('Failed to start native NFC reader mode');
+      }
+    }
+
+    return await new Promise<string>((resolve, reject) => {
+      _scanResolver = resolve;
+      _scanRejecter = reject;
+      _scanTimer = setTimeout(() => {
+        clearScanWaiter();
+        reject(new Error('NFC scan timeout'));
+      }, timeoutMs);
+    });
+  }
+
+  const text = await readType4HceTextWithTimeout(timeoutMs);
+  if (!text) {
+    throw new Error('NFC scan timeout');
+  }
+  return text;
+}
+
+function parsePaymentOfferFromText(text: string): NfcReadResponse {
+  const bytes = decodeOfferNdefContent(text);
+  if (!bytes) {
+    return {
+      status: 'INVALID_PAYLOAD',
+      offer: null,
+      errorMessage: 'Received data is not a payment offer. Hold phones still and retry.',
+    };
+  }
+
+  const offer = decodePaymentOffer(bytes);
+  if (!offer) {
+    return {
+      status: 'INVALID_PAYLOAD',
+      offer: null,
+      errorMessage: 'Invalid payment structure. Ensure both phones use the latest app.',
+    };
+  }
+
+  if (!verifyPaymentOffer(offer)) {
+    return {
+      status: 'SIGNATURE_INVALID',
+      offer: null,
+      errorMessage: 'Could not verify sender signature. Payment rejected.',
+    };
+  }
+
+  return {status: 'SUCCESS', offer};
 }
 
 /**
@@ -111,43 +241,8 @@ async function readHceNdefText(): Promise<string | null> {
  */
 export async function readPaymentOffer(): Promise<NfcReadResponse> {
   try {
-    const text = await readHceNdefText();
-
-    if (!text) {
-      return {
-        status: 'INVALID_PAYLOAD',
-        offer: null,
-        errorMessage: 'No data received. Make sure sender tapped "Ready to Tap" first.',
-      };
-    }
-
-    const bytes = decodeOfferNdefContent(text);
-    if (!bytes) {
-      return {
-        status: 'INVALID_PAYLOAD',
-        offer: null,
-        errorMessage: 'Received data is not a payment offer. Hold phones still and retry.',
-      };
-    }
-
-    const offer = decodePaymentOffer(bytes);
-    if (!offer) {
-      return {
-        status: 'INVALID_PAYLOAD',
-        offer: null,
-        errorMessage: 'Invalid payment structure. Ensure both phones use the latest app.',
-      };
-    }
-
-    if (!verifyPaymentOffer(offer)) {
-      return {
-        status: 'SIGNATURE_INVALID',
-        offer: null,
-        errorMessage: 'Could not verify sender signature. Payment rejected.',
-      };
-    }
-
-    return {status: 'SUCCESS', offer};
+    const text = await waitForHceNdefText();
+    return parsePaymentOfferFromText(text);
   } catch (error: any) {
     if (isUserCancelled(error)) {
       return {status: 'CANCELLED', offer: null};
@@ -156,7 +251,7 @@ export async function readPaymentOffer(): Promise<NfcReadResponse> {
       return {
         status: 'TIMEOUT',
         offer: null,
-        errorMessage: 'No NFC signal detected. Hold phones back-to-back, near the top.',
+        errorMessage: 'No NFC signal. Hold phones back-to-back at the top for 3 seconds.',
       };
     }
     if (isDisconnect(error)) {
@@ -172,8 +267,6 @@ export async function readPaymentOffer(): Promise<NfcReadResponse> {
       offer: null,
       errorMessage: error?.message || 'NFC read failed. Retry the tap.',
     };
-  } finally {
-    NfcManager.cancelTechnologyRequest({delayMsAndroid: 200}).catch(() => {});
   }
 }
 
@@ -184,14 +277,14 @@ export async function readAcceptResponse(
   expectedSessionId: string,
 ): Promise<NfcAcceptResponse> {
   try {
-    const text = await readHceNdefText();
+    const text = await waitForHceNdefText();
 
     if (!text) {
       return {
         status: 'INVALID_PAYLOAD',
         receiverAddress: null,
         sessionId: null,
-        errorMessage: 'No accept signal. Receiver must tap Accept, then hold phones together.',
+        errorMessage: 'No accept signal. Receiver must tap Accept first.',
       };
     }
 
@@ -231,28 +324,15 @@ export async function readAcceptResponse(
         errorMessage: 'No accept signal. Hold phones together after receiver taps Accept.',
       };
     }
-    if (isDisconnect(error)) {
-      return {
-        status: 'DISCONNECTED',
-        receiverAddress: null,
-        sessionId: null,
-        errorMessage: 'Tap interrupted while reading accept.',
-      };
-    }
     return {
       status: 'ERROR',
       receiverAddress: null,
       sessionId: null,
       errorMessage: error?.message || 'Failed to read accept response.',
     };
-  } finally {
-    NfcManager.cancelTechnologyRequest({delayMsAndroid: 200}).catch(() => {});
   }
 }
 
-/**
- * Poll until accept response is received
- */
 export async function pollForAcceptResponse(
   expectedSessionId: string,
   timeoutMs = SESSION_TIMEOUT_MS,
@@ -267,14 +347,15 @@ export async function pollForAcceptResponse(
     if (response.status === 'CANCELLED') {
       return response;
     }
-    await sleep(600);
+    await sleep(500);
   }
 
   return {
     status: 'TIMEOUT',
     receiverAddress: null,
     sessionId: null,
-    errorMessage: 'Timed out waiting for receiver to accept. Ask them to tap Accept, then tap phones again.',
+    errorMessage:
+      'Timed out waiting for receiver. They must tap Accept, then hold phones together again.',
   };
 }
 
@@ -287,5 +368,6 @@ export async function cancelNfcRead(): Promise<void> {
 }
 
 export function teardownNfc(): void {
+  stopContinuousHceScan();
   NfcManager.cancelTechnologyRequest({delayMsAndroid: 200}).catch(() => {});
 }

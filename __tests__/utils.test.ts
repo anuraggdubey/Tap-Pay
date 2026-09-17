@@ -162,7 +162,7 @@ describe('Validation Utils', () => {
 
   test('validates usernames', () => {
     expect(validateUsername('alice').valid).toBe(true);
-    expect(validateUsername('alice_123').valid).toBe(true);
+    expect(validateUsername('alice_123').valid).toBe(false); // underscores no longer allowed
     expect(validateUsername('ab').valid).toBe(false);
     expect(validateUsername('Alice').valid).toBe(false); // only lowercase
   });

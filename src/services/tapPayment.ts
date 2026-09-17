@@ -1,11 +1,5 @@
 /**
  * Tap Payment Orchestrator — End-to-end NFC contactless payment flow
- *
- * Flow:
- * 1. Sender arms HCE with signed payment offer
- * 2. Receiver reads offer via NFC
- * 3. Receiver accepts → broadcasts accept HCE with their address
- * 4. Sender detects offer read → reads accept → broadcasts on-chain payment
  */
 
 import {ethers} from 'ethers';
@@ -63,7 +57,8 @@ export function buildPaymentOffer(
 }
 
 /**
- * Arm sender HCE with the signed payment offer
+ * Arm sender HCE. Returns a promise that resolves when receiver reads the offer.
+ * IMPORTANT: readPromise must be created BEFORE calling this (see completeSenderTap).
  */
 export async function armSenderTap(
   encodedPayload: Uint8Array,
@@ -72,29 +67,50 @@ export async function armSenderTap(
 }
 
 /**
- * Sender: wait until receiver reads the payment offer, then poll for accept
+ * Sender: wait for offer read, then accept, then broadcast payment.
+ * Creates the HCE read listener BEFORE arming to avoid race conditions.
  */
 export async function completeSenderTap(
   session: ArmedTapSession,
   onPhaseChange?: (phase: TapSenderPhase) => void,
 ): Promise<{txHash: string | null; receiverAddress: string | null; error?: string}> {
+  // Register read listener BEFORE enabling HCE (prevents missing fast reads)
+  const offerReadPromise = waitForHceRead();
+
   onPhaseChange?.('armed');
 
-  const offerRead = await waitForHceRead();
+  const armed = await startHceSession(session.encodedPayload);
+  if (!armed) {
+    onPhaseChange?.('failed');
+    return {
+      txHash: null,
+      receiverAddress: null,
+      error: 'Failed to start NFC card emulation. Is NFC enabled?',
+    };
+  }
+
+  const offerRead = await offerReadPromise;
   if (!offerRead) {
     onPhaseChange?.('failed');
-    return {txHash: null, receiverAddress: null, error: 'No device read your payment offer.'};
+    await stopHceSession(true);
+    return {
+      txHash: null,
+      receiverAddress: null,
+      error: 'No device read your payment offer. Hold phones back-to-back near the top.',
+    };
   }
 
   onPhaseChange?.('offer_read');
   onPhaseChange?.('waiting_accept');
 
-  await stopHceSession();
+  // Must disable HCE before this phone can act as NFC reader
+  await stopHceSession(false);
   await cancelNfcRead();
 
   const accept = await pollForAcceptResponse(session.sessionId);
   if (accept.status !== 'SUCCESS' || !accept.receiverAddress) {
     onPhaseChange?.('failed');
+    await stopHceSession(true);
     return {
       txHash: null,
       receiverAddress: null,
@@ -106,6 +122,7 @@ export async function completeSenderTap(
     accept.receiverAddress.toLowerCase() === session.offer.senderAddress.toLowerCase()
   ) {
     onPhaseChange?.('failed');
+    await stopHceSession(true);
     return {
       txHash: null,
       receiverAddress: null,
@@ -128,6 +145,7 @@ export async function completeSenderTap(
 
   if (!result.txHash) {
     onPhaseChange?.('failed');
+    await stopHceSession(true);
     return {
       txHash: null,
       receiverAddress: accept.receiverAddress,
@@ -136,7 +154,7 @@ export async function completeSenderTap(
   }
 
   onPhaseChange?.('completed');
-  await stopHceSession();
+  await stopHceSession(true);
 
   return {
     txHash: result.txHash,
@@ -144,9 +162,6 @@ export async function completeSenderTap(
   };
 }
 
-/**
- * Receiver: broadcast accept response over HCE for sender to read
- */
 export async function broadcastReceiverAccept(
   receiverAddress: string,
   sessionId: string,
@@ -154,21 +169,15 @@ export async function broadcastReceiverAccept(
   return await startHceAcceptSession(receiverAddress, sessionId);
 }
 
-/**
- * Cancel any active tap session resources
- */
 export async function cancelTapSession(): Promise<void> {
   await cancelNfcRead();
-  await stopHceSession();
+  await stopHceSession(true);
 }
 
 function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-/**
- * Receiver: wait until on-chain balance reflects the incoming payment
- */
 export async function waitForIncomingPayment(
   address: string,
   previousBalance: bigint,
@@ -184,7 +193,7 @@ export async function waitForIncomingPayment(
         return true;
       }
     } catch {
-      // Keep polling through transient RPC errors
+      // Keep polling
     }
     await sleep(2000);
   }

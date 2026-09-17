@@ -1,11 +1,10 @@
 /**
- * NFC Reader Service — Receiver/sender-side NFC tag discovery
- *
- * Reads payment offers and accept responses from HCE-emulated Type 4 tags.
+ * NFC Reader Service — Reads HCE-emulated Type 4 tags via IsoDep APDUs
  */
 
-import NfcManager, {NfcTech, Ndef} from 'react-native-nfc-manager';
+import NfcManager from 'react-native-nfc-manager';
 import {SESSION_TIMEOUT_MS} from '../config/monad';
+import {readType4HceTextWithTimeout} from '../utils/type4Nfc';
 import {
   decodePaymentOffer,
   decodeAcceptNdefContent,
@@ -20,6 +19,7 @@ export type NfcReadStatus =
   | 'INVALID_PAYLOAD'
   | 'SIGNATURE_INVALID'
   | 'SESSION_MISMATCH'
+  | 'TIMEOUT'
   | 'CANCELLED'
   | 'ERROR';
 
@@ -36,7 +36,7 @@ export interface NfcAcceptResponse {
   errorMessage?: string;
 }
 
-const READ_TIMEOUT_MS = 15000;
+const SCAN_TIMEOUT_MS = 12_000;
 
 function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -52,8 +52,14 @@ function isDisconnect(error: any): boolean {
   return (
     errorStr.includes('Tag was lost') ||
     errorStr.includes('disconnect') ||
-    errorStr.includes('transceive fail')
+    errorStr.includes('transceive fail') ||
+    errorStr.includes('Tag connection lost')
   );
+}
+
+function isTimeout(error: any): boolean {
+  const errorStr = error?.message || error?.toString() || '';
+  return errorStr.includes('timeout') || errorStr.includes('Timeout');
 }
 
 /**
@@ -69,9 +75,6 @@ export async function initNfc(): Promise<boolean> {
   }
 }
 
-/**
- * Check if NFC is supported on this device
- */
 export async function isNfcSupported(): Promise<boolean> {
   try {
     return await NfcManager.isSupported();
@@ -80,9 +83,6 @@ export async function isNfcSupported(): Promise<boolean> {
   }
 }
 
-/**
- * Check if NFC is currently enabled in device settings
- */
 export async function isNfcEnabled(): Promise<boolean> {
   try {
     return await NfcManager.isEnabled();
@@ -91,9 +91,6 @@ export async function isNfcEnabled(): Promise<boolean> {
   }
 }
 
-/**
- * Open the device's NFC settings (for when NFC is disabled)
- */
 export async function openNfcSettings(): Promise<void> {
   try {
     await NfcManager.goToNfcSetting();
@@ -103,58 +100,24 @@ export async function openNfcSettings(): Promise<void> {
 }
 
 /**
- * Extract plain text from the first NDEF record
+ * Read NDEF text from an HCE-emulated Type 4 card (IsoDep + APDU)
  */
-function decodeNdefText(tag: {ndefMessage?: Array<{payload: number[] | Uint8Array}>}): string | null {
-  const record = tag?.ndefMessage?.[0];
-  if (!record?.payload) {
-    return null;
-  }
-
-  try {
-    const payload = new Uint8Array(record.payload as number[]);
-    return Ndef.text.decodePayload(payload);
-  } catch {
-    return null;
-  }
+async function readHceNdefText(): Promise<string | null> {
+  return await readType4HceTextWithTimeout(SCAN_TIMEOUT_MS);
 }
 
 /**
- * Request NFC technology with NDEF fallback to IsoDep
- */
-async function requestNfcTechnology(): Promise<void> {
-  try {
-    await NfcManager.requestTechnology(NfcTech.Ndef, {
-      alertMessage: 'Hold phones together',
-    });
-  } catch {
-    await NfcManager.requestTechnology(NfcTech.IsoDep, {
-      alertMessage: 'Hold phones together',
-    });
-  }
-}
-
-/**
- * Read NDEF payload from an active NFC session
- */
-async function readNdefText(): Promise<string | null> {
-  await requestNfcTechnology();
-  const tag = await NfcManager.getTag();
-  return decodeNdefText(tag || {});
-}
-
-/**
- * Start listening for an NFC tag and read a payment offer
+ * Read a payment offer from sender's HCE card
  */
 export async function readPaymentOffer(): Promise<NfcReadResponse> {
   try {
-    const text = await readNdefText();
+    const text = await readHceNdefText();
 
     if (!text) {
       return {
         status: 'INVALID_PAYLOAD',
         offer: null,
-        errorMessage: 'Invalid payment data received. Ask sender to retry.',
+        errorMessage: 'No data received. Make sure sender tapped "Ready to Tap" first.',
       };
     }
 
@@ -163,7 +126,7 @@ export async function readPaymentOffer(): Promise<NfcReadResponse> {
       return {
         status: 'INVALID_PAYLOAD',
         offer: null,
-        errorMessage: 'Empty or invalid payload received from sender.',
+        errorMessage: 'Received data is not a payment offer. Hold phones still and retry.',
       };
     }
 
@@ -172,61 +135,63 @@ export async function readPaymentOffer(): Promise<NfcReadResponse> {
       return {
         status: 'INVALID_PAYLOAD',
         offer: null,
-        errorMessage: 'Invalid payment structure. Ensure sender app is updated.',
+        errorMessage: 'Invalid payment structure. Ensure both phones use the latest app.',
       };
     }
 
-    const isValidSignature = verifyPaymentOffer(offer);
-    if (!isValidSignature) {
+    if (!verifyPaymentOffer(offer)) {
       return {
         status: 'SIGNATURE_INVALID',
         offer: null,
-        errorMessage:
-          'Could not verify sender cryptographic signature. Payment rejected for safety.',
+        errorMessage: 'Could not verify sender signature. Payment rejected.',
       };
     }
 
-    return {
-      status: 'SUCCESS',
-      offer,
-    };
+    return {status: 'SUCCESS', offer};
   } catch (error: any) {
     if (isUserCancelled(error)) {
       return {status: 'CANCELLED', offer: null};
+    }
+    if (isTimeout(error)) {
+      return {
+        status: 'TIMEOUT',
+        offer: null,
+        errorMessage: 'No NFC signal detected. Hold phones back-to-back, near the top.',
+      };
     }
     if (isDisconnect(error)) {
       return {
         status: 'DISCONNECTED',
         offer: null,
-        errorMessage: 'Tap interrupted. Move phones closer and hold still.',
+        errorMessage: 'Tap interrupted. Keep phones still and try again.',
       };
     }
     console.error('NFC read error:', error);
     return {
       status: 'ERROR',
       offer: null,
-      errorMessage: error?.message || 'NFC read failure. Please tap again.',
+      errorMessage: error?.message || 'NFC read failed. Retry the tap.',
     };
   } finally {
-    NfcManager.cancelTechnologyRequest().catch(() => {});
+    NfcManager.cancelTechnologyRequest({delayMsAndroid: 200}).catch(() => {});
   }
 }
 
 /**
- * Read receiver accept response from NFC (sender side, after offer was read)
+ * Read receiver accept response from HCE card (sender side)
  */
 export async function readAcceptResponse(
   expectedSessionId: string,
 ): Promise<NfcAcceptResponse> {
   try {
-    const text = await readNdefText();
+    const text = await readHceNdefText();
 
     if (!text) {
       return {
         status: 'INVALID_PAYLOAD',
         receiverAddress: null,
         sessionId: null,
-        errorMessage: 'No accept response received. Ask receiver to accept and tap again.',
+        errorMessage: 'No accept signal. Receiver must tap Accept, then hold phones together.',
       };
     }
 
@@ -236,7 +201,7 @@ export async function readAcceptResponse(
         status: 'INVALID_PAYLOAD',
         receiverAddress: null,
         sessionId: null,
-        errorMessage: 'Invalid accept response from receiver.',
+        errorMessage: 'Invalid accept response. Receiver should tap Accept first.',
       };
     }
 
@@ -258,12 +223,20 @@ export async function readAcceptResponse(
     if (isUserCancelled(error)) {
       return {status: 'CANCELLED', receiverAddress: null, sessionId: null};
     }
+    if (isTimeout(error)) {
+      return {
+        status: 'TIMEOUT',
+        receiverAddress: null,
+        sessionId: null,
+        errorMessage: 'No accept signal. Hold phones together after receiver taps Accept.',
+      };
+    }
     if (isDisconnect(error)) {
       return {
         status: 'DISCONNECTED',
         receiverAddress: null,
         sessionId: null,
-        errorMessage: 'Tap interrupted while reading accept. Hold phones together.',
+        errorMessage: 'Tap interrupted while reading accept.',
       };
     }
     return {
@@ -273,12 +246,12 @@ export async function readAcceptResponse(
       errorMessage: error?.message || 'Failed to read accept response.',
     };
   } finally {
-    NfcManager.cancelTechnologyRequest().catch(() => {});
+    NfcManager.cancelTechnologyRequest({delayMsAndroid: 200}).catch(() => {});
   }
 }
 
 /**
- * Poll NFC reader until accept response is received or timeout expires
+ * Poll until accept response is received
  */
 export async function pollForAcceptResponse(
   expectedSessionId: string,
@@ -294,31 +267,25 @@ export async function pollForAcceptResponse(
     if (response.status === 'CANCELLED') {
       return response;
     }
-    await sleep(800);
+    await sleep(600);
   }
 
   return {
-    status: 'ERROR',
+    status: 'TIMEOUT',
     receiverAddress: null,
     sessionId: null,
-    errorMessage: 'Timed out waiting for receiver to accept the payment.',
+    errorMessage: 'Timed out waiting for receiver to accept. Ask them to tap Accept, then tap phones again.',
   };
 }
 
-/**
- * Cancel any ongoing NFC read operation
- */
 export async function cancelNfcRead(): Promise<void> {
   try {
-    await NfcManager.cancelTechnologyRequest();
+    await NfcManager.cancelTechnologyRequest({delayMsAndroid: 200});
   } catch {
-    // Ignore — may not have an active request
+    // Ignore
   }
 }
 
-/**
- * Clean up NFC manager on app shutdown
- */
 export function teardownNfc(): void {
-  NfcManager.cancelTechnologyRequest().catch(() => {});
+  NfcManager.cancelTechnologyRequest({delayMsAndroid: 200}).catch(() => {});
 }

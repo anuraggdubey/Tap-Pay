@@ -29,7 +29,6 @@ import {isNfcSupported, isNfcEnabled, openNfcSettings} from '../services/nfcRead
 import {computePayloadHash} from '../utils/apdu';
 import {APDU_VERSION} from '../config/monad';
 import {
-  armSenderTap,
   buildPaymentOffer,
   cancelTapSession,
   completeSenderTap,
@@ -203,15 +202,6 @@ export default function SendTapScreen({navigation}: Props) {
         sessionId,
         signature,
       );
-
-      const armed = await armSenderTap(encodedPayload);
-      if (!armed) {
-        Alert.alert(
-          'NFC Unavailable',
-          'Failed to start NFC card emulation. Please ensure NFC is enabled.',
-        );
-        return;
-      }
 
       const session: ArmedTapSession = {
         sessionId,

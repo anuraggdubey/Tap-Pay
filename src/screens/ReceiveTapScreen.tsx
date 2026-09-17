@@ -65,7 +65,9 @@ export default function ReceiveTapScreen({navigation}: Props) {
     }
 
     setPhase('scanning');
-    setStatusMessage("Hold your phone near the sender's phone");
+    setStatusMessage(
+      'Hold phones back-to-back near the top. Sender must tap "Ready to Tap" first.',
+    );
 
     try {
       const response = await readPaymentOffer();
@@ -87,6 +89,19 @@ export default function ReceiveTapScreen({navigation}: Props) {
         } catch {
           // Username lookup is optional
         }
+        return;
+      }
+
+      if (response.status === 'TIMEOUT') {
+        setStatusMessage(
+          response.errorMessage ||
+            'Scanning… hold phones back-to-back near the top (NFC antenna area).',
+        );
+        setTimeout(() => {
+          if (isMountedRef.current && scanningRef.current) {
+            startScanning();
+          }
+        }, 800);
         return;
       }
 
@@ -273,7 +288,7 @@ export default function ReceiveTapScreen({navigation}: Props) {
 
           <View style={styles.stepsCard}>
             <Text style={styles.stepsTitle}>Receiver steps</Text>
-            <Text style={styles.stepItem}>1. Hold phone near sender until offer appears</Text>
+            <Text style={styles.stepItem}>1. Sender taps Ready to Tap, then hold phones back-to-back</Text>
             <Text style={styles.stepItem}>2. Review amount and tap Accept</Text>
             <Text style={styles.stepItem}>3. Tap phones together again to confirm</Text>
           </View>

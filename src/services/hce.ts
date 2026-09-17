@@ -1,8 +1,5 @@
 /**
  * HCE Service — Host Card Emulation session management
- *
- * Manages sender/receiver NFC card emulation with event listeners for
- * tap detection (HCE_STATE_READ) and accept-response broadcasting.
  */
 
 import {HCESession, NFCTagType4, NFCTagType4NDEFContentType} from 'react-native-hce';
@@ -26,7 +23,7 @@ function scheduleExpiry(): void {
     clearTimeout(_sessionTimer);
   }
   _sessionTimer = setTimeout(() => {
-    stopHceSession();
+    stopHceSession(true);
   }, SESSION_TIMEOUT_MS);
 }
 
@@ -38,11 +35,15 @@ async function ensureSession(): Promise<HCESession> {
 }
 
 /**
- * Start an HCE session broadcasting a signed payment offer
+ * Start an HCE session broadcasting a signed payment offer.
+ * Pass onRead to detect when another phone reads this card.
  */
-export async function startHceSession(payloadBytes: Uint8Array): Promise<boolean> {
+export async function startHceSession(
+  payloadBytes: Uint8Array,
+  onRead?: () => void,
+): Promise<boolean> {
   try {
-    await stopHceSession();
+    await stopHceSession(false);
 
     const tag = new NFCTagType4({
       type: NFCTagType4NDEFContentType.Text,
@@ -51,6 +52,12 @@ export async function startHceSession(payloadBytes: Uint8Array): Promise<boolean
     });
 
     const session = await ensureSession();
+
+    if (onRead) {
+      const cancel = session.on(HCESession.Events.HCE_STATE_READ, onRead);
+      _listenerCancels.push(cancel);
+    }
+
     await session.setApplication(tag);
     await session.setEnabled(true);
     scheduleExpiry();
@@ -68,9 +75,10 @@ export async function startHceSession(payloadBytes: Uint8Array): Promise<boolean
 export async function startHceAcceptSession(
   receiverAddress: string,
   sessionId: string,
+  onRead?: () => void,
 ): Promise<boolean> {
   try {
-    await stopHceSession();
+    await stopHceSession(false);
 
     const tag = new NFCTagType4({
       type: NFCTagType4NDEFContentType.Text,
@@ -79,6 +87,12 @@ export async function startHceAcceptSession(
     });
 
     const session = await ensureSession();
+
+    if (onRead) {
+      const cancel = session.on(HCESession.Events.HCE_STATE_READ, onRead);
+      _listenerCancels.push(cancel);
+    }
+
     await session.setApplication(tag);
     await session.setEnabled(true);
     scheduleExpiry();
@@ -91,7 +105,7 @@ export async function startHceAcceptSession(
 }
 
 /**
- * Listen for a specific HCE lifecycle event (e.g. tag read by NFC reader)
+ * Listen for a specific HCE lifecycle event
  */
 export async function onHceEvent(
   event: string,
@@ -104,7 +118,8 @@ export async function onHceEvent(
 }
 
 /**
- * Wait until the emulated tag has been read by another device
+ * Wait until the emulated tag has been read by another device.
+ * Register this BEFORE enabling HCE to avoid missing fast reads.
  */
 export function waitForHceRead(timeoutMs = SESSION_TIMEOUT_MS): Promise<boolean> {
   return new Promise(async resolve => {
@@ -136,11 +151,14 @@ export function waitForHceRead(timeoutMs = SESSION_TIMEOUT_MS): Promise<boolean>
 }
 
 /**
- * Stop the active HCE session and clear listeners
+ * Stop the active HCE session.
+ * @param clearEvents When true, removes event listeners (use on cancel/unmount).
  */
-export async function stopHceSession(): Promise<void> {
+export async function stopHceSession(clearEvents = false): Promise<void> {
   try {
-    clearListeners();
+    if (clearEvents) {
+      clearListeners();
+    }
 
     if (_sessionTimer) {
       clearTimeout(_sessionTimer);
@@ -155,11 +173,12 @@ export async function stopHceSession(): Promise<void> {
   }
 }
 
-/**
- * Check if an HCE session is currently active
- */
 export function isHceActive(): boolean {
   return _activeSession?.enabled ?? false;
+}
+
+export function teardownHce(): void {
+  stopHceSession(true);
 }
 
 export {HCESession};

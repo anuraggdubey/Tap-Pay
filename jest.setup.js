@@ -128,3 +128,10 @@ jest.mock('react-native-nfc-manager', () => ({
     },
   },
 }));
+
+// Clipboard mock
+jest.mock('@react-native-clipboard/clipboard', () => ({
+  setString: jest.fn(),
+  getString: jest.fn().mockResolvedValue(''),
+  hasString: jest.fn().mockResolvedValue(false),
+}));

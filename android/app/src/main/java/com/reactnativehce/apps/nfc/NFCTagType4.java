@@ -43,8 +43,18 @@ public class NFCTagType4 implements IHCEApplication {
   }
 
   private void setUpNdefContent() {
-    byte[] ndef = (new NdefEntity(prefManager.getType(), prefManager.getContent())).getNdefContent();
-    System.arraycopy(ndef,0, this.ndefDataBuffer,0,ndef.length );
+    try {
+      String type = prefManager.getType();
+      String content = prefManager.getContent();
+      if (type == null || type.isEmpty()) type = "text";
+      if (content == null || content.isEmpty()) content = "";
+      byte[] ndef = (new NdefEntity(type, content)).getNdefContent();
+      // Clear buffer before writing to avoid stale trailing bytes
+      Arrays.fill(this.ndefDataBuffer, (byte) 0);
+      System.arraycopy(ndef, 0, this.ndefDataBuffer, 0, ndef.length);
+    } catch (Exception e) {
+      Log.w(TAG, "setUpNdefContent failed: " + e.getMessage());
+    }
   }
 
   private void setUpCapabilityContainerContent() {
@@ -68,6 +78,11 @@ public class NFCTagType4 implements IHCEApplication {
     Boolean result = ApduHelper.commandByRangeEquals(command, 0, 13, C_APDU_SELECT);
 
     if (result) {
+      // Refresh NDEF content from SharedPreferences on every new reader connection
+      // so the latest address set by JS is always served
+      this.selectedFile = null;
+      this.setUpNdefContent();
+      this.setUpCapabilityContainerContent();
       this.hceModel.getLastState().setValue(HceViewModel.HCE_STATE_CONNECTED);
     }
 
@@ -174,6 +189,7 @@ public class NFCTagType4 implements IHCEApplication {
 
   @Override
   public void onDestroy(int reason) {
+    this.selectedFile = null;
     this.hceModel.getLastState()
       .setValue(HceViewModel.HCE_STATE_DISCONNECTED);
   }

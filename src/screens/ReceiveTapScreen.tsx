@@ -41,6 +41,13 @@ export default function ReceiveTapScreen({navigation}: Props) {
   const [isReceiving, setIsReceiving] = useState(true);
 
   const isMountedRef = useRef(true);
+  // Use refs for values that change but shouldn't restart the HCE session
+  const balanceRef = useRef(balance);
+  const navigationRef = useRef(navigation);
+  const refreshBalanceRef = useRef(refreshBalance);
+  balanceRef.current = balance;
+  navigationRef.current = navigation;
+  refreshBalanceRef.current = refreshBalance;
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -77,8 +84,8 @@ export default function ReceiveTapScreen({navigation}: Props) {
            return;
         }
 
-        // Poll for any incoming payment
-        const previousBalance = balance;
+        // Snapshot balance at the time we start waiting
+        const previousBalance = balanceRef.current;
         const confirmed = await waitForIncomingPayment(
           address,
           previousBalance,
@@ -88,7 +95,7 @@ export default function ReceiveTapScreen({navigation}: Props) {
         if (confirmed && isMountedRef.current) {
           setIsReceiving(false);
           await stopReceiverBroadcast();
-          refreshBalance();
+          refreshBalanceRef.current();
           triggerHaptic.notificationSuccess();
 
           recordTransaction({
@@ -99,7 +106,7 @@ export default function ReceiveTapScreen({navigation}: Props) {
             txHash: 'tap-payment',
           });
 
-          navigation.replace('TransactionStatus', {
+          navigationRef.current.replace('TransactionStatus', {
             txHash: 'tap-payment',
             amount: 'Unknown',
             recipient: address,
@@ -115,7 +122,8 @@ export default function ReceiveTapScreen({navigation}: Props) {
       isMountedRef.current = false;
       stopReceiverBroadcast();
     };
-  }, [address, balance, navigation, refreshBalance]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [address]);
 
 
   return (

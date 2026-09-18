@@ -11,7 +11,6 @@ import {
   stopNativeReaderMode,
   subscribeNativeTagRead,
   isNativeTapReaderAvailable,
-  prepareSenderNfc,
 } from './tapNfcNative';
 import {decodeReceiverAddress} from '../utils/apdu';
 
@@ -103,16 +102,16 @@ export async function openNfcSettings(): Promise<void> {
 }
 
 /**
- * Start continuous native reader mode (Android)
+ * Start continuous native reader mode (Android).
+ * This is the ONLY function that should set _nativeReaderRunning = true.
  */
 export async function startContinuousHceScan(): Promise<boolean> {
   if (!isNativeTapReaderAvailable()) {
     return false;
   }
 
-  if (_nativeReaderRunning) {
-    return true;
-  }
+  // Always stop first to get a clean state
+  await stopContinuousHceScan();
 
   _continuousUnsubscribe = subscribeNativeTagRead(
     text => {
@@ -133,7 +132,8 @@ export async function startContinuousHceScan(): Promise<boolean> {
 }
 
 /**
- * Stop continuous native reader mode
+ * Stop continuous native reader mode.
+ * This is the ONLY function that should set _nativeReaderRunning = false.
  */
 export async function stopContinuousHceScan(): Promise<void> {
   clearScanWaiter();
@@ -145,7 +145,6 @@ export async function stopContinuousHceScan(): Promise<void> {
     await stopNativeReaderMode();
     _nativeReaderRunning = false;
   }
-  await cancelNfcRead();
 }
 
 /**
@@ -153,11 +152,10 @@ export async function stopContinuousHceScan(): Promise<void> {
  */
 async function waitForHceNdefText(timeoutMs = SCAN_TIMEOUT_MS): Promise<string> {
   if (isNativeTapReaderAvailable()) {
-    if (!_nativeReaderRunning) {
-      const started = await startContinuousHceScan();
-      if (!started) {
-        throw new Error('Failed to start native NFC reader mode');
-      }
+    // Always (re)start reader mode to ensure clean state
+    const started = await startContinuousHceScan();
+    if (!started) {
+      throw new Error('Failed to start native NFC reader mode');
     }
 
     return await new Promise<string>((resolve, reject) => {
@@ -170,6 +168,7 @@ async function waitForHceNdefText(timeoutMs = SCAN_TIMEOUT_MS): Promise<string> 
     });
   }
 
+  // Fallback: use react-native-nfc-manager IsoDep reader
   const text = await readType4HceTextWithTimeout(timeoutMs);
   if (!text) {
     throw new Error('NFC scan timeout');
@@ -182,8 +181,6 @@ async function waitForHceNdefText(timeoutMs = SCAN_TIMEOUT_MS): Promise<string> 
  */
 export async function readReceiverAddress(): Promise<NfcReadResponse> {
   try {
-    // Prepare sender for reading
-    await prepareSenderNfc();
     const text = await waitForHceNdefText();
     
     const receiverAddress = decodeReceiverAddress(text);
@@ -223,11 +220,18 @@ export async function readReceiverAddress(): Promise<NfcReadResponse> {
   }
 }
 
+/**
+ * Cancel any ongoing NFC read operations.
+ * Only touches react-native-nfc-manager if native reader is NOT active
+ * (avoids the two libraries fighting over the NFC adapter).
+ */
 export async function cancelNfcRead(): Promise<void> {
-  try {
-    await NfcManager.cancelTechnologyRequest({delayMsAndroid: 200});
-  } catch {
-    // Ignore
+  if (!_nativeReaderRunning) {
+    try {
+      await NfcManager.cancelTechnologyRequest({delayMsAndroid: 200});
+    } catch {
+      // Ignore
+    }
   }
 }
 

@@ -49,6 +49,7 @@ class TapNfcReaderModule(private val reactContext: ReactApplicationContext) :
 
       val flags =
         NfcAdapter.FLAG_READER_NFC_A or
+          NfcAdapter.FLAG_READER_NFC_B or
           NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK or
           NfcAdapter.FLAG_READER_NO_PLATFORM_SOUNDS
 
@@ -227,12 +228,24 @@ class TapNfcReaderModule(private val reactContext: ReactApplicationContext) :
   }
 
   private fun sendEvent(event: String, params: WritableMap) {
-    if (!reactContext.hasActiveReactInstance()) {
-      return
+    try {
+      reactContext
+        .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+        .emit(event, params)
+    } catch (e: Exception) {
+      Log.w(TAG, "sendEvent($event) failed: ${e.message}")
     }
-    reactContext
-      .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
-      .emit(event, params)
+  }
+
+  // Required by React Native 0.65+ for modules that emit events
+  @ReactMethod
+  fun addListener(@Suppress("UNUSED_PARAMETER") eventName: String) {
+    // No-op: required by NativeEventEmitter
+  }
+
+  @ReactMethod
+  fun removeListeners(@Suppress("UNUSED_PARAMETER") count: Int) {
+    // No-op: required by NativeEventEmitter
   }
 
   override fun invalidate() {

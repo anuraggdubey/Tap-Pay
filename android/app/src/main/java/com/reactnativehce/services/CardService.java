@@ -56,7 +56,10 @@ public class CardService extends HostApduService {
 
     @Override
     public void onDeactivated(int reason) {
-      Log.d(TAG, "Finishing service: " + reason);
-      this.currentHCEApplication.onDestroy(reason);
+      Log.d(TAG, "Deactivated: reason=" + reason);
+      if (this.currentHCEApplication != null) {
+        this.currentHCEApplication.onDestroy(reason);
+        this.currentHCEApplication = null;
+      }
     }
 }

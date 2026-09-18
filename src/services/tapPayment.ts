@@ -1,132 +1,58 @@
 /**
- * Tap Payment Orchestrator — End-to-end NFC contactless payment flow
+ * Tap Payment Orchestrator — End-to-end One-Way NFC contactless payment flow
  */
 
 import {ethers} from 'ethers';
 import {
-  startHceSession,
-  startHceAcceptSession,
+  startHceReceiverSession,
   stopHceSession,
-  waitForHceRead,
 } from './hce';
-import {pollForAcceptResponse, cancelNfcRead, prepareSenderForHce, stopContinuousHceScan} from './nfcReader';
+import {
+  readReceiverAddress,
+  cancelNfcRead,
+  stopContinuousHceScan,
+} from './nfcReader';
 import {getBalance, sendPayment} from './wallet';
-import {encodePaymentOffer, PaymentOffer} from '../utils/apdu';
 
 export type TapSenderPhase =
   | 'idle'
-  | 'armed'
-  | 'offer_read'
-  | 'waiting_accept'
+  | 'reading'
   | 'broadcasting'
   | 'completed'
   | 'failed';
-
-export interface ArmedTapSession {
-  sessionId: string;
-  amountWei: bigint;
-  amountDisplay: string;
-  encodedPayload: Uint8Array;
-  offer: PaymentOffer;
-}
 
 export function createSessionId(): string {
   const sessionIdHex = ethers.hexlify(ethers.randomBytes(16)).replace('0x', '');
   return `${sessionIdHex.slice(0, 8)}-${sessionIdHex.slice(8, 12)}-4${sessionIdHex.slice(13, 16)}-8${sessionIdHex.slice(17, 20)}-${sessionIdHex.slice(20, 32)}`;
 }
 
-export function buildPaymentOffer(
-  version: number,
-  amountWei: bigint,
-  senderAddress: string,
-  sessionId: string,
-  signature: string,
-): {offer: PaymentOffer; encodedPayload: Uint8Array} {
-  const offer: PaymentOffer = {
-    version,
-    amountWei,
-    senderAddress,
-    sessionId,
-    signature,
-  };
-
-  return {
-    offer,
-    encodedPayload: encodePaymentOffer(offer),
-  };
-}
-
 /**
- * Arm sender HCE. Returns a promise that resolves when receiver reads the offer.
- * IMPORTANT: readPromise must be created BEFORE calling this (see completeSenderTap).
- */
-export async function armSenderTap(
-  encodedPayload: Uint8Array,
-): Promise<boolean> {
-  return await startHceSession(encodedPayload);
-}
-
-/**
- * Sender: wait for offer read, then accept, then broadcast payment.
- * Creates the HCE read listener BEFORE arming to avoid race conditions.
+ * Sender: wait for receiver address, then broadcast payment.
  */
 export async function completeSenderTap(
-  session: ArmedTapSession,
+  senderAddress: string,
+  amountWei: bigint,
   onPhaseChange?: (phase: TapSenderPhase) => void,
 ): Promise<{txHash: string | null; receiverAddress: string | null; error?: string}> {
-  // Sender must NOT be in reader mode — only HCE card emulation
-  await prepareSenderForHce();
-  await stopContinuousHceScan();
+  onPhaseChange?.('reading');
 
-  // Register read listener BEFORE enabling HCE (prevents missing fast reads)
-  const offerReadPromise = waitForHceRead();
-
-  onPhaseChange?.('armed');
-
-  const armed = await startHceSession(session.encodedPayload);
-  if (!armed) {
+  const readResult = await readReceiverAddress();
+  
+  if (readResult.status !== 'SUCCESS' || !readResult.receiverAddress) {
     onPhaseChange?.('failed');
+    await stopContinuousHceScan();
     return {
       txHash: null,
       receiverAddress: null,
-      error: 'Failed to start NFC card emulation. Is NFC enabled?',
+      error: readResult.errorMessage || 'Failed to read receiver address.',
     };
   }
 
-  const offerRead = await offerReadPromise;
-  if (!offerRead) {
+  const receiverAddress = readResult.receiverAddress;
+
+  if (receiverAddress.toLowerCase() === senderAddress.toLowerCase()) {
     onPhaseChange?.('failed');
-    await stopHceSession(true);
-    return {
-      txHash: null,
-      receiverAddress: null,
-      error: 'No device read your payment offer. Hold phones back-to-back near the top.',
-    };
-  }
-
-  onPhaseChange?.('offer_read');
-  onPhaseChange?.('waiting_accept');
-
-  // Must disable HCE before this phone can act as NFC reader
-  await stopHceSession(false);
-  await cancelNfcRead();
-
-  const accept = await pollForAcceptResponse(session.sessionId);
-  if (accept.status !== 'SUCCESS' || !accept.receiverAddress) {
-    onPhaseChange?.('failed');
-    await stopHceSession(true);
-    return {
-      txHash: null,
-      receiverAddress: null,
-      error: accept.errorMessage || 'Receiver did not accept the payment.',
-    };
-  }
-
-  if (
-    accept.receiverAddress.toLowerCase() === session.offer.senderAddress.toLowerCase()
-  ) {
-    onPhaseChange?.('failed');
-    await stopHceSession(true);
+    await stopContinuousHceScan();
     return {
       txHash: null,
       receiverAddress: null,
@@ -135,47 +61,54 @@ export async function completeSenderTap(
   }
 
   onPhaseChange?.('broadcasting');
+  await stopContinuousHceScan(); // Stop reading after success
 
+  // In the one-way architecture, we don't necessarily have a sessionId for the signature 
+  // since we just read the address directly. We can just generate a random one for logging/history
+  // or use a dummy hash if sendPayment requires it.
+  const sessionId = createSessionId();
   const sessionIdHash = ethers.keccak256(
-    ethers.solidityPacked(['string'], [session.sessionId]),
+    ethers.solidityPacked(['string'], [sessionId]),
   );
 
   const result = await sendPayment(
-    accept.receiverAddress,
-    session.amountWei,
+    receiverAddress,
+    amountWei,
     sessionIdHash,
     'Confirm Biometrics to Complete Tap Payment',
   );
 
   if (!result.txHash) {
     onPhaseChange?.('failed');
-    await stopHceSession(true);
     return {
       txHash: null,
-      receiverAddress: accept.receiverAddress,
+      receiverAddress: receiverAddress,
       error: result.error || 'Transaction could not be broadcast.',
     };
   }
 
   onPhaseChange?.('completed');
-  await stopHceSession(true);
 
   return {
     txHash: result.txHash,
-    receiverAddress: accept.receiverAddress,
+    receiverAddress: receiverAddress,
   };
 }
 
-export async function broadcastReceiverAccept(
+export async function startReceiverBroadcast(
   receiverAddress: string,
-  sessionId: string,
 ): Promise<boolean> {
-  return await startHceAcceptSession(receiverAddress, sessionId);
+  return await startHceReceiverSession(receiverAddress);
+}
+
+export async function stopReceiverBroadcast(): Promise<void> {
+  await stopHceSession();
 }
 
 export async function cancelTapSession(): Promise<void> {
   await cancelNfcRead();
-  await stopHceSession(true);
+  await stopContinuousHceScan();
+  await stopHceSession();
 }
 
 function sleep(ms: number): Promise<void> {
@@ -185,21 +118,27 @@ function sleep(ms: number): Promise<void> {
 export async function waitForIncomingPayment(
   address: string,
   previousBalance: bigint,
-  amountWei: bigint,
-  timeoutMs = 30_000,
+  amountWei: bigint | null,
+  timeoutMs = 60_000,
 ): Promise<boolean> {
   const deadline = Date.now() + timeoutMs;
-
+  // fast aggressive polling every 500ms
   while (Date.now() < deadline) {
     try {
       const balance = await getBalance(address);
-      if (balance >= previousBalance + amountWei) {
-        return true;
+      if (amountWei) {
+        if (balance >= previousBalance + amountWei) {
+          return true;
+        }
+      } else {
+        if (balance > previousBalance) {
+          return true;
+        }
       }
     } catch {
       // Keep polling
     }
-    await sleep(2000);
+    await sleep(500);
   }
 
   return false;

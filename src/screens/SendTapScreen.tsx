@@ -1,6 +1,6 @@
 /**
- * SendTapScreen — NFC contactless send flow
- * Enter amount → sign → arm HCE → detect tap → receive accept → broadcast on-chain
+ * SendTapScreen — NFC contactless send flow (One-Way Architecture)
+ * Enter amount → tap to read receiver address → broadcast on-chain
  */
 
 import React, {useState, useEffect, useRef} from 'react';
@@ -23,17 +23,11 @@ import {
   checkSufficientBalance,
   estimateGasCost,
   BalanceCheckResult,
-  signMessage,
 } from '../services/wallet';
 import {isNfcSupported, isNfcEnabled, openNfcSettings} from '../services/nfcReader';
-import {computePayloadHash} from '../utils/apdu';
-import {APDU_VERSION} from '../config/monad';
 import {
-  buildPaymentOffer,
   cancelTapSession,
   completeSenderTap,
-  createSessionId,
-  ArmedTapSession,
   TapSenderPhase,
 } from '../services/tapPayment';
 import {recordTransaction} from '../services/history';
@@ -51,17 +45,9 @@ const DUMMY_RECIPIENT = '0x000000000000000000000000000000000000dEaD';
 
 const PHASE_COPY: Record<TapSenderPhase, {title: string; subtitle: string}> = {
   idle: {title: '', subtitle: ''},
-  armed: {
+  reading: {
     title: 'Hold Phones Together',
-    subtitle: 'Bring your phone close to the receiver.\nYour payment offer is broadcasting via NFC.',
-  },
-  offer_read: {
-    title: 'Payment Detected',
-    subtitle: 'Receiver found your offer.\nWaiting for them to accept…',
-  },
-  waiting_accept: {
-    title: 'Waiting for Acceptance',
-    subtitle: 'Ask the receiver to tap Accept, then hold phones together again.',
+    subtitle: 'Bring your phone close to the receiver to read their address.',
   },
   broadcasting: {
     title: 'Sending Payment',
@@ -91,7 +77,6 @@ export default function SendTapScreen({navigation}: Props) {
   const [nfcModalVisible, setNfcModalVisible] = useState(false);
 
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const sessionRef = useRef<ArmedTapSession | null>(null);
   const isMountedRef = useRef(true);
 
   useEffect(() => {
@@ -137,7 +122,6 @@ export default function SendTapScreen({navigation}: Props) {
   const handleCancel = async () => {
     clearCountdown();
     await cancelTapSession();
-    sessionRef.current = null;
     setPhase('idle');
     setActiveAmount('');
   };
@@ -184,35 +168,8 @@ export default function SendTapScreen({navigation}: Props) {
         return;
       }
 
-      const sessionId = createSessionId();
-      const payloadHash = computePayloadHash(APDU_VERSION, amountWei, address, sessionId);
-      const signature = await signMessage(
-        ethers.getBytes(payloadHash),
-        'Confirm Biometrics to Authorize TapPay Payment',
-      );
-
-      if (!signature) {
-        return;
-      }
-
-      const {offer, encodedPayload} = buildPaymentOffer(
-        APDU_VERSION,
-        amountWei,
-        address,
-        sessionId,
-        signature,
-      );
-
-      const session: ArmedTapSession = {
-        sessionId,
-        amountWei,
-        amountDisplay: amount,
-        encodedPayload,
-        offer,
-      };
-      sessionRef.current = session;
       setActiveAmount(amount);
-      setPhase('armed');
+      setPhase('reading');
       setTimeLeft(120);
       triggerHaptic.impactMedium();
 
@@ -229,7 +186,7 @@ export default function SendTapScreen({navigation}: Props) {
         });
       }, 1000);
 
-      completeSenderTap(session, nextPhase => {
+      completeSenderTap(address, amountWei, nextPhase => {
         if (isMountedRef.current) {
           setPhase(nextPhase);
         }
@@ -239,7 +196,6 @@ export default function SendTapScreen({navigation}: Props) {
         }
 
         clearCountdown();
-        const displayAmount = session.amountDisplay;
 
         if (result.txHash && result.receiverAddress) {
           triggerHaptic.notificationSuccess();
@@ -247,14 +203,14 @@ export default function SendTapScreen({navigation}: Props) {
           recordTransaction({
             direction: 'sent',
             counterparty: result.receiverAddress,
-            amount: displayAmount,
+            amount: amount,
             status: 'pending',
             txHash: result.txHash,
           });
 
           navigation.replace('TransactionStatus', {
             txHash: result.txHash,
-            amount: displayAmount,
+            amount: amount,
             recipient: result.receiverAddress,
             direction: 'sent',
           });
@@ -279,7 +235,7 @@ export default function SendTapScreen({navigation}: Props) {
 
   if (phase !== 'idle') {
     const copy = PHASE_COPY[phase];
-    const isWaiting = ['armed', 'offer_read', 'waiting_accept'].includes(phase);
+    const isWaiting = phase === 'reading';
     const isBusy = phase === 'broadcasting';
 
     return (
@@ -343,9 +299,8 @@ export default function SendTapScreen({navigation}: Props) {
         <View style={styles.stepsCard}>
           <Text style={styles.stepsTitle}>How Tap Pay works</Text>
           <Text style={styles.stepItem}>1. Enter amount and tap Ready</Text>
-          <Text style={styles.stepItem}>2. Hold phones together — receiver scans</Text>
-          <Text style={styles.stepItem}>3. Receiver accepts — tap again to confirm</Text>
-          <Text style={styles.stepItem}>4. Payment broadcasts on Monad</Text>
+          <Text style={styles.stepItem}>2. Tap your phone to the receiver's phone</Text>
+          <Text style={styles.stepItem}>3. Payment is automatically sent on Monad</Text>
         </View>
 
         <TouchableOpacity

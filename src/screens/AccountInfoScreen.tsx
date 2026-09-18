@@ -11,10 +11,10 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
-  Clipboard,
   Animated,
   ActivityIndicator,
 } from 'react-native';
+import Clipboard from '@react-native-clipboard/clipboard';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useWallet} from '../context/WalletContext';
 import {RootStackParamList} from '../navigation/AppNavigator';

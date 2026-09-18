@@ -49,7 +49,7 @@ export function getProvider(): ethers.JsonRpcProvider {
  */
 export function rotateRpcProvider(): ethers.JsonRpcProvider {
   _currentRpcIndex = (_currentRpcIndex + 1) % RPC_ENDPOINTS.length;
-  console.log(`[RPC Failover] Switching to RPC endpoint #${_currentRpcIndex}: ${RPC_ENDPOINTS[_currentRpcIndex]}`);
+  console.warn(`[RPC Failover] Switching to RPC endpoint #${_currentRpcIndex}`);
   _provider = createProvider(_currentRpcIndex);
   return _provider;
 }

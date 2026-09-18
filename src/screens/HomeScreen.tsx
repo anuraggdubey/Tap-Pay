@@ -13,9 +13,9 @@ import {
   StyleSheet,
   ScrollView,
   RefreshControl,
-  Clipboard,
   Platform,
 } from 'react-native';
+import Clipboard from '@react-native-clipboard/clipboard';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';

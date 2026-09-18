@@ -125,7 +125,7 @@ export async function onHceEvent(
  * Register this BEFORE enabling HCE to avoid missing fast reads.
  */
 export function waitForHceRead(timeoutMs = SESSION_TIMEOUT_MS): Promise<boolean> {
-  return new Promise(async resolve => {
+  return new Promise(resolve => {
     let settled = false;
     let cancelListener: (() => void) | null = null;
 
@@ -137,19 +137,29 @@ export function waitForHceRead(timeoutMs = SESSION_TIMEOUT_MS): Promise<boolean>
       }
     }, timeoutMs);
 
-    try {
-      cancelListener = await onHceEvent(HCESession.Events.HCE_STATE_READ, () => {
+    // Register event listener (async, but safe — errors are caught explicitly)
+    onHceEvent(HCESession.Events.HCE_STATE_READ, () => {
+      if (!settled) {
+        settled = true;
+        clearTimeout(timer);
+        cancelListener?.();
+        resolve(true);
+      }
+    })
+      .then(cancel => {
+        cancelListener = cancel;
+        // If already settled before listener registered, clean up
+        if (settled) {
+          cancel();
+        }
+      })
+      .catch(() => {
+        clearTimeout(timer);
         if (!settled) {
           settled = true;
-          clearTimeout(timer);
-          cancelListener?.();
-          resolve(true);
+          resolve(false);
         }
       });
-    } catch {
-      clearTimeout(timer);
-      resolve(false);
-    }
   });
 }
 

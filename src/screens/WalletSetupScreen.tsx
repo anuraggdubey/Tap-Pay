@@ -15,15 +15,15 @@ import {
   Alert,
   ActivityIndicator,
   ScrollView,
-  Clipboard,
 } from 'react-native';
+import Clipboard from '@react-native-clipboard/clipboard';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 
 import {useWallet} from '../context/WalletContext';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import {validateUsername} from '../utils/validation';
-import {resolveUsername, registerUsername} from '../services/registry';
+import {resolveUsername, registerUsername, reverseResolveAddress} from '../services/registry';
 import {triggerHaptic} from '../utils/haptics';
 import BrandLogo from '../components/BrandLogo';
 
@@ -62,6 +62,7 @@ export default function WalletSetupScreen({navigation}: Props) {
   };
 
   // Step 1 Alternate: Import Existing Wallet
+  // Username is assigned per user at creation time, so importing skips username step.
   const handleImport = async () => {
     if (!privateKeyInput.trim()) {
       Alert.alert('Error', 'Please enter a valid private key.');
@@ -71,12 +72,26 @@ export default function WalletSetupScreen({navigation}: Props) {
     triggerHaptic.impactMedium();
     setLoading(true);
     const success = await importWallet(privateKeyInput.trim());
-    setLoading(false);
 
     if (success) {
-      setNewPrivateKey(privateKeyInput.trim());
-      setStep('username');
+      // Try to recover existing username from Supabase (it was set during original wallet creation)
+      try {
+        const {ethers} = require('ethers');
+        const wallet = new ethers.Wallet(privateKeyInput.trim());
+        const existingUsername = await reverseResolveAddress(wallet.address);
+        if (existingUsername) {
+          await saveUsername(existingUsername);
+        }
+      } catch {
+        // Non-critical — username can be claimed later from Account Info
+      }
+
+      setLoading(false);
+      triggerHaptic.notificationSuccess();
+      // Skip username step entirely — go directly to the app
+      navigation.replace('MainTabs');
     } else {
+      setLoading(false);
       triggerHaptic.notificationError();
       Alert.alert('Error', 'Invalid private key. Please check and try again.');
     }

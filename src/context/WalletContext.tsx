@@ -5,7 +5,8 @@
  * to all screens via React Context.
  */
 
-import React, {createContext, useContext, useState, useEffect, useCallback, ReactNode} from 'react';
+import React, {createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode} from 'react';
+import {AppState, AppStateStatus} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   generateWallet,
@@ -98,22 +99,52 @@ export function WalletProvider({children}: {children: ReactNode}) {
     })();
   }, [loadStoredUsername]);
 
-  // Periodic balance refresh (every 10 seconds)
+  // Periodic balance refresh (every 10 seconds) — pauses when app is backgrounded
+  const appState = useRef(AppState.currentState);
   useEffect(() => {
     if (!address) {
       return;
     }
 
-    const interval = setInterval(async () => {
-      try {
-        const bal = await getBalance(address);
-        setBalance(bal);
-      } catch {
-        // Silently fail — keep last known balance
-      }
-    }, 10_000);
+    let interval: ReturnType<typeof setInterval> | null = null;
 
-    return () => clearInterval(interval);
+    const startPolling = () => {
+      if (interval) clearInterval(interval);
+      interval = setInterval(async () => {
+        try {
+          const bal = await getBalance(address);
+          setBalance(bal);
+        } catch {
+          // Silently fail — keep last known balance
+        }
+      }, 10_000);
+    };
+
+    const stopPolling = () => {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+    };
+
+    const handleAppStateChange = (nextState: AppStateStatus) => {
+      if (appState.current?.match(/inactive|background/) && nextState === 'active') {
+        // App came to foreground — resume polling
+        startPolling();
+      } else if (nextState.match(/inactive|background/)) {
+        // App went to background — stop polling to save battery & RPC calls
+        stopPolling();
+      }
+      appState.current = nextState;
+    };
+
+    startPolling();
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+
+    return () => {
+      stopPolling();
+      subscription.remove();
+    };
   }, [address]);
 
   const createWallet = useCallback(async () => {
@@ -139,6 +170,12 @@ export function WalletProvider({children}: {children: ReactNode}) {
         const addr = await getWalletAddress();
         setAddress(addr);
         setIsInitialized(true);
+
+        // Recover existing username from Supabase (assigned during original wallet creation)
+        if (addr) {
+          await loadStoredUsername(addr);
+        }
+
         return true;
       }
       return false;
@@ -146,7 +183,7 @@ export function WalletProvider({children}: {children: ReactNode}) {
       console.error('Import wallet error:', error);
       return false;
     }
-  }, []);
+  }, [loadStoredUsername]);
 
   const refreshBalance = useCallback(async () => {
     if (!address) {

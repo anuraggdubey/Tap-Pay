@@ -121,7 +121,7 @@ export default function SendPaymentScreen({navigation}: Props) {
     setResolvedUsername(null);
   };
 
-  // Dynamic gas estimation
+  // Dynamic gas estimation (with mounted guard to discard stale async results)
   useEffect(() => {
     const val = validateAmount(amount);
     if (!val.valid || !address || !resolvedAddress) {
@@ -129,11 +129,13 @@ export default function SendPaymentScreen({navigation}: Props) {
       return;
     }
 
+    let cancelled = false;
+
     const timer = setTimeout(async () => {
       try {
         const amountWei = ethers.parseEther(amount);
         const gasInfo = await estimateGasCost(address, resolvedAddress, amountWei);
-        if (gasInfo) {
+        if (gasInfo && !cancelled) {
           setEstimatedGasWei(gasInfo.gasCostWei);
         }
       } catch {
@@ -141,7 +143,10 @@ export default function SendPaymentScreen({navigation}: Props) {
       }
     }, 400);
 
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [amount, address, resolvedAddress]);
 
   // Pre-check balance and show confirm modal

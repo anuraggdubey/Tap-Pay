@@ -1,16 +1,8 @@
 import {ethers} from 'ethers';
 import {
-  encodePaymentOffer,
-  decodePaymentOffer,
-  encodeAcceptResponse,
-  decodeAcceptResponse,
-  encodeAcceptPayload,
-  decodeAcceptPayload,
-  encodeAcceptNdefContent,
-  decodeAcceptNdefContent,
-  computePayloadHash,
-  verifyPaymentOffer,
-  PaymentOffer,
+  encodeReceiverAddress,
+  decodeReceiverAddress,
+  RECEIVER_NDEF_PREFIX,
 } from '../src/utils/apdu';
 import {truncateAddress, formatMon, parseMonToWei} from '../src/utils/format';
 import {
@@ -19,119 +11,31 @@ import {
   validateAddress,
 } from '../src/utils/validation';
 
-describe('APDU Encoding/Decoding & Cryptographic Verification', () => {
-  test('correctly encodes and decodes PaymentOffer binary payload', () => {
-    const offer: PaymentOffer = {
-      version: 1,
-      amountWei: 1000000000000000000n, // 1 MON
-      senderAddress: '0x1234567890123456789012345678901234567890',
-      sessionId: '12345678-1234-1234-1234-123456789abc',
-      signature: '0x' + 'ab'.repeat(65),
-    };
-
-    const encoded = encodePaymentOffer(offer);
-    expect(encoded.length).toBe(134);
-
-    const decoded = decodePaymentOffer(encoded);
-    expect(decoded).not.toBeNull();
-    expect(decoded?.version).toBe(offer.version);
-    expect(decoded?.amountWei).toBe(offer.amountWei);
-    expect(decoded?.senderAddress.toLowerCase()).toBe(offer.senderAddress.toLowerCase());
-    expect(decoded?.sessionId.toLowerCase()).toBe(offer.sessionId.toLowerCase());
-    expect(decoded?.signature.toLowerCase()).toBe(offer.signature.toLowerCase());
+describe('APDU Encoding/Decoding for One-Way NFC', () => {
+  test('correctly encodes receiver address', () => {
+    const receiver = '0x1234567890123456789012345678901234567890';
+    const encoded = encodeReceiverAddress(receiver);
+    expect(encoded).toBe(`${RECEIVER_NDEF_PREFIX}1234567890123456789012345678901234567890`);
   });
 
-  test('correctly encodes and decodes AcceptResponse', () => {
+  test('correctly decodes receiver address', () => {
     const receiver = '0xabcdef1234567890abcdef1234567890abcdef12';
-    const encoded = encodeAcceptResponse(receiver);
-    expect(encoded.length).toBe(20);
-
-    const decoded = decodeAcceptResponse(encoded);
+    const encoded = `${RECEIVER_NDEF_PREFIX}abcdef1234567890abcdef1234567890abcdef12`;
+    
+    const decoded = decodeReceiverAddress(encoded);
     expect(decoded?.toLowerCase()).toBe(receiver.toLowerCase());
   });
 
-  test('correctly encodes and decodes accept payload with session binding', () => {
-    const receiver = '0xabcdef1234567890abcdef1234567890abcdef12';
-    const sessionId = 'd290f1ee-6c54-4b01-90e6-d701748f0851';
-    const encoded = encodeAcceptPayload(receiver, sessionId);
-    expect(encoded.length).toBe(36);
-
-    const decoded = decodeAcceptPayload(encoded);
-    expect(decoded?.receiverAddress.toLowerCase()).toBe(receiver.toLowerCase());
-    expect(decoded?.sessionId.toLowerCase()).toBe(sessionId.toLowerCase());
-
-    const ndef = encodeAcceptNdefContent(receiver, sessionId);
-    const fromNdef = decodeAcceptNdefContent(ndef);
-    expect(fromNdef?.receiverAddress.toLowerCase()).toBe(receiver.toLowerCase());
-    expect(fromNdef?.sessionId.toLowerCase()).toBe(sessionId.toLowerCase());
+  test('returns null for invalid prefix', () => {
+    const encoded = `WRONGPREFIXabcdef1234567890abcdef1234567890abcdef12`;
+    const decoded = decodeReceiverAddress(encoded);
+    expect(decoded).toBeNull();
   });
 
-  test('computes deterministic keccak256 hash of payment payload', () => {
-    const hash1 = computePayloadHash(
-      1,
-      1000000000000000000n,
-      '0x1234567890123456789012345678901234567890',
-      'test-session-1234',
-    );
-    const hash2 = computePayloadHash(
-      1,
-      1000000000000000000n,
-      '0x1234567890123456789012345678901234567890',
-      'test-session-1234',
-    );
-    expect(hash1).toBe(hash2);
-    expect(hash1.startsWith('0x')).toBe(true);
-    expect(hash1.length).toBe(66);
-  });
-
-  test('cryptographically verifies genuine signed PaymentOffer', async () => {
-    const testWallet = ethers.Wallet.createRandom();
-    const version = 1;
-    const amountWei = 2500000000000000000n; // 2.5 MON
-    const senderAddress = testWallet.address;
-    const sessionId = 'd290f1ee-6c54-4b01-90e6-d701748f0851';
-
-    const hash = computePayloadHash(version, amountWei, senderAddress, sessionId);
-    const signature = await testWallet.signMessage(ethers.getBytes(hash));
-
-    const offer: PaymentOffer = {
-      version,
-      amountWei,
-      senderAddress,
-      sessionId,
-      signature,
-    };
-
-    // Valid offer should pass verification
-    expect(verifyPaymentOffer(offer)).toBe(true);
-
-    // Tampered amount should fail verification
-    const tamperedAmountOffer: PaymentOffer = {
-      ...offer,
-      amountWei: 9990000000000000000n,
-    };
-    expect(verifyPaymentOffer(tamperedAmountOffer)).toBe(false);
-
-    // Spoofed sender address should fail verification
-    const spoofedSenderOffer: PaymentOffer = {
-      ...offer,
-      senderAddress: '0x0000000000000000000000000000000000000001',
-    };
-    expect(verifyPaymentOffer(spoofedSenderOffer)).toBe(false);
-
-    // Tampered session ID should fail verification
-    const tamperedSessionOffer: PaymentOffer = {
-      ...offer,
-      sessionId: '00000000-0000-0000-0000-000000000000',
-    };
-    expect(verifyPaymentOffer(tamperedSessionOffer)).toBe(false);
-
-    // Malformed signature should fail gracefully without throwing
-    const malformedSigOffer: PaymentOffer = {
-      ...offer,
-      signature: '0x1234',
-    };
-    expect(verifyPaymentOffer(malformedSigOffer)).toBe(false);
+  test('returns null for incorrect length', () => {
+    const encoded = `${RECEIVER_NDEF_PREFIX}abcdef1234567890`;
+    const decoded = decodeReceiverAddress(encoded);
+    expect(decoded).toBeNull();
   });
 });
 

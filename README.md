@@ -18,8 +18,8 @@ Phone-to-phone contactless payments on [Monad Testnet](https://docs.monad.xyz) �
 
 | | |
 |:--|:--|
-| **APK Download** | `[PLACEHOLDER — paste APK URL here]` |
-| **Video Demo** | `[PLACEHOLDER — paste demo video URL here]` |
+| **APK Download** | [Tap-pay.apk (Google Drive)](https://drive.google.com/file/d/1w3K3PTeqvt250qMJne4azXeU4D35dC8P/view?usp=drivesdk) |
+| **Video Demo** | [tappay.mp4 (Google Drive)](https://drive.google.com/file/d/1f8ZO1ian1y1d4o98g1C-SuV6wPYAysDC/view?usp=sharing) |
 | **UsernameRegistry** | [`0xEebB05F9AF06908eCb7bFa5F916Dde1EEa231aDD`](https://testnet.monadscan.com/address/0xEebB05F9AF06908eCb7bFa5F916Dde1EEa231aDD) |
 | **TapPayLedger** | [`0x5B177FEF554dA84A86be62E45fb49BB52e6D6838`](https://testnet.monadscan.com/address/0x5B177FEF554dA84A86be62E45fb49BB52e6D6838) |
 
@@ -68,24 +68,25 @@ On-chain username ↔ address mapping used for human-readable pay and reverse lo
 
 ### APK
 
-**APK URL:** `[PLACEHOLDER — paste public APK / drive / Actions artifact link here]`
+**APK URL:** [https://drive.google.com/file/d/1w3K3PTeqvt250qMJne4azXeU4D35dC8P/view?usp=drivesdk](https://drive.google.com/file/d/1w3K3PTeqvt250qMJne4azXeU4D35dC8P/view?usp=drivesdk)
 
-Until the public link is ready, a debug APK can also be downloaded from GitHub Actions:
+Install on two NFC-capable Android phones to try Tap Pay end-to-end.
+
+A debug APK is also available from GitHub Actions if needed:
 
 1. Open [Actions → Build workflow](https://github.com/anuraggdubey/tappay/actions)
 2. Open the latest successful run
 3. Download the APK artifact
-4. Install on two NFC-capable Android phones
 
 ### Video Demo
 
-**Video Demo URL:** `[PLACEHOLDER — paste YouTube / Loom / Drive link here]`
+**Video Demo URL:** [https://drive.google.com/file/d/1f8ZO1ian1y1d4o98g1C-SuV6wPYAysDC/view?usp=sharing](https://drive.google.com/file/d/1f8ZO1ian1y1d4o98g1C-SuV6wPYAysDC/view?usp=sharing)
 
 ---
 
 ## Social Posts
 
-Live posts from **Monad India Blitz V4**, shown with the same media as on X.
+Live posts from **Monad India Blitz V4**, shown with the same media as on X and LinkedIn.
 
 <table>
 <tr>
@@ -196,7 +197,27 @@ Live posts from **Monad India Blitz V4**, shown with the same media as on X.
 <p><a href="https://x.com/AdityaNishad987/status/2101170921033883854?s=20">View on X</a></p>
 
 </td>
-<td width="50%" valign="top"></td>
+<td width="50%" valign="top">
+
+<p>
+<img src="docs/screenshots/social/misbah-cooking-avatar.jpg" width="40" height="40" alt="Misbah Ansari" />
+&nbsp;&nbsp;<strong>Misbah Ansari</strong><br/>
+<a href="https://www.linkedin.com/in/misbah-ansari-52657428a">LinkedIn</a>
+</p>
+
+> We Anurag Dubey Aditya Nishad cooking now at monad hack.
+>
+> Kartikey Garg
+
+<p align="center">
+  <a href="https://www.linkedin.com/posts/misbah-ansari-52657428a_we-anurag-dubey-aditya-nishad-cooking-now-activity-7506962375024168960-KQwP">
+    <img src="docs/screenshots/social/misbah-cooking.jpg" alt="LinkedIn — cooking at Monad hack" width="100%" />
+  </a>
+</p>
+
+<p><a href="https://www.linkedin.com/posts/misbah-ansari-52657428a_we-anurag-dubey-aditya-nishad-cooking-now-activity-7506962375024168960-KQwP">View on LinkedIn</a></p>
+
+</td>
 </tr>
 </table>
 

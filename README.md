@@ -22,9 +22,6 @@ Phone-to-phone contactless payments on [Monad Testnet](https://docs.monad.xyz) â
 | **Video Demo** | `[PLACEHOLDER â€” paste demo video URL here]` |
 | **UsernameRegistry** | [`0xEebB05F9AF06908eCb7bFa5F916Dde1EEa231aDD`](https://testnet.monadscan.com/address/0xEebB05F9AF06908eCb7bFa5F916Dde1EEa231aDD) |
 | **TapPayLedger** | [`0x5B177FEF554dA84A86be62E45fb49BB52e6D6838`](https://testnet.monadscan.com/address/0x5B177FEF554dA84A86be62E45fb49BB52e6D6838) |
-| **Explorer** | [Monadscan Testnet](https://testnet.monadscan.com) |
-| **Faucet** | [faucet.monad.xyz](https://faucet.monad.xyz) |
-| **Repo** | [github.com/anuraggdubey/tappay](https://github.com/anuraggdubey/tappay) |
 
 ---
 

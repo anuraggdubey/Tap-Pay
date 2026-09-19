@@ -219,6 +219,54 @@ Live posts from **Monad India Blitz V4**, shown with the same media as on X and 
 
 </td>
 </tr>
+<tr>
+<td width="50%" valign="top">
+
+<p>
+<img src="docs/screenshots/social/aditya-demo-avatar.jpg" width="40" height="40" alt="@AdityaNishad987" />
+&nbsp;&nbsp;<strong>0xAdityaa</strong><br/>
+<a href="https://x.com/AdityaNishad987">@AdityaNishad987</a>
+</p>
+
+> This is what we made.
+>
+> TapPay at @monad BlitzV4.
+>
+> Contactless Payment using NFC just tap on each others phone and payment done that’s how easy it is.
+
+<p align="center">
+  <a href="https://x.com/AdityaNishad987/status/2101275794375131270?s=20">
+    <img src="docs/screenshots/social/aditya-demo.jpg" alt="Aditya — TapPay demo video" width="100%" />
+  </a>
+</p>
+
+<p><a href="https://x.com/AdityaNishad987/status/2101275794375131270?s=20">View on X</a></p>
+
+</td>
+<td width="50%" valign="top">
+
+<p>
+<img src="docs/screenshots/social/misbah-demo-avatar.jpg" width="40" height="40" alt="@Misbahtwts" />
+&nbsp;&nbsp;<strong>Misbah(agentic arc)</strong><br/>
+<a href="https://x.com/Misbahtwts">@Misbahtwts</a>
+</p>
+
+> We made TapPay and here's the video on how it works.
+>
+> if you wanna try it out, dm me
+>
+> @geeky_kartikey @KushalVijay_
+
+<p align="center">
+  <a href="https://x.com/Misbahtwts/status/2101276318541496533?s=20">
+    <img src="docs/screenshots/social/aditya-demo.jpg" alt="Misbah — TapPay demo video share" width="100%" />
+  </a>
+</p>
+
+<p><a href="https://x.com/Misbahtwts/status/2101276318541496533?s=20">View on X</a></p>
+
+</td>
+</tr>
 </table>
 
 ---

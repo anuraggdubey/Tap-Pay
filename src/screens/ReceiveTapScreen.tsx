@@ -25,11 +25,14 @@ import {
   stopReceiverBroadcast,
   waitForIncomingPayment,
 } from '../services/tapPayment';
+import {getBalance} from '../services/wallet';
+import {reverseResolveAddress} from '../services/registry';
 import {recordTransaction} from '../services/history';
 import NfcNotAvailableModal from '../components/NfcNotAvailableModal';
 import {PulsingRadar} from '../components/PulsingRadar';
 import {triggerHaptic} from '../utils/haptics';
-import {colors, screen} from '../theme';
+import {formatMon, truncateAddress} from '../utils/format';
+import {colors, screen, spacing} from '../theme';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'ReceiveTap'>;
@@ -86,31 +89,65 @@ export default function ReceiveTapScreen({navigation}: Props) {
 
         // Snapshot balance at the time we start waiting
         const previousBalance = balanceRef.current;
-        const confirmed = await waitForIncomingPayment(
+        const payment = await waitForIncomingPayment(
           address,
           previousBalance,
           null, // Any amount
         );
 
-        if (confirmed && isMountedRef.current) {
+        if (payment.detected && isMountedRef.current) {
           setIsReceiving(false);
           await stopReceiverBroadcast();
+
+          // Prefer on-chain amount from PaymentLogged; fall back to balance delta
+          let amountStr = 'Unknown';
+          if (payment.amountWei != null && payment.amountWei > 0n) {
+            amountStr = formatMon(payment.amountWei).replace(/ MON$/, '');
+          } else {
+            try {
+              const currentBalance = await getBalance(address);
+              if (currentBalance > previousBalance) {
+                amountStr = formatMon(currentBalance - previousBalance).replace(
+                  / MON$/,
+                  '',
+                );
+              }
+            } catch {
+              // Keep Unknown if RPC fails; payment was already detected
+            }
+          }
+
+          const senderAddress = payment.senderAddress || '';
+          let senderUsername: string | undefined;
+          if (senderAddress) {
+            try {
+              senderUsername =
+                (await reverseResolveAddress(senderAddress)) || undefined;
+            } catch {
+              // Username lookup is optional
+            }
+          }
+
           refreshBalanceRef.current();
           triggerHaptic.notificationSuccess();
 
+          const counterpartyLabel = senderAddress || 'Unknown (Tap)';
+
           recordTransaction({
             direction: 'received',
-            counterparty: 'Unknown (Tap)',
-            amount: 'Unknown',
+            counterparty: counterpartyLabel,
+            counterpartyUsername: senderUsername,
+            amount: amountStr,
             status: 'confirmed',
-            txHash: 'tap-payment',
+            txHash: payment.txHash || 'tap-payment',
           });
 
           navigationRef.current.replace('TransactionStatus', {
-            txHash: 'tap-payment',
-            amount: 'Unknown',
-            recipient: address,
+            txHash: payment.txHash || 'tap-payment',
+            amount: amountStr,
+            recipient: counterpartyLabel,
             direction: 'received',
+            counterpartyUsername: senderUsername,
             waitForBalance: false,
             expectedAmountWei: '0',
           });
@@ -128,24 +165,47 @@ export default function ReceiveTapScreen({navigation}: Props) {
 
   return (
     <View style={screen.container}>
-      <View style={screen.centered}>
-        <PulsingRadar label="RECEIVE" color={colors.success} size={96} active={isReceiving} />
-
-        <Text style={screen.title}>Ready to Receive</Text>
-        <Text style={screen.subtitle}>
-          Hold your phone near the sender's phone.
-        </Text>
-
-        <View style={styles.stepsCard}>
-          <Text style={styles.stepsTitle}>Receiver steps</Text>
-          <Text style={styles.stepItem}>1. Sender taps your phone.</Text>
-          <Text style={styles.stepItem}>2. Sender's phone reads your address instantly.</Text>
-          <Text style={styles.stepItem}>3. Payment is broadcasted on Monad.</Text>
+      <View style={styles.stage}>
+        <View style={styles.radarWrap}>
+          <PulsingRadar
+            label="RECEIVE"
+            color={colors.success}
+            size={88}
+            active={isReceiving}
+          />
         </View>
 
-        {!isReceiving && (
-          <ActivityIndicator color={colors.success} style={{marginTop: 24}} />
+        <Text style={styles.title}>
+          {isReceiving ? 'Ready to receive' : 'Payment detected'}
+        </Text>
+        <Text style={styles.subtitle}>
+          {isReceiving
+            ? 'Hold phones back-to-back until the sender finishes.'
+            : 'Confirming details…'}
+        </Text>
+
+        {!!address && (
+          <View style={styles.walletChip}>
+            <Text style={styles.walletChipLabel}>Your wallet</Text>
+            <Text style={styles.walletChipValue}>
+              {truncateAddress(address, 8, 6)}
+            </Text>
+          </View>
         )}
+
+        <View style={styles.statusRow}>
+          {isReceiving ? (
+            <>
+              <View style={styles.liveDot} />
+              <Text style={styles.statusText}>Listening for tap</Text>
+            </>
+          ) : (
+            <>
+              <ActivityIndicator color={colors.success} size="small" />
+              <Text style={styles.statusText}>Opening receipt…</Text>
+            </>
+          )}
+        </View>
       </View>
 
       <NfcNotAvailableModal
@@ -161,24 +221,70 @@ export default function ReceiveTapScreen({navigation}: Props) {
 }
 
 const styles = StyleSheet.create({
-  stepsCard: {
-    marginTop: 28,
-    backgroundColor: colors.surface,
-    borderRadius: 14,
-    padding: 16,
-    width: '100%',
-    borderWidth: 1,
-    borderColor: colors.border,
+  stage: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
   },
-  stepsTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.text,
+  radarWrap: {
     marginBottom: 8,
   },
-  stepItem: {
-    fontSize: 12,
+  title: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: colors.text,
+    letterSpacing: -0.4,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 14,
     color: colors.textMuted,
+    textAlign: 'center',
     lineHeight: 20,
+    maxWidth: 280,
+    marginBottom: 28,
+  },
+  walletChip: {
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    minWidth: 220,
+    marginBottom: 20,
+  },
+  walletChipLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.textSubtle,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  walletChipValue: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text,
+    fontFamily: 'monospace',
+  },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  liveDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.success,
+  },
+  statusText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textMuted,
   },
 });

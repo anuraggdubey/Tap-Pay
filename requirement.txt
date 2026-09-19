@@ -1,0 +1,252 @@
+================================================================================
+TapPay — Complete Project Requirements & Contributor Setup Guide
+================================================================================
+Monad Hackathon: Phone-to-Phone NFC Tap-to-Pay & Username Pay App (React Native)
+================================================================================
+
+This document lists EVERY requirement, dependency, tool, SDK, runtime version,
+hardware capability, and command needed by contributors to set up, develop, and
+build TapPay without missing a single component.
+
+--------------------------------------------------------------------------------
+TABLE OF CONTENTS
+--------------------------------------------------------------------------------
+1. System & Developer Machine Requirements
+2. Hardware & Device Testing Requirements
+3. Environment Variables Required
+4. Core NPM Production Dependencies
+5. NPM Development Dependencies
+6. Android SDK & Native Toolchain Requirements
+7. Android Native Permissions & Manifest Configurations
+8. Monad Testnet & Web3 Requirements
+9. CI/CD Environment Requirements (GitHub Actions)
+10. One-Command Quick Install Guide for Contributors
+
+
+================================================================================
+1. SYSTEM & DEVELOPER MACHINE REQUIREMENTS
+================================================================================
+- Operating System:
+  * Windows 10/11 (64-bit), macOS (Intel or Apple Silicon), or Linux (Ubuntu 20.04+)
+- Node.js Runtime:
+  * Node.js: >= 18.18.0 (Node 20 LTS recommended: 20.x)
+- Package Manager:
+  * npm >= 9.x or yarn >= 1.22.x
+- Version Control:
+  * Git >= 2.30.0
+- Java Development Kit (JDK):
+  * OpenJDK 17 (JDK 17) — Eclipse Temurin, Amazon Corretto, or Zulu 17
+  * Note: React Native 0.73+ requires JDK 17. JDK 11 or JDK 21 may cause Gradle errors.
+- Python:
+  * Python >= 3.8 (needed for certain node-gyp native builds on Windows)
+- C++ Build Tools (Windows only):
+  * Visual Studio Build Tools (C++ desktop development workload) or `windows-build-tools`
+
+
+================================================================================
+2. HARDWARE & DEVICE TESTING REQUIREMENTS
+================================================================================
+* CRITICAL NOTE ON NFC TESTING:
+  Android Studio Emulators DO NOT support Host Card Emulation (HCE) phone-to-phone
+  NFC tap. To test Tap Pay end-to-end, physical hardware is strictly required.
+
+- Receiver Device (Reader Role):
+  * Physical Android smartphone with NFC hardware enabled
+  * Android OS version: Android 7.0+ (API Level 24 minimum, target API 34)
+- Sender Device (Card Emulation Role):
+  * Physical Android smartphone supporting Host Card Emulation (HCE)
+    (Feature check: android.hardware.nfc.hce)
+  * Android OS version: Android 7.0+ (API Level 24+)
+- Connectivity:
+  * USB Debugging enabled via Android Developer Options
+  * Active Wi-Fi / Cellular internet connection (to talk to Monad RPC)
+
+
+================================================================================
+3. ENVIRONMENT VARIABLES REQUIRED
+================================================================================
+The following environment variables MUST be set on your development machine:
+
+Windows:
+  JAVA_HOME=C:\Program Files\Eclipse Adoptium\jdk-17.x.x-hotspot
+  ANDROID_HOME=%LOCALAPPDATA%\Android\Sdk
+  Path additions:
+    %ANDROID_HOME%\platform-tools
+    %ANDROID_HOME%\emulator
+    %ANDROID_HOME%\cmdline-tools\latest\bin
+
+macOS / Linux:
+  export JAVA_HOME=$(/usr/libexec/java_home -v 17) # macOS
+  export ANDROID_HOME=$HOME/Android/Sdk            # Linux: $HOME/Android/Sdk, macOS: $HOME/Library/Android/sdk
+  export PATH=$PATH:$ANDROID_HOME/platform-tools
+  export PATH=$PATH:$ANDROID_HOME/emulator
+  export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
+
+
+================================================================================
+4. CORE NPM PRODUCTION DEPENDENCIES
+================================================================================
+Install these into the project via `npm install`:
+
+[Core Framework]
+- react: ^18.2.0 or ^18.3.1
+- react-native: >= 0.73.0 (bare workflow, TypeScript template)
+
+[NFC & Host Card Emulation (Spec §4)]
+- react-native-hce: ^1.2.0
+  * Purpose: Enables Android Host Card Emulation (HCE) on the sender device
+- react-native-nfc-manager: ^3.14.0
+  * Purpose: Enables NFC Reader mode on the receiver device to read APDU responses
+
+[Web3, Wallet & Monad Testnet (Spec §3)]
+- ethers: ^6.13.0
+  * Purpose: EVM wallet generation, private key signing, raw tx broadcast to Monad testnet
+- react-native-get-random-values: ^1.11.0
+  * Purpose: Crypto CSPRNG polyfill required by ethers in React Native environment
+- @ethersproject/shims: ^5.7.0
+  * Purpose: Required polyfills for ethers cryptographic primitives on React Native
+
+[Secure Storage & Android Keystore (Spec §3.2)]
+- react-native-keychain: ^8.2.0
+  * Purpose: Securely stores EVM private keys inside hardware-backed Android Keystore
+
+[Navigation & UI Flow (Spec §2)]
+- @react-navigation/native: ^6.1.18
+  * Purpose: Core navigation container
+- @react-navigation/native-stack: ^6.10.0
+  * Purpose: Native stack navigator for screen transitions
+- react-native-screens: ^3.31.0
+  * Purpose: Native screen primitives optimization
+- react-native-safe-area-context: ^4.10.0
+  * Purpose: Handles safe insets (notches, status bars, navigation bars)
+
+
+================================================================================
+5. NPM DEVELOPMENT DEPENDENCIES
+================================================================================
+Install these via `npm install --save-dev`:
+
+- typescript: ^5.0.0
+- @types/react: ^18.2.0
+- @types/react-native: ^0.73.0
+- @tsconfig/react-native: ^3.0.0
+- @react-native-community/cli: latest
+- @babel/core: ^7.20.0
+- @babel/runtime: ^7.20.0
+- @react-native/babel-preset: ^0.73.0 (or metro-react-native-babel-preset)
+- eslint: ^8.19.0
+- prettier: ^2.8.8
+
+
+================================================================================
+6. ANDROID SDK & NATIVE TOOLCHAIN REQUIREMENTS
+================================================================================
+Installed via Android Studio SDK Manager or `sdkmanager` CLI:
+
+- Android SDK Platforms:
+  * Android 14.0 ("UpsideDownCake" / API level 34)
+  * Android 13.0 ("Tiramisu" / API level 33)
+- Android SDK Build-Tools:
+  * 34.0.0
+  * 33.0.2
+- Android SDK Command-line Tools:
+  * latest version
+- Android SDK Platform-Tools:
+  * adb (Android Debug Bridge) >= 34.0.0
+- Gradle Version:
+  * Gradle 8.x+ (bundled via gradle-wrapper.properties)
+- Android Gradle Plugin (AGP):
+  * AGP 8.x+
+- Minimum SDK Version (minSdkVersion):
+  * 24 (Android 7.0 Nougat) — required for HCE & modern native crypto
+- Target SDK Version (targetSdkVersion):
+  * 34 (Android 14)
+- Compile SDK Version (compileSdkVersion):
+  * 34
+
+
+================================================================================
+7. ANDROID NATIVE PERMISSIONS & MANIFEST CONFIGURATIONS
+================================================================================
+In `android/app/src/main/AndroidManifest.xml`:
+
+1. Permissions:
+   <uses-permission android:name="android.permission.NFC" />
+   <uses-permission android:name="android.permission.INTERNET" />
+   <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+2. Hardware Features:
+   <uses-feature android:name="android.hardware.nfc" android:required="false" />
+   <uses-feature android:name="android.hardware.nfc.hce" android:required="false" />
+
+3. HCE Service Registration:
+   <service
+       android:name=".TapPayHceService"
+       android:exported="true"
+       android:permission="android.permission.BIND_NFC_SERVICE">
+       <intent-filter>
+           <action android:name="android.nfc.cardemulation.action.HOST_APDU_SERVICE" />
+       </intent-filter>
+       <meta-data
+           android:name="android.nfc.cardemulation.host_apdu_service"
+           android:resource="@xml/apduservice" />
+   </service>
+
+4. Application Identifier (AID) Configuration (`res/xml/apduservice.xml`):
+   - Category: "other"
+   - AID Filter: "F0546170506179" (Hex for "TapPay") or your assigned AID hex
+
+
+================================================================================
+8. MONAD TESTNET & WEB3 REQUIREMENTS
+================================================================================
+Configure in `src/config/monad.ts`:
+
+- Network Name: Monad Testnet
+- Native Currency: MON
+- Decimals: 18
+- Default RPC Endpoint: https://testnet-rpc.monad.xyz/ (or custom Alchemy/node URL)
+- Chain ID: 10143
+- Block Explorer: https://testnet.monadexplorer.com/
+- Testnet Faucet: Access to Monad official testnet faucet to fund wallets with test MON
+- Key Storage: Hardware-backed Android Keystore (AES-256 GCM encrypted via react-native-keychain)
+
+
+================================================================================
+9. CI/CD ENVIRONMENT REQUIREMENTS (GITHUB ACTIONS)
+================================================================================
+For building the APK in CI without requiring local Android compilation:
+
+- Runner OS: ubuntu-latest
+- Actions Components:
+  * actions/checkout@v4
+  * actions/setup-node@v4 (node-version: 20, cache: 'npm')
+  * actions/setup-java@v4 (java-version: '17', distribution: 'temurin')
+  * android-actions/setup-android@v3
+  * actions/upload-artifact@v4 (upload android/app/build/outputs/apk/debug/app-debug.apk)
+
+
+================================================================================
+10. ONE-COMMAND QUICK INSTALL GUIDE FOR CONTRIBUTORS
+================================================================================
+
+Step 1: Verify prerequisites
+  node -v          # Must output v18+ or v20+
+  java -version    # Must output openjdk version 17
+  adb version      # Must output Android Debug Bridge version
+
+Step 2: Install dependencies
+  npm install
+
+Step 3: Run Metro Bundler (local JS hot reload)
+  npm start
+
+Step 4: Build & Run on Connected Android Device (or download APK from GitHub Actions CI)
+  npx react-native run-android
+
+Step 5: Testing NFC Tap Mode
+  Ensure two physical Android devices have NFC toggled ON in Android Settings.
+  Install debug APK on both phones.
+  - Device 1: Tap "Send" -> Enter Amount -> "Hold phones together"
+  - Device 2: Tap "Receive" -> Tap back-to-back with Device 1.
+================================================================================

@@ -125,6 +125,45 @@ TapPay/
 | Faucet | `https://faucet.monad.xyz` |
 | Currency | MON (18 decimals) |
 
+## Deployed Contracts (Monad Testnet)
+
+Both smart contracts are **live and verified** on Monad Testnet (Chain ID: 10143).
+
+| Contract | Address | Explorer Link |
+|---|---|---|
+| **UsernameRegistry** | `0xEebB05F9AF06908eCb7bFa5F916Dde1EEa231aDD` | [View on Monadscan ↗](https://testnet.monadscan.com/address/0xEebB05F9AF06908eCb7bFa5F916Dde1EEa231aDD) |
+| **TapPayLedger** | `0x5B177FEF554dA84A86be62E45fb49BB52e6D6838` | [View on Monadscan ↗](https://testnet.monadscan.com/address/0x5B177FEF554dA84A86be62E45fb49BB52e6D6838) |
+
+**Deployer:** [`0x1406Fe936D971A0dAE9a19DD3354b900B08Fa002`](https://testnet.monadscan.com/address/0x1406Fe936D971A0dAE9a19DD3354b900B08Fa002)
+
+### TapPayLedger — On-chain Payment Logger
+
+The payment rail for both Tap Pay (NFC) and Username Pay flows. Sender calls `payWithLog()` with native MON — funds pass through atomically to the recipient with an on-chain event log.
+
+**Security features:**
+- 🛡️ ReentrancyGuard + Checks-Effects-Interactions pattern
+- 🔁 Session-based replay protection (each NFC tap gets a unique `sessionId`)
+- ⏰ Optional deadline enforcement for session expiry
+- 💰 Configurable min/max payment limits (default: 0.0001 – 10,000 MON)
+- 🚫 Direct ETH send rejection (prevents accidental fund locking)
+- ⏸️ Pausable emergency stop (owner-only)
+- 🔐 Ownable2Step safe ownership transfer
+- 📊 On-chain analytics (`totalPayments`, `totalVolume`)
+- 📦 Batch payment support (`payMultiple()` for up to 10 recipients)
+
+### UsernameRegistry — On-chain Identity Layer
+
+Maps human-readable usernames to Monad wallet addresses. Fully on-chain — no off-chain database needed.
+
+**Features:**
+- ✅ Register unique usernames (3-20 chars: `a-z`, `0-9`, `_`)
+- 🔍 `resolve(username)` → address lookup
+- 🔄 `reverseResolve(address)` → username lookup
+- 🆓 Self-service `release()` to free your username
+- 👮 Admin `adminRemove()` for abusive/inappropriate names
+- 📊 `totalRegistrations` counter
+- 🔎 `isAvailable(username)` for UI pre-checks
+
 ## NFC Testing
 
 > ⚠️ NFC Host Card Emulation requires **two physical Android devices**. Emulators cannot test phone-to-phone tap.

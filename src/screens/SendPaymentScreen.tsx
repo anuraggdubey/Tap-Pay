@@ -1,9 +1,9 @@
 /**
  * SendPaymentScreen — Unified payment screen with @username and address modes
- * Binance Pay-style: search recipient, enter amount, confirm & broadcast
+ * After recipient is resolved, amount entry matches NFC sender Cash App-style keypad.
  */
 
-import React, {useState, useEffect, useCallback} from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -33,13 +33,22 @@ import {
 import {recordTransaction} from '../services/history';
 import ConfirmPaymentModal from '../components/ConfirmPaymentModal';
 import InsufficientBalanceModal from '../components/InsufficientBalanceModal';
+import {CrossIcon} from '../components/AppIcons';
 import {triggerHaptic} from '../utils/haptics';
+import {colors} from '../theme';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'SendPayment'>;
 };
 
 type PayMode = 'username' | 'address';
+
+const KEYS = [
+  ['1', '2', '3'],
+  ['4', '5', '6'],
+  ['7', '8', '9'],
+  ['.', '0', '⌫'],
+] as const;
 
 export default function SendPaymentScreen({navigation}: Props) {
   const insets = useSafeAreaInsets();
@@ -63,6 +72,10 @@ export default function SendPaymentScreen({navigation}: Props) {
   const [insufficientModalVisible, setInsufficientModalVisible] = useState(false);
   const [balanceCheckData, setBalanceCheckData] = useState<BalanceCheckResult | null>(null);
 
+  useEffect(() => {
+    navigation.setOptions({headerShown: !resolvedAddress});
+  }, [navigation, resolvedAddress]);
+
   const switchMode = (newMode: PayMode) => {
     triggerHaptic.selection();
     setMode(newMode);
@@ -70,6 +83,14 @@ export default function SendPaymentScreen({navigation}: Props) {
     setResolvedUsername(null);
     setUsernameInput('');
     setAddressInput('');
+    setAmount('');
+  };
+
+  const clearResolved = () => {
+    setResolvedAddress(null);
+    setResolvedUsername(null);
+    setAmount('');
+    setEstimatedGasWei(null);
   };
 
   // Search username on registry
@@ -96,6 +117,7 @@ export default function SendPaymentScreen({navigation}: Props) {
       triggerHaptic.notificationSuccess();
       setResolvedAddress(resolved);
       setResolvedUsername(trimmed);
+      setAmount('');
     } catch (err: any) {
       setSearching(false);
       triggerHaptic.notificationError();
@@ -119,6 +141,38 @@ export default function SendPaymentScreen({navigation}: Props) {
     triggerHaptic.notificationSuccess();
     setResolvedAddress(trimmed);
     setResolvedUsername(null);
+    setAmount('');
+  };
+
+  const onKeyPress = (key: string) => {
+    if (key === '⌫') {
+      setAmount(prev => prev.slice(0, -1));
+      return;
+    }
+
+    setAmount(prev => {
+      if (key === '.') {
+        if (prev.includes('.')) {
+          return prev;
+        }
+        return prev === '' ? '0.' : prev + '.';
+      }
+
+      const parts = prev.split('.');
+      if (parts[1] && parts[1].length >= 6) {
+        return prev;
+      }
+
+      if (prev === '0' && key !== '.') {
+        return key;
+      }
+
+      if (prev.length >= 12) {
+        return prev;
+      }
+
+      return prev + key;
+    });
   };
 
   // Dynamic gas estimation (with mounted guard to discard stale async results)
@@ -205,6 +259,7 @@ export default function SendPaymentScreen({navigation}: Props) {
           txHash: result.txHash,
           amount,
           recipient: resolvedAddress,
+          counterpartyUsername: resolvedUsername || undefined,
         });
       } else {
         Alert.alert('Payment Failed', result.error || 'Transaction could not be broadcast.');
@@ -216,7 +271,108 @@ export default function SendPaymentScreen({navigation}: Props) {
     }
   };
 
-  const recipientDisplay = resolvedUsername ? `@${resolvedUsername}` : truncateAddress(resolvedAddress || '');
+  const recipientDisplay = resolvedUsername
+    ? `@${resolvedUsername}`
+    : truncateAddress(resolvedAddress || '', 6, 4);
+
+  const displayAmount = amount === '' ? '0' : amount;
+  const canPay = validateAmount(amount).valid && !sending;
+
+  // Cash App-style amount entry (same pattern as NFC SendTap)
+  if (resolvedAddress) {
+    return (
+      <View
+        style={[
+          styles.payRoot,
+          {paddingTop: insets.top + 8, paddingBottom: insets.bottom + 12},
+        ]}>
+        <View style={styles.payHeader}>
+          <TouchableOpacity
+            style={styles.closeBtn}
+            onPress={clearResolved}
+            activeOpacity={0.8}>
+            <CrossIcon size={16} color="#FFFFFF" />
+          </TouchableOpacity>
+
+          <View style={styles.payHeaderCenter}>
+            <Text style={styles.payHeaderTitle}>{recipientDisplay}</Text>
+            <Text style={styles.payHeaderBalance}>
+              {formatMon(balance).replace(/ MON$/, '')} MON available
+            </Text>
+          </View>
+
+          <View style={styles.closeBtnSpacer} />
+        </View>
+
+        <View style={styles.amountStage}>
+          <Text style={styles.bigAmount} numberOfLines={1} adjustsFontSizeToFit>
+            {displayAmount}
+          </Text>
+          <View style={styles.currencyRow}>
+            <Text style={styles.currencyText}>MON</Text>
+            {estimatedGasWei !== null && validateAmount(amount).valid && (
+              <Text style={styles.gasHint}>
+                Gas ~{formatMon(estimatedGasWei).replace(/ MON$/, '')}
+              </Text>
+            )}
+          </View>
+          <Text style={styles.addrHint}>
+            {truncateAddress(resolvedAddress, 8, 6)}
+          </Text>
+        </View>
+
+        <View style={styles.keypad}>
+          {KEYS.map(row => (
+            <View key={row.join('-')} style={styles.keypadRow}>
+              {row.map(key => (
+                <TouchableOpacity
+                  key={key}
+                  style={styles.key}
+                  onPress={() => onKeyPress(key)}
+                  activeOpacity={0.55}>
+                  <Text style={styles.keyText}>{key}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          ))}
+        </View>
+
+        <TouchableOpacity
+          style={[styles.payButton, !canPay && styles.payButtonDisabled]}
+          onPress={handleInitiateSend}
+          disabled={!canPay}
+          activeOpacity={0.85}>
+          {sending ? (
+            <ActivityIndicator color="#000000" />
+          ) : (
+            <Text style={styles.payButtonText}>Pay</Text>
+          )}
+        </TouchableOpacity>
+
+        {balanceCheckData && (
+          <ConfirmPaymentModal
+            visible={confirmModalVisible}
+            onConfirm={handleConfirmSend}
+            onCancel={() => setConfirmModalVisible(false)}
+            recipient={resolvedAddress || ''}
+            recipientUsername={resolvedUsername}
+            amountWei={balanceCheckData.amountWei}
+            gasCostWei={balanceCheckData.gasCostWei}
+            loading={sending}
+          />
+        )}
+        {balanceCheckData && (
+          <InsufficientBalanceModal
+            visible={insufficientModalVisible}
+            onClose={() => setInsufficientModalVisible(false)}
+            requiredWei={balanceCheckData.requiredTotal}
+            currentBalanceWei={balanceCheckData.balance}
+            userAddress={address || ''}
+          />
+        )}
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -231,13 +387,11 @@ export default function SendPaymentScreen({navigation}: Props) {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled">
 
-        {/* Page Header */}
         <View style={styles.header}>
           <Text style={styles.pageTitle}>Send Payment</Text>
           <Text style={styles.pageSubtitle}>Direct transfer on Monad testnet</Text>
         </View>
 
-        {/* Mode Toggle */}
         <View style={styles.modeToggle}>
           <TouchableOpacity
             style={[styles.modeTab, mode === 'username' && styles.modeTabActive]}
@@ -257,7 +411,6 @@ export default function SendPaymentScreen({navigation}: Props) {
           </TouchableOpacity>
         </View>
 
-        {/* Recipient Input */}
         <Text style={styles.sectionLabel}>RECIPIENT</Text>
         {mode === 'username' ? (
           <View style={styles.inputRow}>
@@ -315,137 +468,7 @@ export default function SendPaymentScreen({navigation}: Props) {
             </TouchableOpacity>
           </View>
         )}
-
-        {/* Resolved Recipient Card */}
-        {resolvedAddress && (
-          <View style={styles.recipientCard}>
-            <View style={styles.recipientAvatar}>
-              <Text style={styles.recipientAvatarText}>
-                {(resolvedUsername || resolvedAddress.slice(2, 3)).charAt(0).toUpperCase()}
-              </Text>
-            </View>
-            <View style={styles.recipientMeta}>
-              {resolvedUsername && (
-                <Text style={styles.recipientName}>@{resolvedUsername}</Text>
-              )}
-              <Text style={styles.recipientAddr}>
-                {truncateAddress(resolvedAddress, 8, 6)}
-              </Text>
-            </View>
-            <View style={styles.verifiedBadge}>
-              <Text style={styles.verifiedText}>Verified</Text>
-            </View>
-          </View>
-        )}
-
-        {/* Amount Input */}
-        {resolvedAddress && (
-          <>
-            <Text style={[styles.sectionLabel, {marginTop: 28}]}>AMOUNT</Text>
-            <View style={styles.amountContainer}>
-              <TextInput
-                style={styles.amountInput}
-                placeholder="0.00"
-                placeholderTextColor="#333344"
-                value={amount}
-                onChangeText={setAmount}
-                keyboardType="decimal-pad"
-              />
-              <Text style={styles.amountCurrency}>MON</Text>
-            </View>
-
-            {/* Quick Amount Chips (Binance Pay style) */}
-            <View style={styles.presetsRow}>
-              {['0.1', '0.5', '1', '5'].map(val => (
-                <TouchableOpacity
-                  key={val}
-                  style={[
-                    styles.presetChip,
-                    amount === val && styles.presetChipActive,
-                  ]}
-                  onPress={() => {
-                    triggerHaptic.impactMedium();
-                    setAmount(val);
-                  }}
-                  activeOpacity={0.7}>
-                  <Text
-                    style={[
-                      styles.presetChipText,
-                      amount === val && styles.presetChipTextActive,
-                    ]}>
-                    {val}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-              <TouchableOpacity
-                style={[styles.presetChip, styles.maxChip]}
-                onPress={() => {
-                  triggerHaptic.impactMedium();
-                  const balStr = ethers.formatEther(balance);
-                  const balNum = parseFloat(balStr);
-                  // Leave small headroom for gas
-                  const maxSend = Math.max(0, balNum - 0.005).toFixed(4);
-                  setAmount(maxSend > '0' ? maxSend : '0');
-                }}
-                activeOpacity={0.7}>
-                <Text style={styles.maxChipText}>MAX</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Gas & Balance Info */}
-            <View style={styles.infoRow}>
-              {estimatedGasWei !== null && (
-                <View style={styles.infoPill}>
-                  <Text style={styles.infoLabel}>Gas Fee</Text>
-                  <Text style={styles.infoValue}>~{formatMon(estimatedGasWei)}</Text>
-                </View>
-              )}
-              <View style={styles.infoPill}>
-                <Text style={styles.infoLabel}>Available</Text>
-                <Text style={styles.infoValue}>{formatMon(balance)}</Text>
-              </View>
-            </View>
-
-            {/* Send Button */}
-            <TouchableOpacity
-              style={[styles.sendButton, sending && {opacity: 0.6}]}
-              onPress={handleInitiateSend}
-              disabled={sending}
-              activeOpacity={0.8}>
-              {sending ? (
-                <ActivityIndicator color="#FFF" />
-              ) : (
-                <Text style={styles.sendButtonText}>
-                  Send to {recipientDisplay}
-                </Text>
-              )}
-            </TouchableOpacity>
-          </>
-        )}
       </ScrollView>
-
-      {/* Modals */}
-      {balanceCheckData && (
-        <ConfirmPaymentModal
-          visible={confirmModalVisible}
-          onConfirm={handleConfirmSend}
-          onCancel={() => setConfirmModalVisible(false)}
-          recipient={resolvedAddress || ''}
-          recipientUsername={resolvedUsername}
-          amountWei={balanceCheckData.amountWei}
-          gasCostWei={balanceCheckData.gasCostWei}
-          loading={sending}
-        />
-      )}
-      {balanceCheckData && (
-        <InsufficientBalanceModal
-          visible={insufficientModalVisible}
-          onClose={() => setInsufficientModalVisible(false)}
-          requiredWei={balanceCheckData.requiredTotal}
-          currentBalanceWei={balanceCheckData.balance}
-          userAddress={address || ''}
-        />
-      )}
     </KeyboardAvoidingView>
   );
 }
@@ -552,152 +575,109 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
   },
-  recipientCard: {
+  payRoot: {
+    flex: 1,
+    backgroundColor: '#000000',
+    paddingHorizontal: 20,
+  },
+  payHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#14141E',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#222232',
-    marginBottom: 4,
+    justifyContent: 'space-between',
+    marginBottom: 8,
   },
-  recipientAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#262638',
-    justifyContent: 'center',
+  closeBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#1C1C1E',
     alignItems: 'center',
-    marginRight: 12,
+    justifyContent: 'center',
   },
-  recipientAvatarText: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#FFFFFF',
+  closeBtnSpacer: {
+    width: 36,
   },
-  recipientMeta: {
+  payHeaderCenter: {
+    alignItems: 'center',
     flex: 1,
   },
-  recipientName: {
-    fontSize: 15,
+  payHeaderTitle: {
+    fontSize: 17,
     fontWeight: '700',
     color: '#FFFFFF',
-    marginBottom: 2,
   },
-  recipientAddr: {
-    fontSize: 12,
+  payHeaderBalance: {
+    marginTop: 3,
+    fontSize: 13,
     color: '#8E8E93',
+    fontWeight: '500',
+  },
+  amountStage: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+  },
+  bigAmount: {
+    fontSize: 64,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: -2,
+    maxWidth: '100%',
+  },
+  currencyRow: {
+    marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  currencyText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.successSoft,
+  },
+  gasHint: {
+    fontSize: 12,
+    color: '#636366',
+    fontWeight: '500',
+  },
+  addrHint: {
+    marginTop: 10,
+    fontSize: 12,
+    color: '#636366',
     fontFamily: 'monospace',
   },
-  verifiedBadge: {
-    backgroundColor: 'rgba(48, 209, 88, 0.14)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+  keypad: {
+    paddingBottom: 8,
   },
-  verifiedText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#30D158',
-    letterSpacing: 0.5,
-  },
-  amountContainer: {
-    alignItems: 'center',
-    marginBottom: 16,
-    backgroundColor: '#14141E',
-    borderRadius: 16,
-    paddingVertical: 24,
-    borderWidth: 1,
-    borderColor: '#222232',
-  },
-  amountInput: {
-    fontSize: 48,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    textAlign: 'center',
-    paddingVertical: 6,
-    width: '100%',
-  },
-  amountCurrency: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#8E8E93',
-    letterSpacing: 1,
-  },
-  presetsRow: {
+  keypadRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  key: {
+    width: '33.33%',
+    height: 64,
+    alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    marginBottom: 20,
   },
-  presetChip: {
-    backgroundColor: '#14141E',
-    borderWidth: 1,
-    borderColor: '#222232',
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  presetChipActive: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#FFFFFF',
-  },
-  presetChipText: {
-    color: '#8E8E93',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  presetChipTextActive: {
-    color: '#000000',
-    fontWeight: '800',
-  },
-  maxChip: {
-    backgroundColor: 'rgba(48, 209, 88, 0.12)',
-    borderColor: 'rgba(48, 209, 88, 0.25)',
-  },
-  maxChipText: {
-    color: '#30D158',
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 24,
-  },
-  infoPill: {
-    flex: 1,
-    backgroundColor: '#14141E',
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderWidth: 1,
-    borderColor: '#222232',
-  },
-  infoLabel: {
-    fontSize: 10,
-    color: '#71717A',
-    marginBottom: 4,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  infoValue: {
-    fontSize: 13,
+  keyText: {
+    fontSize: 28,
+    fontWeight: '500',
     color: '#FFFFFF',
-    fontWeight: '700',
   },
-  sendButton: {
+  payButton: {
     backgroundColor: '#FFFFFF',
-    paddingVertical: 18,
-    borderRadius: 16,
+    borderRadius: 28,
+    minHeight: 56,
     alignItems: 'center',
-    marginTop: 10,
+    justifyContent: 'center',
+    marginTop: 8,
   },
-  sendButtonText: {
-    fontSize: 16,
+  payButtonDisabled: {
+    opacity: 0.35,
+  },
+  payButtonText: {
+    fontSize: 17,
     fontWeight: '700',
     color: '#000000',
   },

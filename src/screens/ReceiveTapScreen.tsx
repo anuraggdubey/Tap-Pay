@@ -8,7 +8,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ActivityIndicator,
   Alert,
 } from 'react-native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
@@ -29,10 +28,9 @@ import {getBalance} from '../services/wallet';
 import {reverseResolveAddress} from '../services/registry';
 import {recordTransaction} from '../services/history';
 import NfcNotAvailableModal from '../components/NfcNotAvailableModal';
-import {PulsingRadar} from '../components/PulsingRadar';
+import NfcWaitingCard from '../components/NfcWaitingCard';
 import {triggerHaptic} from '../utils/haptics';
 import {formatMon, truncateAddress} from '../utils/format';
-import {colors, screen, spacing} from '../theme';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'ReceiveTap'>;
@@ -51,6 +49,10 @@ export default function ReceiveTapScreen({navigation}: Props) {
   balanceRef.current = balance;
   navigationRef.current = navigation;
   refreshBalanceRef.current = refreshBalance;
+
+  useEffect(() => {
+    navigation.setOptions({headerShown: false});
+  }, [navigation]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -164,49 +166,27 @@ export default function ReceiveTapScreen({navigation}: Props) {
 
 
   return (
-    <View style={screen.container}>
-      <View style={styles.stage}>
-        <View style={styles.radarWrap}>
-          <PulsingRadar
-            label="RECEIVE"
-            color={colors.success}
-            size={88}
-            active={isReceiving}
-          />
-        </View>
-
-        <Text style={styles.title}>
-          {isReceiving ? 'Ready to receive' : 'Payment detected'}
-        </Text>
-        <Text style={styles.subtitle}>
-          {isReceiving
-            ? 'Hold phones back-to-back until the sender finishes.'
-            : 'Confirming details…'}
-        </Text>
-
-        {!!address && (
-          <View style={styles.walletChip}>
-            <Text style={styles.walletChipLabel}>Your wallet</Text>
-            <Text style={styles.walletChipValue}>
+    <View style={styles.root}>
+      <NfcWaitingCard
+        accent="green"
+        showSpinner={!isReceiving}
+        onClose={() => navigation.goBack()}
+        title={
+          isReceiving ? 'Ready to receive' : "We're processing your payment"
+        }
+        subtitle={
+          isReceiving
+            ? 'Hold phones together. Listening for a tap…'
+            : 'Payment detected — confirming details.'
+        }
+        footer={
+          !!address ? (
+            <Text style={styles.walletHint}>
               {truncateAddress(address, 8, 6)}
             </Text>
-          </View>
-        )}
-
-        <View style={styles.statusRow}>
-          {isReceiving ? (
-            <>
-              <View style={styles.liveDot} />
-              <Text style={styles.statusText}>Listening for tap</Text>
-            </>
-          ) : (
-            <>
-              <ActivityIndicator color={colors.success} size="small" />
-              <Text style={styles.statusText}>Opening receipt…</Text>
-            </>
-          )}
-        </View>
-      </View>
+          ) : null
+        }
+      />
 
       <NfcNotAvailableModal
         visible={nfcModalVisible}
@@ -221,70 +201,14 @@ export default function ReceiveTapScreen({navigation}: Props) {
 }
 
 const styles = StyleSheet.create({
-  stage: {
+  root: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
   },
-  radarWrap: {
-    marginBottom: 8,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: colors.text,
-    letterSpacing: -0.4,
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: colors.textMuted,
-    textAlign: 'center',
-    lineHeight: 20,
-    maxWidth: 280,
-    marginBottom: 28,
-  },
-  walletChip: {
-    alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 16,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    minWidth: 220,
-    marginBottom: 20,
-  },
-  walletChipLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.textSubtle,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    marginBottom: 4,
-  },
-  walletChipValue: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.text,
-    fontFamily: 'monospace',
-  },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  liveDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.success,
-  },
-  statusText: {
+  walletHint: {
+    marginTop: 18,
     fontSize: 13,
+    color: 'rgba(255,255,255,0.55)',
+    fontFamily: 'monospace',
     fontWeight: '600',
-    color: colors.textMuted,
   },
 });

@@ -34,10 +34,10 @@ import {
 import {recordTransaction} from '../services/history';
 import InsufficientBalanceModal from '../components/InsufficientBalanceModal';
 import NfcNotAvailableModal from '../components/NfcNotAvailableModal';
-import {PulsingRadar} from '../components/PulsingRadar';
+import NfcWaitingCard from '../components/NfcWaitingCard';
 import {CrossIcon} from '../components/AppIcons';
 import {triggerHaptic} from '../utils/haptics';
-import {buttons, colors, screen, spacing} from '../theme';
+import {colors} from '../theme';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'SendTap'>;
@@ -294,49 +294,36 @@ export default function SendTapScreen({navigation}: Props) {
 
   if (phase !== 'idle') {
     const copy = PHASE_COPY[phase];
-    const isWaiting = phase === 'reading';
     const isBusy = phase === 'broadcasting';
 
     return (
-      <View style={screen.container}>
-        <View style={styles.stage}>
-          <View style={styles.radarWrap}>
-            <PulsingRadar
-              label="SEND"
-              color={colors.accentSoft}
-              size={88}
-              active={isWaiting}
-            />
-          </View>
-
-          <Text style={styles.phaseTitle}>{copy.title}</Text>
-          <Text style={styles.phaseSubtitle}>{copy.subtitle}</Text>
-
-          {!!activeAmount && (
-            <View style={styles.amountPanel}>
-              <Text style={styles.amountPanelLabel}>Amount</Text>
-              <Text style={styles.amountPanelValue}>{activeAmount} MON</Text>
-            </View>
-          )}
-
-          {isWaiting && (
-            <Text style={styles.timerText}>Expires in {timeLeft}s</Text>
-          )}
-
-          {isBusy && (
-            <ActivityIndicator color={colors.accent} style={{marginTop: 24}} />
-          )}
-
-          {!isBusy && (
+      <NfcWaitingCard
+        accent="purple"
+        showSpinner={isBusy}
+        onClose={isBusy ? undefined : handleCancel}
+        title={
+          isBusy
+            ? "We're processing your payment"
+            : copy.title || 'Hold phones together'
+        }
+        subtitle={
+          isBusy
+            ? 'Crunching the numbers.'
+            : activeAmount
+            ? `Sending ${activeAmount} MON · expires in ${timeLeft}s`
+            : copy.subtitle
+        }
+        footer={
+          !isBusy ? (
             <TouchableOpacity
-              style={[buttons.ghostDanger, styles.cancelBtn]}
+              style={styles.cancelLink}
               onPress={handleCancel}
-              activeOpacity={0.85}>
-              <Text style={buttons.ghostDangerText}>Cancel</Text>
+              activeOpacity={0.7}>
+              <Text style={styles.cancelLinkText}>Cancel</Text>
             </TouchableOpacity>
-          )}
-        </View>
-      </View>
+          ) : null
+        }
+      />
     );
   }
 
@@ -534,63 +521,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#000000',
   },
-  stage: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
+  cancelLink: {
+    marginTop: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
   },
-  radarWrap: {
-    marginBottom: 8,
-  },
-  phaseTitle: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: colors.text,
-    letterSpacing: -0.4,
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  phaseSubtitle: {
-    fontSize: 14,
-    color: colors.textMuted,
-    textAlign: 'center',
-    lineHeight: 20,
-    maxWidth: 280,
-  },
-  amountPanel: {
-    marginTop: 28,
-    alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 28,
-    minWidth: 200,
-    backgroundColor: colors.surface,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  amountPanelLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.textSubtle,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    marginBottom: 4,
-  },
-  amountPanelValue: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: colors.text,
-    letterSpacing: -0.3,
-  },
-  timerText: {
-    marginTop: 18,
-    fontSize: 13,
+  cancelLinkText: {
+    fontSize: 15,
     fontWeight: '600',
-    color: colors.textSubtle,
-  },
-  cancelBtn: {
-    marginTop: 32,
-    minWidth: 140,
+    color: 'rgba(255,255,255,0.65)',
   },
 });

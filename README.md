@@ -85,15 +85,62 @@ Until the public link is ready, a debug APK can also be downloaded from GitHub A
 
 ## Social Posts
 
-Build-in-public updates from the Monad Blitz hack:
+Build-in-public trail from **Monad India Blitz V4**. Each card shows a short visual overview of the post.
 
-| # | Overview | Link |
-|--:|:---------|:-----|
-| 1 | Misbah on-site at Monad hack — “come say hi” | [Post](https://x.com/Misbahtwts/status/2101171148813639993?s=20) |
-| 2 | Team cooking with [@anuraggdubeyy](https://x.com/anuraggdubeyy) & [@AdityaNishad987](https://x.com/AdityaNishad987) | [Post](https://x.com/Misbahtwts/status/2101196068054769999?s=20) |
-| 3 | First TapPay teaser — more details soon | [Post](https://x.com/Misbahtwts/status/2101255579910230415?s=20) |
-| 4 | Anurag at Monad India Blitz V4 | [Post](https://x.com/anuraggdubeyy/status/2101171282012442744?s=20) |
-| 5 | Aditya at Monad Blitz V4 | [Post](https://x.com/AdityaNishad987/status/2101170921033883854?s=20) |
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>Misbah — On site</h3>
+      <blockquote>
+        At @monad hack today.<br/>
+        If you're here, come say hi.
+      </blockquote>
+      <p><strong>Overview:</strong> Kickoff check-in from the venue — team is live at the hack.</p>
+      <p><a href="https://x.com/Misbahtwts/status/2101171148813639993?s=20">Open on X</a> · <a href="https://x.com/Misbahtwts">@Misbahtwts</a></p>
+    </td>
+    <td width="50%" valign="top">
+      <h3>Misbah — Cooking</h3>
+      <blockquote>
+        We @anuraggdubeyy @AdityaNishad987 cooking now for monad hack.<br/>
+        How does this wallpaper look btw?
+      </blockquote>
+      <p><strong>Overview:</strong> Team build update while hacking — Misbah, Anurag, and Aditya shipping TapPay.</p>
+      <p><a href="https://x.com/Misbahtwts/status/2101196068054769999?s=20">Open on X</a> · <a href="https://x.com/Misbahtwts">@Misbahtwts</a></p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>Misbah — TapPay teaser</h3>
+      <blockquote>
+        Tappay....<br/>
+        will be sharing more details about it sooon.<br/>
+        @MonadIndia @geeky_kartikey
+      </blockquote>
+      <p><strong>Overview:</strong> First public name-drop of TapPay during Blitz — product tease for judges and community.</p>
+      <p><a href="https://x.com/Misbahtwts/status/2101255579910230415?s=20">Open on X</a> · <a href="https://x.com/Misbahtwts">@Misbahtwts</a></p>
+    </td>
+    <td width="50%" valign="top">
+      <h3>Anurag — Blitz V4</h3>
+      <blockquote>
+        Here at @MonadIndia Blitz V4.
+      </blockquote>
+      <p><strong>Overview:</strong> Anurag’s venue check-in at Monad India Blitz V4.</p>
+      <p><a href="https://x.com/anuraggdubeyy/status/2101171282012442744?s=20">Open on X</a> · <a href="https://x.com/anuraggdubeyy">@anuraggdubeyy</a></p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>Aditya — Blitz V4</h3>
+      <blockquote>
+        At @monad Blitz V4..
+      </blockquote>
+      <p><strong>Overview:</strong> Aditya’s on-site presence post for Monad Blitz V4.</p>
+      <p><a href="https://x.com/AdityaNishad987/status/2101170921033883854?s=20">Open on X</a> · <a href="https://x.com/AdityaNishad987">@AdityaNishad987</a></p>
+    </td>
+    <td width="50%" valign="top">
+    </td>
+  </tr>
+</table>
 
 ---
 

@@ -1,0 +1,106 @@
+import {ethers} from 'ethers';
+import {
+  encodeReceiverAddress,
+  decodeReceiverAddress,
+  RECEIVER_NDEF_PREFIX,
+} from '../src/utils/apdu';
+import {truncateAddress, formatMon, parseMonToWei} from '../src/utils/format';
+import {
+  validateAmount,
+  validateUsername,
+  validateAddress,
+} from '../src/utils/validation';
+
+describe('APDU Encoding/Decoding for One-Way NFC', () => {
+  test('correctly encodes receiver address', () => {
+    const receiver = '0x1234567890123456789012345678901234567890';
+    const encoded = encodeReceiverAddress(receiver);
+    expect(encoded).toBe(`${RECEIVER_NDEF_PREFIX}1234567890123456789012345678901234567890`);
+  });
+
+  test('correctly decodes receiver address', () => {
+    const receiver = '0xabcdef1234567890abcdef1234567890abcdef12';
+    const encoded = `${RECEIVER_NDEF_PREFIX}abcdef1234567890abcdef1234567890abcdef12`;
+    
+    const decoded = decodeReceiverAddress(encoded);
+    expect(decoded?.toLowerCase()).toBe(receiver.toLowerCase());
+  });
+
+  test('returns null for invalid prefix', () => {
+    const encoded = `WRONGPREFIXabcdef1234567890abcdef1234567890abcdef12`;
+    const decoded = decodeReceiverAddress(encoded);
+    expect(decoded).toBeNull();
+  });
+
+  test('returns null for incorrect length', () => {
+    const encoded = `${RECEIVER_NDEF_PREFIX}abcdef1234567890`;
+    const decoded = decodeReceiverAddress(encoded);
+    expect(decoded).toBeNull();
+  });
+});
+
+describe('Formatting Utils', () => {
+  test('truncateAddress shortens 42-char address', () => {
+    const addr = '0x1234567890abcdef1234567890abcdef12345678';
+    expect(truncateAddress(addr, 6, 4)).toBe('0x1234...5678');
+  });
+
+  test('formatMon formats wei correctly', () => {
+    expect(formatMon(1000000000000000000n)).toBe('1 MON');
+    expect(formatMon(2500000000000000000n)).toBe('2.5 MON');
+  });
+
+  test('parseMonToWei parses decimal string to wei bigint', () => {
+    expect(parseMonToWei('1')).toBe(1000000000000000000n);
+    expect(parseMonToWei('0.5')).toBe(500000000000000000n);
+  });
+});
+
+describe('Validation Utils', () => {
+  test('validates MON amounts', () => {
+    expect(validateAmount('1.5').valid).toBe(true);
+    expect(validateAmount('0').valid).toBe(false);
+    expect(validateAmount('-1').valid).toBe(false);
+    expect(validateAmount('abc').valid).toBe(false);
+  });
+
+  test('validates usernames', () => {
+    expect(validateUsername('alice').valid).toBe(true);
+    expect(validateUsername('alice_123').valid).toBe(false); // underscores no longer allowed
+    expect(validateUsername('ab').valid).toBe(false);
+    expect(validateUsername('Alice').valid).toBe(false); // only lowercase
+  });
+
+  test('validates EVM addresses', () => {
+    expect(validateAddress('0x1234567890abcdef1234567890abcdef12345678')).toBe(true);
+    expect(validateAddress('0xinvalid')).toBe(false);
+  });
+});
+
+describe('Contract Error Parsing', () => {
+  const {parseContractError} = require('../src/services/wallet');
+
+  test('parses TapPayLedger SessionAlreadyProcessed and SessionAlreadyUsed error', () => {
+    const err1 = {message: 'execution reverted: SessionAlreadyProcessed'};
+    expect(parseContractError(err1)).toBe('This payment session was already processed.');
+    const err2 = {message: 'execution reverted: SessionAlreadyUsed'};
+    expect(parseContractError(err2)).toBe('This payment session was already processed.');
+  });
+
+  test('parses TapPayLedger InvalidRecipient and SelfPayment error', () => {
+    const err1 = {message: 'execution reverted: InvalidRecipient'};
+    expect(parseContractError(err1)).toBe('Invalid recipient address or self-payment is not allowed.');
+    const err2 = {message: 'execution reverted: SelfPayment'};
+    expect(parseContractError(err2)).toBe('Invalid recipient address or self-payment is not allowed.');
+  });
+
+  test('parses UsernameRegistry UsernameTaken error', () => {
+    const err = {message: 'execution reverted: UsernameTaken'};
+    expect(parseContractError(err)).toBe('This username is already taken by another user.');
+  });
+
+  test('parses insufficient funds error', () => {
+    const err = {message: 'sender doesn\'t have enough funds to send tx or exceeds balance'};
+    expect(parseContractError(err)).toBe('Insufficient MON balance for payment and network gas fee.');
+  });
+});

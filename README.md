@@ -303,7 +303,7 @@ Configured in [`src/config/monad.ts`](./src/config/monad.ts).
 
 ## Prerequisites
 
-See [`requirement.txt`](./requirement.txt) for the full list.
+See [`requirement.txt`](./docs/requirement.txt) for the full list.
 
 - Node.js >= 18 (20 LTS recommended)
 - JDK 17
@@ -321,8 +321,8 @@ export ANDROID_HOME=$HOME/Android/Sdk
 ## Quick Start
 
 ```bash
-git clone https://github.com/anuraggdubey/tappay.git
-cd tappay
+git clone https://github.com/anuraggdubey/Tap-Pay.git
+cd Tap-Pay
 npm install
 
 npm start
@@ -345,7 +345,7 @@ TapPay/
 │   ├── screens/                # Home, Send/Receive Tap, Send Payment, Status…
 │   ├── components/             # UI (radar, waiting card, modals…)
 │   └── navigation/             # Stack + tabs
-├── docs/screenshots/           # README UI shots
+├── docs/                       # Architecture, implementation specs, screenshots
 ├── test/                       # Contract tests
 └── .github/workflows/          # APK CI
 ```
@@ -366,9 +366,10 @@ NFC Host Card Emulation needs **two physical Android phones**. Emulators cannot 
 
 ## Documentation
 
-- [`TapPay-Technical-Spec.md`](./TapPay-Technical-Spec.md) — architecture
-- [`TapPay-Implementation-Plan.md`](./TapPay-Implementation-Plan.md) — implementation plan
-- [`requirement.txt`](./requirement.txt) — contributor setup
+- [`TapPay-Technical-Spec.md`](./docs/TapPay-Technical-Spec.md) — architecture
+- [`TapPay-Implementation-Plan.md`](./docs/TapPay-Implementation-Plan.md) — implementation plan
+- [`requirement.txt`](./docs/requirement.txt) — contributor setup
+- [`ADITYA_RULES.md`](./docs/ADITYA_RULES.md) — team guidelines
 
 ---
 

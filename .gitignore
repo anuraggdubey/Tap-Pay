@@ -95,3 +95,21 @@ backend/data/
 # Keystore / signing (NEVER commit real keystores)
 *.jks
 release.keystore
+
+# Windows / OS
+Thumbs.db
+ehthumbs.db
+[Dd]esktop.ini
+$RECYCLE.BIN/
+
+# Ruby bundler
+.bundle/
+
+# Editor / IDE settings
+.vscode/*
+!.vscode/settings.json
+
+# Caches & temp
+.eslintcache
+*.log
+

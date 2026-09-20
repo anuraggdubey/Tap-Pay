@@ -6,11 +6,17 @@ import "@openzeppelin/contracts/access/Ownable2Step.sol";
 
 /**
  * @title UsernameRegistry
- * @notice On-chain mapping between human-readable usernames and Monad wallet addresses for TapPay.
+ * @notice Hardened on-chain mapping between human-readable usernames and Monad wallet addresses for TapPay.
  * @dev Fully on-chain identity layer — the hackathon differentiator.
  *      One username per address, enforced on-chain.
  *      Lowercase-only + alphanumeric + underscore charset enforced on-chain.
  *      Uses OZ v5 Pausable + Ownable2Step for safety.
+ *
+ *      Security additions:
+ *      - Admin force-remove for abusive/inappropriate usernames
+ *      - Registration counter for analytics
+ *      - isAvailable() view for UI pre-checks
+ *      - Indexed username hash in events for efficient off-chain filtering
  */
 contract UsernameRegistry is Pausable, Ownable2Step {
     // ──────────────────────────────────────────────
@@ -21,12 +27,14 @@ contract UsernameRegistry is Pausable, Ownable2Step {
     error UsernameTaken(string username);
     error AlreadyRegistered(address user);
     error NotRegistered(address user);
+    error CannotRemoveZeroAddress();
 
     // ──────────────────────────────────────────────
     // Events
     // ──────────────────────────────────────────────
-    event UsernameRegistered(string username, address indexed owner);
-    event UsernameReleased(string username, address indexed owner);
+    event UsernameRegistered(string username, address indexed owner, bytes32 indexed usernameHash);
+    event UsernameReleased(string username, address indexed owner, bytes32 indexed usernameHash);
+    event UsernameForceRemoved(string username, address indexed formerOwner, address indexed removedBy);
 
     // ──────────────────────────────────────────────
     // Constants
@@ -39,6 +47,9 @@ contract UsernameRegistry is Pausable, Ownable2Step {
     // ──────────────────────────────────────────────
     mapping(string => address) private _usernameToAddress;
     mapping(address => string) private _addressToUsername;
+
+    // Analytics
+    uint256 public totalRegistrations;
 
     // ──────────────────────────────────────────────
     // Modifiers
@@ -77,7 +88,11 @@ contract UsernameRegistry is Pausable, Ownable2Step {
         _usernameToAddress[username] = msg.sender;
         _addressToUsername[msg.sender] = username;
 
-        emit UsernameRegistered(username, msg.sender);
+        unchecked {
+            totalRegistrations++;
+        }
+
+        emit UsernameRegistered(username, msg.sender, keccak256(bytes(username)));
     }
 
     /**
@@ -91,7 +106,7 @@ contract UsernameRegistry is Pausable, Ownable2Step {
         delete _usernameToAddress[username];
         delete _addressToUsername[msg.sender];
 
-        emit UsernameReleased(username, msg.sender);
+        emit UsernameReleased(username, msg.sender, keccak256(bytes(username)));
     }
 
     /**
@@ -110,6 +125,35 @@ contract UsernameRegistry is Pausable, Ownable2Step {
      */
     function reverseResolve(address user) external view returns (string memory) {
         return _addressToUsername[user];
+    }
+
+    /**
+     * @notice Check if a username is available for registration
+     * @param username The username to check
+     * @return True if the username is not taken
+     */
+    function isAvailable(string calldata username) external view returns (bool) {
+        return _usernameToAddress[username] == address(0);
+    }
+
+    // ──────────────────────────────────────────────
+    // Admin Controls (owner-only)
+    // ──────────────────────────────────────────────
+
+    /**
+     * @notice Force-remove a user's username (for abusive/inappropriate names)
+     * @param user The address whose username should be removed
+     * @dev Only callable by the contract owner. Clears both mappings.
+     */
+    function adminRemove(address user) external onlyOwner {
+        if (user == address(0)) revert CannotRemoveZeroAddress();
+        string memory username = _addressToUsername[user];
+        if (bytes(username).length == 0) revert NotRegistered(user);
+
+        delete _usernameToAddress[username];
+        delete _addressToUsername[user];
+
+        emit UsernameForceRemoved(username, user, msg.sender);
     }
 
     // ──────────────────────────────────────────────

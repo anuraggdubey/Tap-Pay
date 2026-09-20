@@ -28,10 +28,11 @@ describe("UsernameRegistry", function () {
       expect(username).to.equal("alice_123");
     });
 
-    it("should emit UsernameRegistered event", async function () {
+    it("should emit UsernameRegistered event with hash", async function () {
+      const expectedHash = ethers.keccak256(ethers.toUtf8Bytes("alice_123"));
       await expect(registry.connect(alice).register("alice_123"))
         .to.emit(registry, "UsernameRegistered")
-        .withArgs("alice_123", alice.address);
+        .withArgs("alice_123", alice.address, expectedHash);
     });
 
     it("should return address(0) for unregistered username", async function () {
@@ -49,6 +50,50 @@ describe("UsernameRegistry", function () {
       await registry.connect(bob).register("bob_user");
       expect(await registry.resolve("alice")).to.equal(alice.address);
       expect(await registry.resolve("bob_user")).to.equal(bob.address);
+    });
+  });
+
+  // ──────────────────────────────────────────────
+  // isAvailable()
+  // ──────────────────────────────────────────────
+  describe("isAvailable", function () {
+    it("should return true for untaken usernames", async function () {
+      expect(await registry.isAvailable("free_name")).to.be.true;
+    });
+
+    it("should return false for taken usernames", async function () {
+      await registry.connect(alice).register("taken_name");
+      expect(await registry.isAvailable("taken_name")).to.be.false;
+    });
+
+    it("should return true after username is released", async function () {
+      await registry.connect(alice).register("temp_name");
+      expect(await registry.isAvailable("temp_name")).to.be.false;
+      await registry.connect(alice).release();
+      expect(await registry.isAvailable("temp_name")).to.be.true;
+    });
+  });
+
+  // ──────────────────────────────────────────────
+  // Registration Counter
+  // ──────────────────────────────────────────────
+  describe("Registration Counter", function () {
+    it("should start at zero", async function () {
+      expect(await registry.totalRegistrations()).to.equal(0);
+    });
+
+    it("should increment on each registration", async function () {
+      await registry.connect(alice).register("alice");
+      expect(await registry.totalRegistrations()).to.equal(1);
+
+      await registry.connect(bob).register("bob_user");
+      expect(await registry.totalRegistrations()).to.equal(2);
+    });
+
+    it("should not decrement on release", async function () {
+      await registry.connect(alice).register("alice");
+      await registry.connect(alice).release();
+      expect(await registry.totalRegistrations()).to.equal(1);
     });
   });
 
@@ -146,11 +191,12 @@ describe("UsernameRegistry", function () {
       expect(await registry.reverseResolve(alice.address)).to.equal("");
     });
 
-    it("should emit UsernameReleased event", async function () {
+    it("should emit UsernameReleased event with hash", async function () {
       await registry.connect(alice).register("alice_old");
+      const expectedHash = ethers.keccak256(ethers.toUtf8Bytes("alice_old"));
       await expect(registry.connect(alice).release())
         .to.emit(registry, "UsernameReleased")
-        .withArgs("alice_old", alice.address);
+        .withArgs("alice_old", alice.address, expectedHash);
     });
 
     it("should allow re-registration after release", async function () {
@@ -172,6 +218,48 @@ describe("UsernameRegistry", function () {
       await expect(registry.connect(alice).release())
         .to.be.revertedWithCustomError(registry, "NotRegistered")
         .withArgs(alice.address);
+    });
+  });
+
+  // ──────────────────────────────────────────────
+  // Admin Force-Remove
+  // ──────────────────────────────────────────────
+  describe("Admin Force-Remove", function () {
+    it("should allow owner to force-remove a username", async function () {
+      await registry.connect(alice).register("bad_name");
+      await registry.connect(owner).adminRemove(alice.address);
+      expect(await registry.resolve("bad_name")).to.equal(ethers.ZeroAddress);
+      expect(await registry.reverseResolve(alice.address)).to.equal("");
+    });
+
+    it("should emit UsernameForceRemoved event", async function () {
+      await registry.connect(alice).register("offensive");
+      await expect(registry.connect(owner).adminRemove(alice.address))
+        .to.emit(registry, "UsernameForceRemoved")
+        .withArgs("offensive", alice.address, owner.address);
+    });
+
+    it("should allow user to re-register after admin removal", async function () {
+      await registry.connect(alice).register("bad_name");
+      await registry.connect(owner).adminRemove(alice.address);
+      await registry.connect(alice).register("good_name");
+      expect(await registry.resolve("good_name")).to.equal(alice.address);
+    });
+
+    it("should reject adminRemove from non-owner", async function () {
+      await registry.connect(alice).register("my_name");
+      await expect(registry.connect(bob).adminRemove(alice.address))
+        .to.be.revertedWithCustomError(registry, "OwnableUnauthorizedAccount");
+    });
+
+    it("should reject adminRemove for unregistered address", async function () {
+      await expect(registry.connect(owner).adminRemove(alice.address))
+        .to.be.revertedWithCustomError(registry, "NotRegistered");
+    });
+
+    it("should reject adminRemove for zero address", async function () {
+      await expect(registry.connect(owner).adminRemove(ethers.ZeroAddress))
+        .to.be.revertedWithCustomError(registry, "CannotRemoveZeroAddress");
     });
   });
 

@@ -1,123 +1,295 @@
 # TapPay
 
-> Phone-to-phone contactless payments (NFC tap) & username-based payments, settling on [Monad testnet](https://docs.monad.xyz).
+Phone-to-phone contactless payments on [Monad Testnet](https://docs.monad.xyz) — NFC tap or `@username` send, settled on-chain as native MON.
 
-[![Build APK](https://github.com/anuraggdubey/Tap-Pay/actions/workflows/build.yml/badge.svg)](https://github.com/anuraggdubey/Tap-Pay/actions/workflows/build.yml)
+<p align="center">
+  <img src="docs/screenshots/home.png" alt="TapPay Home — Card & NFC actions" width="46%" />
+  &nbsp;
+  <img src="docs/screenshots/settings.png" alt="TapPay Settings — Network & account" width="46%" />
+</p>
+
+<p align="center">
+  <em>Home (Card) &nbsp;·&nbsp; Settings</em>
+</p>
+
+---
+
+## Quick Links (for judges)
+
+| | |
+|:--|:--|
+| **APK Download** | [Tap-pay.apk (Google Drive)](https://drive.google.com/file/d/1w3K3PTeqvt250qMJne4azXeU4D35dC8P/view?usp=drivesdk) |
+| **Video Demo** | [tappay.mp4 (Google Drive)](https://drive.google.com/file/d/1f8ZO1ian1y1d4o98g1C-SuV6wPYAysDC/view?usp=sharing) |
+| **UsernameRegistry** | [`0xEebB05F9AF06908eCb7bFa5F916Dde1EEa231aDD`](https://testnet.monadscan.com/address/0xEebB05F9AF06908eCb7bFa5F916Dde1EEa231aDD) |
+| **TapPayLedger** | [`0x5B177FEF554dA84A86be62E45fb49BB52e6D6838`](https://testnet.monadscan.com/address/0x5B177FEF554dA84A86be62E45fb49BB52e6D6838) |
+
+---
 
 ## What is TapPay?
 
-TapPay lets two people pay each other by:
-1. **Tap Pay** — physically tapping phones together (NFC Host Card Emulation)
-2. **Username Pay** — searching a username instead of a wallet address
+TapPay is a React Native wallet built for **Monad Blitz** that settles payments as native MON on Monad Testnet (Chain ID `10143`).
 
-All transactions settle on-chain as native MON transfers on the Monad testnet.
+**Two ways to pay**
+
+1. **Tap Pay (NFC)** — sender reads the receiver’s address over NFC Host Card Emulation, then broadcasts `payWithLog` on TapPayLedger
+2. **Username / Address Pay** — search `@username` (or paste a wallet address), enter amount on a Cash App–style keypad, confirm, and send
+
+Keys stay on-device (Android Keystore via `react-native-keychain`). No custodial balances.
+
+---
+
+## Deployed Contracts (Monad Testnet)
+
+**Network:** Monad Testnet · Chain ID `10143` · ~1s finality
+
+| Contract | Address | Explorer |
+|:---------|:--------|:---------|
+| **UsernameRegistry** | `0xEebB05F9AF06908eCb7bFa5F916Dde1EEa231aDD` | [View on Monadscan](https://testnet.monadscan.com/address/0xEebB05F9AF06908eCb7bFa5F916Dde1EEa231aDD) |
+| **TapPayLedger** | `0x5B177FEF554dA84A86be62E45fb49BB52e6D6838` | [View on Monadscan](https://testnet.monadscan.com/address/0x5B177FEF554dA84A86be62E45fb49BB52e6D6838) |
+
+**Deployer:** [`0x1406Fe936D971A0dAE9a19DD3354b900B08Fa002`](https://testnet.monadscan.com/address/0x1406Fe936D971A0dAE9a19DD3354b900B08Fa002)
+
+### TapPayLedger
+
+Payment rail for NFC and direct sends. Sender calls `payWithLog(to, sessionIdHash)` with `msg.value`; funds forward atomically to the recipient and emit `PaymentLogged`.
+
+- ReentrancyGuard + checks-effects-interactions
+- Session-based replay protection
+- Pausable / Ownable2Step
+- Pass-through only — no custody
+
+### UsernameRegistry
+
+On-chain username ↔ address mapping used for human-readable pay and reverse lookup on receipts.
+
+---
+
+## Demo Assets
+
+### APK
+
+**APK URL:** [https://drive.google.com/file/d/1w3K3PTeqvt250qMJne4azXeU4D35dC8P/view?usp=drivesdk](https://drive.google.com/file/d/1w3K3PTeqvt250qMJne4azXeU4D35dC8P/view?usp=drivesdk)
+
+Install on two NFC-capable Android phones to try Tap Pay end-to-end.
+
+A debug APK is also available from GitHub Actions if needed:
+
+1. Open [Actions → Build workflow](https://github.com/anuraggdubey/tappay/actions)
+2. Open the latest successful run
+3. Download the APK artifact
+
+### Video Demo
+
+**Video Demo URL:** [https://drive.google.com/file/d/1f8ZO1ian1y1d4o98g1C-SuV6wPYAysDC/view?usp=sharing](https://drive.google.com/file/d/1f8ZO1ian1y1d4o98g1C-SuV6wPYAysDC/view?usp=sharing)
+
+---
+
+## Social Posts
+
+Live posts from **Monad India Blitz V4**, shown with the same media as on X and LinkedIn.
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+<p>
+<img src="docs/screenshots/social/misbah-onsite-avatar.jpg" width="40" height="40" alt="@Misbahtwts" />
+&nbsp;&nbsp;<strong>Misbah(agentic arc)</strong><br/>
+<a href="https://x.com/Misbahtwts">@Misbahtwts</a>
+</p>
+
+> At @monad hack today.
+>
+> If you're here, come say hi.
+
+<p align="center">
+  <a href="https://x.com/Misbahtwts/status/2101171148813639993?s=20">
+    <img src="docs/screenshots/social/misbah-onsite.jpg" alt="Misbah onsite at Monad hack" width="100%" />
+  </a>
+</p>
+
+<p><a href="https://x.com/Misbahtwts/status/2101171148813639993?s=20">View on X</a></p>
+
+</td>
+<td width="50%" valign="top">
+
+<p>
+<img src="docs/screenshots/social/misbah-cooking-avatar.jpg" width="40" height="40" alt="@Misbahtwts" />
+&nbsp;&nbsp;<strong>Misbah(agentic arc)</strong><br/>
+<a href="https://x.com/Misbahtwts">@Misbahtwts</a>
+</p>
+
+> We @anuraggdubeyy @AdityaNishad987 cooking now for monad hack.
+>
+> How does this wallpaper look btw?
+
+<p align="center">
+  <a href="https://x.com/Misbahtwts/status/2101196068054769999?s=20">
+    <img src="docs/screenshots/social/misbah-cooking.jpg" alt="Team cooking at Monad hack" width="100%" />
+  </a>
+</p>
+
+<p><a href="https://x.com/Misbahtwts/status/2101196068054769999?s=20">View on X</a></p>
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+<p>
+<img src="docs/screenshots/social/misbah-tappay-avatar.jpg" width="40" height="40" alt="@Misbahtwts" />
+&nbsp;&nbsp;<strong>Misbah(agentic arc)</strong><br/>
+<a href="https://x.com/Misbahtwts">@Misbahtwts</a>
+</p>
+
+> Tappay....
+>
+> will be sharing more details about it sooon.
+>
+> @MonadIndia @geeky_kartikey
+
+<p align="center">
+  <a href="https://x.com/Misbahtwts/status/2101255579910230415?s=20">
+    <img src="docs/screenshots/social/misbah-tappay.jpg" alt="TapPay teaser post" width="100%" />
+  </a>
+</p>
+
+<p><a href="https://x.com/Misbahtwts/status/2101255579910230415?s=20">View on X</a></p>
+
+</td>
+<td width="50%" valign="top">
+
+<p>
+<img src="docs/screenshots/social/anurag-blitz-avatar.jpg" width="40" height="40" alt="@anuraggdubeyy" />
+&nbsp;&nbsp;<strong>Anurag Dubey</strong><br/>
+<a href="https://x.com/anuraggdubeyy">@anuraggdubeyy</a>
+</p>
+
+> Here at @MonadIndia Blitz V4.
+
+<p align="center">
+  <a href="https://x.com/anuraggdubeyy/status/2101171282012442744?s=20">
+    <img src="docs/screenshots/social/anurag-blitz.jpg" alt="Anurag at Monad India Blitz V4" width="100%" />
+  </a>
+</p>
+
+<p><a href="https://x.com/anuraggdubeyy/status/2101171282012442744?s=20">View on X</a></p>
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+<p>
+<img src="docs/screenshots/social/aditya-blitz-avatar.jpg" width="40" height="40" alt="@AdityaNishad987" />
+&nbsp;&nbsp;<strong>0xAdityaa</strong><br/>
+<a href="https://x.com/AdityaNishad987">@AdityaNishad987</a>
+</p>
+
+> At @monad Blitz V4..
+
+<p align="center">
+  <a href="https://x.com/AdityaNishad987/status/2101170921033883854?s=20">
+    <img src="docs/screenshots/social/aditya-blitz.jpg" alt="Aditya at Monad Blitz V4" width="100%" />
+  </a>
+</p>
+
+<p><a href="https://x.com/AdityaNishad987/status/2101170921033883854?s=20">View on X</a></p>
+
+</td>
+<td width="50%" valign="top">
+
+<p>
+<img src="docs/screenshots/social/misbah-cooking-avatar.jpg" width="40" height="40" alt="Misbah Ansari" />
+&nbsp;&nbsp;<strong>Misbah Ansari</strong><br/>
+<a href="https://www.linkedin.com/in/misbah-ansari-52657428a">LinkedIn</a>
+</p>
+
+> We Anurag Dubey Aditya Nishad cooking now at monad hack.
+>
+> Kartikey Garg
+
+<p align="center">
+  <a href="https://www.linkedin.com/posts/misbah-ansari-52657428a_we-anurag-dubey-aditya-nishad-cooking-now-activity-7506962375024168960-KQwP">
+    <img src="docs/screenshots/social/misbah-cooking.jpg" alt="LinkedIn — cooking at Monad hack" width="100%" />
+  </a>
+</p>
+
+<p><a href="https://www.linkedin.com/posts/misbah-ansari-52657428a_we-anurag-dubey-aditya-nishad-cooking-now-activity-7506962375024168960-KQwP">View on LinkedIn</a></p>
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+<p>
+<img src="docs/screenshots/social/aditya-demo-avatar.jpg" width="40" height="40" alt="@AdityaNishad987" />
+&nbsp;&nbsp;<strong>0xAdityaa</strong><br/>
+<a href="https://x.com/AdityaNishad987">@AdityaNishad987</a>
+</p>
+
+> This is what we made.
+>
+> TapPay at @monad BlitzV4.
+>
+> Contactless Payment using NFC just tap on each others phone and payment done that’s how easy it is.
+
+<p align="center">
+  <a href="https://x.com/AdityaNishad987/status/2101275794375131270?s=20">
+    <img src="docs/screenshots/social/aditya-demo.jpg" alt="Aditya — TapPay demo video" width="100%" />
+  </a>
+</p>
+
+<p><a href="https://x.com/AdityaNishad987/status/2101275794375131270?s=20">View on X</a></p>
+
+</td>
+<td width="50%" valign="top">
+
+<p>
+<img src="docs/screenshots/social/misbah-demo-avatar.jpg" width="40" height="40" alt="@Misbahtwts" />
+&nbsp;&nbsp;<strong>Misbah(agentic arc)</strong><br/>
+<a href="https://x.com/Misbahtwts">@Misbahtwts</a>
+</p>
+
+> We made TapPay and here's the video on how it works.
+>
+> if you wanna try it out, dm me
+>
+> @geeky_kartikey @KushalVijay_
+
+<p align="center">
+  <a href="https://x.com/Misbahtwts/status/2101276318541496533?s=20">
+    <img src="docs/screenshots/social/aditya-demo.jpg" alt="Misbah — TapPay demo video share" width="100%" />
+  </a>
+</p>
+
+<p><a href="https://x.com/Misbahtwts/status/2101276318541496533?s=20">View on X</a></p>
+
+</td>
+</tr>
+</table>
+
+---
 
 ## Tech Stack
 
 | Layer | Technology |
-|---|---|
-| Mobile App | React Native 0.87 (bare workflow, TypeScript) |
+|:------|:-----------|
+| Mobile | React Native 0.87 (bare), TypeScript |
 | NFC / HCE | `react-native-hce`, Android `HostApduService` |
 | NFC Reader | `react-native-nfc-manager` |
-| Wallet / Signing | `ethers.js` v6, Android Keystore via `react-native-keychain` |
-| Chain | Monad Testnet (Chain ID: 10143, EVM-compatible) |
-| Username Registry | On-chain Solidity contract (`UsernameRegistry.sol`) |
-| Payment Ledger | On-chain Solidity contract (`TapPayLedger.sol`) |
-| CI / Build | GitHub Actions → debug APK artifact |
+| Wallet | `ethers.js` v6 + Android Keystore (`react-native-keychain`) |
+| Chain | Monad Testnet (`10143`) |
+| Contracts | `UsernameRegistry.sol`, `TapPayLedger.sol` (Hardhat) |
+| Identity cache | Supabase username index (with on-chain registry) |
+| CI | GitHub Actions → debug APK artifact |
 
-## Prerequisites
-
-See [`requirement.txt`](./requirement.txt) for the full list. Quick version:
-
-- **Node.js** >= 18.x (20 LTS recommended)
-- **JDK 17** (Eclipse Temurin recommended)
-- **Android SDK** with API 34 + Build-Tools 34.0.0
-- **Two physical Android devices** with NFC for tap testing (emulators can't do HCE)
-
-### Environment Variables
-
-```bash
-# Windows
-set JAVA_HOME=C:\Program Files\Eclipse Adoptium\jdk-17
-set ANDROID_HOME=%LOCALAPPDATA%\Android\Sdk
-
-# macOS / Linux
-export JAVA_HOME=$(/usr/libexec/java_home -v 17)
-export ANDROID_HOME=$HOME/Android/Sdk
-```
-
-## Quick Start
-
-```bash
-# 1. Clone & install
-git clone https://github.com/anuraggdubey/Tap-Pay.git
-cd Tap-Pay
-npm install
-
-# 2. Start Metro bundler (JS hot reload)
-npm start
-
-# 3. Build & run on connected device (requires Android SDK locally)
-npx react-native run-android
-
-# OR download the pre-built APK from GitHub Actions:
-# → Actions tab → latest "Build TapPay APK" run → download artifact
-```
-
-## Project Structure
-
-```
-TapPay/
-├── android/                          # Android native project
-│   └── app/src/main/
-│       ├── java/com/tappay/
-│       │   └── TapPayHceService.kt   # Native HostApduService for NFC HCE
-│       ├── res/xml/apduservice.xml    # AID declaration for TapPay
-│       └── AndroidManifest.xml        # NFC permissions + HCE service registration
-├── contracts/                         # Solidity smart contracts (Hardhat)
-│   ├── UsernameRegistry.sol           # On-chain username → address mapping
-│   └── TapPayLedger.sol               # Payment logging with session-based replay protection
-├── src/
-│   ├── config/
-│   │   └── monad.ts                   # Monad testnet RPC, chain ID, contract addresses
-│   ├── services/
-│   │   ├── wallet.ts                  # Key generation, secure storage, signing, broadcasting
-│   │   ├── hce.ts                     # HCE session management + binary payload encoding
-│   │   ├── nfcReader.ts               # NFC reader mode + payload decoding & verification
-│   │   └── registry.ts               # UsernameRegistry contract interactions
-│   ├── context/
-│   │   └── WalletContext.tsx           # Global wallet state provider
-│   ├── hooks/
-│   │   ├── useNfc.ts                  # NFC availability check
-│   │   ├── useTransaction.ts          # Build, sign, broadcast, poll receipt
-│   │   └── useBalance.ts             # Auto-refreshing balance
-│   ├── screens/
-│   │   ├── WalletSetupScreen.tsx      # Onboarding: create/import wallet + username
-│   │   ├── HomeScreen.tsx             # Balance, recent tx, action buttons
-│   │   ├── SendTapScreen.tsx          # Enter amount → arm HCE → "Hold phones together"
-│   │   ├── ReceiveTapScreen.tsx       # NFC reader → accept/reject → confirmation
-│   │   ├── UsernamePayScreen.tsx      # Search username → resolve → send
-│   │   ├── TransactionStatusScreen.tsx # Pending/confirmed/failed + explorer link
-│   │   ├── TransactionHistoryScreen.tsx # Past payments list
-│   │   └── SettingsScreen.tsx         # Export key, username, wallet QR
-│   ├── components/                    # Reusable UI components
-│   ├── utils/
-│   │   ├── apdu.ts                    # Binary APDU encode/decode (NOT JSON)
-│   │   ├── format.ts                  # Address truncation, MON formatting
-│   │   └── validation.ts             # Amount & username validation
-│   └── navigation/
-│       └── AppNavigator.tsx           # NativeStack navigator
-├── App.tsx                            # Root component
-├── .github/workflows/build.yml        # CI: build debug APK on push
-├── requirement.txt                    # Full dependency & setup guide
-├── TapPay-Technical-Spec.md           # Technical specification
-└── TapPay-Implementation-Plan.md      # Detailed implementation plan
-```
+---
 
 ## Monad Testnet Config
 
 | Setting | Value |
-|---|---|
+|:--------|:------|
 | Chain ID | `10143` |
 | RPC (primary) | `https://testnet-rpc.monad.xyz` |
 | RPC (fallback) | `https://rpc.ankr.com/monad_testnet` |
@@ -125,31 +297,90 @@ TapPay/
 | Faucet | `https://faucet.monad.xyz` |
 | Currency | MON (18 decimals) |
 
+Configured in [`src/config/monad.ts`](./src/config/monad.ts).
+
+---
+
+## Prerequisites
+
+See [`requirement.txt`](./requirement.txt) for the full list.
+
+- Node.js >= 18 (20 LTS recommended)
+- JDK 17
+- Android SDK (API 34 + Build-Tools 34)
+- **Two physical Android devices with NFC** for Tap Pay (emulators cannot do HCE)
+
+```bash
+# macOS / Linux
+export JAVA_HOME=$(/usr/libexec/java_home -v 17)
+export ANDROID_HOME=$HOME/Android/Sdk
+```
+
+---
+
+## Quick Start
+
+```bash
+git clone https://github.com/anuraggdubey/tappay.git
+cd tappay
+npm install
+
+npm start
+# separate terminal
+npx react-native run-android
+```
+
+---
+
+## Project Structure
+
+```
+TapPay/
+├── android/                    # Native Android + HCE service
+├── contracts/                  # TapPayLedger + UsernameRegistry
+├── scripts/                    # Hardhat deploy
+├── src/
+│   ├── config/monad.ts         # RPC, chain, contract addresses
+│   ├── services/               # wallet, NFC, HCE, registry, history
+│   ├── screens/                # Home, Send/Receive Tap, Send Payment, Status…
+│   ├── components/             # UI (radar, waiting card, modals…)
+│   └── navigation/             # Stack + tabs
+├── docs/screenshots/           # README UI shots
+├── test/                       # Contract tests
+└── .github/workflows/          # APK CI
+```
+
+---
+
 ## NFC Testing
 
-> ⚠️ NFC Host Card Emulation requires **two physical Android devices**. Emulators cannot test phone-to-phone tap.
+NFC Host Card Emulation needs **two physical Android phones**. Emulators cannot test phone-to-phone tap.
 
-1. Install the debug APK on both phones
-2. Enable NFC in Android Settings on both
-3. **Phone A** (Sender): Tap "Send" → enter amount → "Hold phones together"
-4. **Phone B** (Receiver): Tap "Receive" → bring phones together → tap "Accept"
-5. Transaction confirms on Monad testnet in ~1-2 seconds
+1. Install the APK on both devices and enable NFC
+2. **Receiver:** open Receive Tap (broadcasts wallet address over HCE)
+3. **Sender:** enter amount → Ready to tap → hold phones together
+4. Sender reads address, signs, and broadcasts on TapPayLedger
+5. Both sides show a Glow-style Sent / Received receipt; balance updates in ~1–2s
 
-## CI / APK Builds
-
-The project builds via GitHub Actions (no local Android SDK needed for APK generation):
-
-- Pushes to `main` trigger `.github/workflows/build.yml`
-- The workflow compiles a debug APK and uploads it as a workflow artifact
-- Download from the Actions tab → install on phone via `adb install` or file transfer
-
-Only re-trigger the build when native code changes (Gradle config, AndroidManifest, native deps). JS-only changes use Metro hot reload.
+---
 
 ## Documentation
 
-- [`TapPay-Technical-Spec.md`](./TapPay-Technical-Spec.md) — High-level architecture & concept
-- [`TapPay-Implementation-Plan.md`](./TapPay-Implementation-Plan.md) — Deep technical implementation plan
-- [`requirement.txt`](./requirement.txt) — Complete dependency list for contributors
+- [`TapPay-Technical-Spec.md`](./TapPay-Technical-Spec.md) — architecture
+- [`TapPay-Implementation-Plan.md`](./TapPay-Implementation-Plan.md) — implementation plan
+- [`requirement.txt`](./requirement.txt) — contributor setup
+
+---
+
+## Team
+
+Built at **Monad India Blitz V4** by:
+
+- [Misbah](https://x.com/Misbahtwts)
+- [Anurag Dubey](https://x.com/anuraggdubeyy)
+- [Aditya](https://x.com/AdityaNishad987)
+
+---
 
 ## License
 

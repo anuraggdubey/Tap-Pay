@@ -3,6 +3,12 @@
 Phone-to-phone contactless payments on [Monad Testnet](https://docs.monad.xyz) — NFC tap or `@username` send, settled on-chain as native MON.
 
 <p align="center">
+  <a href="https://x.com/tapxpay">
+    <img src="https://img.shields.io/badge/X%20Account-%40tapxpay-000000?style=for-the-badge&logo=x&logoColor=white" alt="X Account @tapxpay" />
+  </a>
+</p>
+
+<p align="center">
   <img src="docs/screenshots/home.png" alt="TapPay Home — Card & NFC actions" width="46%" />
   &nbsp;
   <img src="docs/screenshots/settings.png" alt="TapPay Settings — Network & account" width="46%" />
@@ -18,6 +24,7 @@ Phone-to-phone contactless payments on [Monad Testnet](https://docs.monad.xyz) �
 
 | | |
 |:--|:--|
+| **X Account** | [![X Account](https://img.shields.io/badge/X%20Account-%40tapxpay-000000?style=flat-square&logo=x&logoColor=white)](https://x.com/tapxpay) &nbsp; [Here is the link: x.com/tapxpay](https://x.com/tapxpay) |
 | **APK Download** | [Tap-pay.apk (Google Drive)](https://drive.google.com/file/d/1w3K3PTeqvt250qMJne4azXeU4D35dC8P/view?usp=drivesdk) |
 | **Video Demo** | [tappay.mp4 (Google Drive)](https://drive.google.com/file/d/1f8ZO1ian1y1d4o98g1C-SuV6wPYAysDC/view?usp=sharing) |
 | **UsernameRegistry** | [`0xEebB05F9AF06908eCb7bFa5F916Dde1EEa231aDD`](https://testnet.monadscan.com/address/0xEebB05F9AF06908eCb7bFa5F916Dde1EEa231aDD) |
@@ -85,6 +92,14 @@ A debug APK is also available from GitHub Actions if needed:
 ---
 
 ## Social Posts
+
+<p align="center">
+  <a href="https://x.com/tapxpay">
+    <img src="https://img.shields.io/badge/Follow%20TapPay%20on%20X-%40tapxpay-000000?style=for-the-badge&logo=x&logoColor=white" alt="Follow @tapxpay on X" />
+  </a>
+  <br/>
+  <sub><strong>X Account:</strong> Here is the link &rarr; <a href="https://x.com/tapxpay">https://x.com/tapxpay</a></sub>
+</p>
 
 Live posts from **Monad India Blitz V4**, shown with the same media as on X and LinkedIn.
 
@@ -380,6 +395,8 @@ Built at **Monad India Blitz V4** by:
 - [Misbah](https://x.com/Misbahtwts)
 - [Anurag Dubey](https://x.com/anuraggdubeyy)
 - [Aditya](https://x.com/AdityaNishad987)
+
+**Official Project X:** [![X Account](https://img.shields.io/badge/X_Account-@tapxpay-000000?style=flat-square&logo=x&logoColor=white)](https://x.com/tapxpay) &nbsp; [https://x.com/tapxpay](https://x.com/tapxpay)
 
 ---
 

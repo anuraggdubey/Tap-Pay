@@ -8,7 +8,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ActivityIndicator,
   Alert,
 } from 'react-native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
@@ -25,11 +24,13 @@ import {
   stopReceiverBroadcast,
   waitForIncomingPayment,
 } from '../services/tapPayment';
+import {getBalance} from '../services/wallet';
+import {reverseResolveAddress} from '../services/registry';
 import {recordTransaction} from '../services/history';
 import NfcNotAvailableModal from '../components/NfcNotAvailableModal';
-import {PulsingRadar} from '../components/PulsingRadar';
+import NfcWaitingCard from '../components/NfcWaitingCard';
 import {triggerHaptic} from '../utils/haptics';
-import {colors, screen} from '../theme';
+import {formatMon, truncateAddress} from '../utils/format';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'ReceiveTap'>;
@@ -48,6 +49,10 @@ export default function ReceiveTapScreen({navigation}: Props) {
   balanceRef.current = balance;
   navigationRef.current = navigation;
   refreshBalanceRef.current = refreshBalance;
+
+  useEffect(() => {
+    navigation.setOptions({headerShown: false});
+  }, [navigation]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -86,31 +91,65 @@ export default function ReceiveTapScreen({navigation}: Props) {
 
         // Snapshot balance at the time we start waiting
         const previousBalance = balanceRef.current;
-        const confirmed = await waitForIncomingPayment(
+        const payment = await waitForIncomingPayment(
           address,
           previousBalance,
           null, // Any amount
         );
 
-        if (confirmed && isMountedRef.current) {
+        if (payment.detected && isMountedRef.current) {
           setIsReceiving(false);
           await stopReceiverBroadcast();
+
+          // Prefer on-chain amount from PaymentLogged; fall back to balance delta
+          let amountStr = 'Unknown';
+          if (payment.amountWei != null && payment.amountWei > 0n) {
+            amountStr = formatMon(payment.amountWei).replace(/ MON$/, '');
+          } else {
+            try {
+              const currentBalance = await getBalance(address);
+              if (currentBalance > previousBalance) {
+                amountStr = formatMon(currentBalance - previousBalance).replace(
+                  / MON$/,
+                  '',
+                );
+              }
+            } catch {
+              // Keep Unknown if RPC fails; payment was already detected
+            }
+          }
+
+          const senderAddress = payment.senderAddress || '';
+          let senderUsername: string | undefined;
+          if (senderAddress) {
+            try {
+              senderUsername =
+                (await reverseResolveAddress(senderAddress)) || undefined;
+            } catch {
+              // Username lookup is optional
+            }
+          }
+
           refreshBalanceRef.current();
           triggerHaptic.notificationSuccess();
 
+          const counterpartyLabel = senderAddress || 'Unknown (Tap)';
+
           recordTransaction({
             direction: 'received',
-            counterparty: 'Unknown (Tap)',
-            amount: 'Unknown',
+            counterparty: counterpartyLabel,
+            counterpartyUsername: senderUsername,
+            amount: amountStr,
             status: 'confirmed',
-            txHash: 'tap-payment',
+            txHash: payment.txHash || 'tap-payment',
           });
 
           navigationRef.current.replace('TransactionStatus', {
-            txHash: 'tap-payment',
-            amount: 'Unknown',
-            recipient: address,
+            txHash: payment.txHash || 'tap-payment',
+            amount: amountStr,
+            recipient: counterpartyLabel,
             direction: 'received',
+            counterpartyUsername: senderUsername,
             waitForBalance: false,
             expectedAmountWei: '0',
           });
@@ -127,26 +166,27 @@ export default function ReceiveTapScreen({navigation}: Props) {
 
 
   return (
-    <View style={screen.container}>
-      <View style={screen.centered}>
-        <PulsingRadar label="RECEIVE" color={colors.success} size={96} active={isReceiving} />
-
-        <Text style={screen.title}>Ready to Receive</Text>
-        <Text style={screen.subtitle}>
-          Hold your phone near the sender's phone.
-        </Text>
-
-        <View style={styles.stepsCard}>
-          <Text style={styles.stepsTitle}>Receiver steps</Text>
-          <Text style={styles.stepItem}>1. Sender taps your phone.</Text>
-          <Text style={styles.stepItem}>2. Sender's phone reads your address instantly.</Text>
-          <Text style={styles.stepItem}>3. Payment is broadcasted on Monad.</Text>
-        </View>
-
-        {!isReceiving && (
-          <ActivityIndicator color={colors.success} style={{marginTop: 24}} />
-        )}
-      </View>
+    <View style={styles.root}>
+      <NfcWaitingCard
+        accent="green"
+        showSpinner={!isReceiving}
+        onClose={() => navigation.goBack()}
+        title={
+          isReceiving ? 'Ready to receive' : "We're processing your payment"
+        }
+        subtitle={
+          isReceiving
+            ? 'Hold phones together. Listening for a tap…'
+            : 'Payment detected — confirming details.'
+        }
+        footer={
+          !!address ? (
+            <Text style={styles.walletHint}>
+              {truncateAddress(address, 8, 6)}
+            </Text>
+          ) : null
+        }
+      />
 
       <NfcNotAvailableModal
         visible={nfcModalVisible}
@@ -161,24 +201,14 @@ export default function ReceiveTapScreen({navigation}: Props) {
 }
 
 const styles = StyleSheet.create({
-  stepsCard: {
-    marginTop: 28,
-    backgroundColor: colors.surface,
-    borderRadius: 14,
-    padding: 16,
-    width: '100%',
-    borderWidth: 1,
-    borderColor: colors.border,
+  root: {
+    flex: 1,
   },
-  stepsTitle: {
+  walletHint: {
+    marginTop: 18,
     fontSize: 13,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: 8,
-  },
-  stepItem: {
-    fontSize: 12,
-    color: colors.textMuted,
-    lineHeight: 20,
+    color: 'rgba(255,255,255,0.55)',
+    fontFamily: 'monospace',
+    fontWeight: '600',
   },
 });

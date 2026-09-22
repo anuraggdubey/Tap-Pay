@@ -3,6 +3,7 @@
  */
 
 import {ethers} from 'ethers';
+import {MONAD_CONFIG} from '../config/monad';
 import {
   startHceReceiverSession,
   stopHceSession,
@@ -12,7 +13,18 @@ import {
   cancelNfcRead,
   stopContinuousHceScan,
 } from './nfcReader';
-import {getBalance, sendPayment} from './wallet';
+import {getBalance, sendPayment, withRpcFailover} from './wallet';
+
+const PAYMENT_LOGGED_ABI = [
+  'event PaymentLogged(address indexed from, address indexed to, uint256 amount, bytes32 sessionId, uint256 timestamp)',
+];
+
+export type IncomingPaymentInfo = {
+  detected: boolean;
+  senderAddress?: string;
+  amountWei?: bigint;
+  txHash?: string;
+};
 
 export type TapSenderPhase =
   | 'idle'
@@ -115,25 +127,101 @@ function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+/**
+ * Look up the latest PaymentLogged event for a recipient on TapPayLedger.
+ * Used by the receiver after a balance increase to recover the sender address.
+ */
+export async function lookupIncomingPayment(
+  recipientAddress: string,
+  expectedAmountWei?: bigint | null,
+): Promise<{senderAddress?: string; amountWei?: bigint; txHash?: string}> {
+  const ledgerAddress = MONAD_CONFIG.contracts.tapPayLedger;
+  if (!ledgerAddress) {
+    return {};
+  }
+
+  try {
+    return await withRpcFailover(async provider => {
+      const contract = new ethers.Contract(
+        ledgerAddress,
+        PAYMENT_LOGGED_ABI,
+        provider,
+      );
+      const currentBlock = await provider.getBlockNumber();
+      const fromBlock = Math.max(0, currentBlock - 64);
+      const filter = contract.filters.PaymentLogged(null, recipientAddress);
+      const events = await contract.queryFilter(filter, fromBlock, currentBlock);
+
+      if (!events.length) {
+        return {};
+      }
+
+      let match = events[events.length - 1];
+      if (expectedAmountWei != null && expectedAmountWei > 0n) {
+        const amountMatch = [...events].reverse().find(event => {
+          const args = (event as ethers.EventLog).args;
+          return args?.amount === expectedAmountWei;
+        });
+        if (amountMatch) {
+          match = amountMatch;
+        }
+      }
+
+      const args = (match as ethers.EventLog).args;
+      if (!args?.from) {
+        return {};
+      }
+
+      return {
+        senderAddress: args.from as string,
+        amountWei: args.amount as bigint,
+        txHash: match.transactionHash,
+      };
+    });
+  } catch {
+    return {};
+  }
+}
+
 export async function waitForIncomingPayment(
   address: string,
   previousBalance: bigint,
   amountWei: bigint | null,
   timeoutMs = 60_000,
-): Promise<boolean> {
+): Promise<IncomingPaymentInfo> {
   const deadline = Date.now() + timeoutMs;
   // fast aggressive polling every 500ms
   while (Date.now() < deadline) {
     try {
       const balance = await getBalance(address);
-      if (amountWei) {
-        if (balance >= previousBalance + amountWei) {
-          return true;
+      const received =
+        amountWei != null
+          ? balance >= previousBalance + amountWei
+          : balance > previousBalance;
+
+      if (received) {
+        const delta = balance - previousBalance;
+        // Event index can lag the balance update briefly — retry a few times
+        for (let attempt = 0; attempt < 5; attempt++) {
+          const info = await lookupIncomingPayment(
+            address,
+            amountWei ?? (delta > 0n ? delta : null),
+          );
+          if (info.senderAddress) {
+            return {
+              detected: true,
+              senderAddress: info.senderAddress,
+              amountWei: info.amountWei ?? (delta > 0n ? delta : undefined),
+              txHash: info.txHash,
+            };
+          }
+          await sleep(400);
         }
-      } else {
-        if (balance > previousBalance) {
-          return true;
-        }
+
+        return {
+          detected: true,
+          amountWei: delta > 0n ? delta : undefined,
+        };
       }
     } catch {
       // Keep polling
@@ -141,5 +229,5 @@ export async function waitForIncomingPayment(
     await sleep(500);
   }
 
-  return false;
+  return {detected: false};
 }

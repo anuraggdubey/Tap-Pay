@@ -1,29 +1,30 @@
 /**
  * SendTapScreen — NFC contactless send flow (One-Way Architecture)
- * Enter amount → tap to read receiver address → broadcast on-chain
+ * Amount entry UI inspired by Cash App keypad (dark theme).
  */
 
 import React, {useState, useEffect, useRef} from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
   Alert,
 } from 'react-native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {ethers} from 'ethers';
 import {useWallet} from '../context/WalletContext';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import {validateAmount} from '../utils/validation';
-import {formatMon} from '../utils/format';
+import {formatMon, truncateAddress} from '../utils/format';
 import {
   checkSufficientBalance,
   estimateGasCost,
   BalanceCheckResult,
 } from '../services/wallet';
+import {reverseResolveAddress} from '../services/registry';
 import {isNfcSupported, isNfcEnabled, openNfcSettings} from '../services/nfcReader';
 import {
   cancelTapSession,
@@ -33,9 +34,10 @@ import {
 import {recordTransaction} from '../services/history';
 import InsufficientBalanceModal from '../components/InsufficientBalanceModal';
 import NfcNotAvailableModal from '../components/NfcNotAvailableModal';
-import {PulsingRadar} from '../components/PulsingRadar';
+import NfcWaitingCard from '../components/NfcWaitingCard';
+import {CrossIcon} from '../components/AppIcons';
 import {triggerHaptic} from '../utils/haptics';
-import {buttons, colors, screen} from '../theme';
+import {colors} from '../theme';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'SendTap'>;
@@ -43,28 +45,36 @@ type Props = {
 
 const DUMMY_RECIPIENT = '0x000000000000000000000000000000000000dEaD';
 
+const KEYS = [
+  ['1', '2', '3'],
+  ['4', '5', '6'],
+  ['7', '8', '9'],
+  ['.', '0', '⌫'],
+] as const;
+
 const PHASE_COPY: Record<TapSenderPhase, {title: string; subtitle: string}> = {
   idle: {title: '', subtitle: ''},
   reading: {
-    title: 'Hold Phones Together',
-    subtitle: 'Bring your phone close to the receiver to read their address.',
+    title: 'Hold phones together',
+    subtitle: 'Keep backs touching until the address is read.',
   },
   broadcasting: {
-    title: 'Sending Payment',
-    subtitle: 'Broadcasting transaction to Monad testnet…',
+    title: 'Sending payment',
+    subtitle: 'Broadcasting to Monad testnet…',
   },
   completed: {
-    title: 'Payment Sent',
+    title: 'Payment sent',
     subtitle: 'Transaction submitted successfully.',
   },
   failed: {
-    title: 'Payment Failed',
+    title: 'Payment failed',
     subtitle: 'The tap session could not be completed.',
   },
 };
 
 export default function SendTapScreen({navigation}: Props) {
   const {address, balance, refreshBalance} = useWallet();
+  const insets = useSafeAreaInsets();
   const [amount, setAmount] = useState('');
   const [phase, setPhase] = useState<TapSenderPhase>('idle');
   const [loading, setLoading] = useState(false);
@@ -78,6 +88,10 @@ export default function SendTapScreen({navigation}: Props) {
 
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    navigation.setOptions({headerShown: false});
+  }, [navigation]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -124,6 +138,39 @@ export default function SendTapScreen({navigation}: Props) {
     await cancelTapSession();
     setPhase('idle');
     setActiveAmount('');
+  };
+
+  const onKeyPress = (key: string) => {
+    if (key === '⌫') {
+      setAmount(prev => prev.slice(0, -1));
+      return;
+    }
+
+    setAmount(prev => {
+      if (key === '.') {
+        if (prev.includes('.')) {
+          return prev;
+        }
+        return prev === '' ? '0.' : prev + '.';
+      }
+
+      // Limit decimal places to 6 for keypad comfort
+      const parts = prev.split('.');
+      if (parts[1] && parts[1].length >= 6) {
+        return prev;
+      }
+
+      // Avoid leading zeros like 00
+      if (prev === '0' && key !== '.') {
+        return key;
+      }
+
+      if (prev.length >= 12) {
+        return prev;
+      }
+
+      return prev + key;
+    });
   };
 
   const handleArm = async () => {
@@ -200,9 +247,20 @@ export default function SendTapScreen({navigation}: Props) {
         if (result.txHash && result.receiverAddress) {
           triggerHaptic.notificationSuccess();
           refreshBalance();
+
+          let receiverUsername: string | undefined;
+          try {
+            receiverUsername =
+              (await reverseResolveAddress(result.receiverAddress)) ||
+              undefined;
+          } catch {
+            // Optional
+          }
+
           recordTransaction({
             direction: 'sent',
             counterparty: result.receiverAddress,
+            counterpartyUsername: receiverUsername,
             amount: amount,
             status: 'pending',
             txHash: result.txHash,
@@ -213,6 +271,7 @@ export default function SendTapScreen({navigation}: Props) {
             amount: amount,
             recipient: result.receiverAddress,
             direction: 'sent',
+            counterpartyUsername: receiverUsername,
           });
           return;
         }
@@ -235,86 +294,109 @@ export default function SendTapScreen({navigation}: Props) {
 
   if (phase !== 'idle') {
     const copy = PHASE_COPY[phase];
-    const isWaiting = phase === 'reading';
     const isBusy = phase === 'broadcasting';
 
     return (
-      <View style={screen.container}>
-        <View style={screen.centered}>
-          <PulsingRadar
-            label="SEND"
-            color={colors.accentSoft}
-            size={96}
-            active={isWaiting}
-          />
-
-          <Text style={styles.tapTitle}>{copy.title}</Text>
-          <Text style={screen.subtitle}>{copy.subtitle}</Text>
-
-          {activeAmount && (
-            <View style={styles.amountBadge}>
-              <Text style={styles.amountBadgeLabel}>Sending</Text>
-              <Text style={styles.amountBadgeValue}>{activeAmount} MON</Text>
-            </View>
-          )}
-
-          {isWaiting && (
-            <View style={styles.timerBadge}>
-              <Text style={styles.timerText}>Auto-expires in {timeLeft}s</Text>
-            </View>
-          )}
-
-          {isBusy && <ActivityIndicator color={colors.accent} style={{marginTop: 20}} />}
-
-          {!isBusy && (
-            <TouchableOpacity style={buttons.ghostDanger} onPress={handleCancel}>
-              <Text style={buttons.ghostDangerText}>Cancel Tap</Text>
+      <NfcWaitingCard
+        accent="purple"
+        showSpinner={isBusy}
+        onClose={isBusy ? undefined : handleCancel}
+        title={
+          isBusy
+            ? "We're processing your payment"
+            : copy.title || 'Hold phones together'
+        }
+        subtitle={
+          isBusy
+            ? 'Crunching the numbers.'
+            : activeAmount
+            ? `Sending ${activeAmount} MON · expires in ${timeLeft}s`
+            : copy.subtitle
+        }
+        footer={
+          !isBusy ? (
+            <TouchableOpacity
+              style={styles.cancelLink}
+              onPress={handleCancel}
+              activeOpacity={0.7}>
+              <Text style={styles.cancelLinkText}>Cancel</Text>
             </TouchableOpacity>
-          )}
-        </View>
-      </View>
+          ) : null
+        }
+      />
     );
   }
 
+  const displayAmount = amount === '' ? '0' : amount;
+  const canPay = validateAmount(amount).valid && !loading;
+
   return (
-    <View style={screen.container}>
-      <View style={styles.content}>
-        <Text style={screen.sectionLabel}>Amount (MON)</Text>
-        <TextInput
-          style={styles.amountInput}
-          placeholder="0.00"
-          placeholderTextColor="#444"
-          value={amount}
-          onChangeText={setAmount}
-          keyboardType="decimal-pad"
-          autoFocus
-        />
+    <View
+      style={[
+        styles.payRoot,
+        {paddingTop: insets.top + 8, paddingBottom: insets.bottom + 12},
+      ]}>
+      <View style={styles.payHeader}>
+        <TouchableOpacity
+          style={styles.closeBtn}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.8}>
+          <CrossIcon size={16} color="#FFFFFF" />
+        </TouchableOpacity>
 
-        {estimatedGasWei !== null && (
-          <Text style={styles.gasHint}>Est. Gas: ~{formatMon(estimatedGasWei)}</Text>
-        )}
-
-        <Text style={styles.balanceHint}>Available: {formatMon(balance)}</Text>
-
-        <View style={styles.stepsCard}>
-          <Text style={styles.stepsTitle}>How Tap Pay works</Text>
-          <Text style={styles.stepItem}>1. Enter amount and tap Ready</Text>
-          <Text style={styles.stepItem}>2. Tap your phone to the receiver's phone</Text>
-          <Text style={styles.stepItem}>3. Payment is automatically sent on Monad</Text>
+        <View style={styles.payHeaderCenter}>
+          <Text style={styles.payHeaderTitle}>
+            {address ? truncateAddress(address, 6, 4) : 'Tap Pay'}
+          </Text>
+          <Text style={styles.payHeaderBalance}>
+            {formatMon(balance).replace(/ MON$/, '')} MON available
+          </Text>
         </View>
 
-        <TouchableOpacity
-          style={[buttons.primary, loading && buttons.disabled]}
-          onPress={handleArm}
-          disabled={loading}
-          activeOpacity={0.85}>
-          {loading ? (
-            <ActivityIndicator color={colors.text} />
-          ) : (
-            <Text style={buttons.primaryText}>Ready to Tap</Text>
-          )}
-        </TouchableOpacity>
+        <View style={styles.closeBtnSpacer} />
       </View>
+
+      <View style={styles.amountStage}>
+        <Text style={styles.bigAmount} numberOfLines={1} adjustsFontSizeToFit>
+          {displayAmount}
+        </Text>
+        <View style={styles.currencyRow}>
+          <Text style={styles.currencyText}>MON</Text>
+          {estimatedGasWei !== null && validateAmount(amount).valid && (
+            <Text style={styles.gasHint}>
+              Gas ~{formatMon(estimatedGasWei).replace(/ MON$/, '')}
+            </Text>
+          )}
+        </View>
+      </View>
+
+      <View style={styles.keypad}>
+        {KEYS.map(row => (
+          <View key={row.join('-')} style={styles.keypadRow}>
+            {row.map(key => (
+              <TouchableOpacity
+                key={key}
+                style={styles.key}
+                onPress={() => onKeyPress(key)}
+                activeOpacity={0.55}>
+                <Text style={styles.keyText}>{key}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ))}
+      </View>
+
+      <TouchableOpacity
+        style={[styles.payButton, !canPay && styles.payButtonDisabled]}
+        onPress={handleArm}
+        disabled={!canPay}
+        activeOpacity={0.85}>
+        {loading ? (
+          <ActivityIndicator color="#000000" />
+        ) : (
+          <Text style={styles.payButtonText}>Pay</Text>
+        )}
+      </TouchableOpacity>
 
       {balanceCheckData && (
         <InsufficientBalanceModal
@@ -339,94 +421,114 @@ export default function SendTapScreen({navigation}: Props) {
 }
 
 const styles = StyleSheet.create({
-  content: {
+  payRoot: {
     flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 22,
+    backgroundColor: '#000000',
+    paddingHorizontal: 20,
   },
-  amountInput: {
-    fontSize: 48,
-    fontWeight: '800',
-    color: colors.text,
-    textAlign: 'center',
+  payHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 8,
-    paddingVertical: 10,
+  },
+  closeBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#1C1C1E',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeBtnSpacer: {
+    width: 36,
+  },
+  payHeaderCenter: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  payHeaderTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  payHeaderBalance: {
+    marginTop: 3,
+    fontSize: 13,
+    color: '#8E8E93',
+    fontWeight: '500',
+  },
+  amountStage: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+  },
+  bigAmount: {
+    fontSize: 64,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: -2,
+    maxWidth: '100%',
+  },
+  currencyRow: {
+    marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  currencyText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.successSoft,
   },
   gasHint: {
     fontSize: 12,
-    color: colors.accentSoft,
-    textAlign: 'center',
-    marginBottom: 6,
-    fontWeight: '600',
+    color: '#636366',
+    fontWeight: '500',
   },
-  balanceHint: {
-    fontSize: 13,
-    color: colors.textSubtle,
-    textAlign: 'center',
-    marginBottom: 24,
+  keypad: {
+    paddingBottom: 8,
   },
-  stepsCard: {
-    backgroundColor: colors.surface,
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: colors.border,
+  keypadRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
-  stepsTitle: {
-    fontSize: 13,
+  key: {
+    width: '33.33%',
+    height: 64,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  keyText: {
+    fontSize: 28,
+    fontWeight: '500',
+    color: '#FFFFFF',
+  },
+  payButton: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 28,
+    minHeight: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  payButtonDisabled: {
+    opacity: 0.35,
+  },
+  payButtonText: {
+    fontSize: 17,
     fontWeight: '700',
-    color: colors.text,
-    marginBottom: 10,
+    color: '#000000',
   },
-  stepItem: {
-    fontSize: 12,
-    color: colors.textMuted,
-    lineHeight: 20,
-    marginBottom: 2,
-  },
-  tapTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: colors.text,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  amountBadge: {
+  cancelLink: {
     marginTop: 20,
     paddingVertical: 10,
-    paddingHorizontal: 18,
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
+    paddingHorizontal: 16,
   },
-  amountBadgeLabel: {
-    fontSize: 11,
-    color: colors.textSubtle,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginBottom: 2,
-  },
-  amountBadgeValue: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: colors.text,
-  },
-  timerBadge: {
-    marginTop: 16,
-    paddingVertical: 5,
-    paddingHorizontal: 12,
-    backgroundColor: colors.surface,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  timerText: {
-    fontSize: 12,
-    color: colors.textMuted,
+  cancelLinkText: {
+    fontSize: 15,
     fontWeight: '600',
+    color: 'rgba(255,255,255,0.65)',
   },
 });

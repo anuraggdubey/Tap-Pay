@@ -1,0 +1,280 @@
+/* Phantom.com Style Effects & Components */
+
+/* Translucent Glass Panel */
+.glass-panel {
+  background: var(--bg-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-panel:hover {
+  border-color: var(--border-hover);
+}
+
+.glass-panel-glow {
+  background: var(--bg-glass);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(131, 110, 249, 0.25);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 0 40px -10px rgba(131, 110, 249, 0.25);
+}
+
+/* Phantom Buttons */
+.btn-phantom-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background-color: #ffffff;
+  color: #0a0b0e;
+  font-weight: 700;
+  font-size: 15px;
+  padding: 12px 26px;
+  border-radius: var(--radius-full);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 20px rgba(255, 255, 255, 0.2);
+}
+
+.btn-phantom-primary:hover {
+  transform: translateY(-2px) scale(1.02);
+  background-color: #f3f4f6;
+  box-shadow: 0 6px 28px rgba(255, 255, 255, 0.35);
+}
+
+.btn-phantom-primary:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.btn-phantom-purple {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: linear-gradient(135deg, #836ef9 0%, #684ff6 100%);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 15px;
+  padding: 12px 28px;
+  border-radius: var(--radius-full);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 8px 30px rgba(131, 110, 249, 0.45);
+}
+
+.btn-phantom-purple:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 10px 40px rgba(131, 110, 249, 0.65);
+}
+
+.btn-phantom-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 15px;
+  padding: 12px 24px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-subtle);
+  backdrop-filter: blur(12px);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-phantom-secondary:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px);
+}
+
+/* Badges */
+.badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  background: rgba(131, 110, 249, 0.12);
+  border: 1px solid rgba(131, 110, 249, 0.25);
+  color: var(--accent-purple-light);
+}
+
+.badge-glow {
+  position: relative;
+  overflow: hidden;
+}
+
+.badge-glow::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(131, 110, 249, 0.3) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+/* Gradient Text */
+.gradient-text-purple {
+  background: linear-gradient(135deg, #ffffff 30%, #ab9ff2 70%, #836ef9 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gradient-text-subtle {
+  background: linear-gradient(180deg, #ffffff 0%, #c4c6d6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Concentric NFC Ripple Waves */
+.nfc-wave-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nfc-wave-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid rgba(131, 110, 249, 0.6);
+  pointer-events: none;
+  animation: nfcPulse 2.8s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+}
+
+.nfc-wave-ring:nth-child(1) {
+  width: 70px;
+  height: 70px;
+  animation-delay: 0s;
+}
+
+.nfc-wave-ring:nth-child(2) {
+  width: 120px;
+  height: 120px;
+  animation-delay: 0.6s;
+}
+
+.nfc-wave-ring:nth-child(3) {
+  width: 180px;
+  height: 180px;
+  animation-delay: 1.2s;
+}
+
+@keyframes nfcPulse {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.9;
+    border-color: rgba(131, 110, 249, 0.9);
+  }
+  70% {
+    opacity: 0.3;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+    border-color: rgba(131, 110, 249, 0);
+  }
+}
+
+/* Floating animation */
+@keyframes floatGentle {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(0.5deg);
+  }
+}
+
+.animate-float {
+  animation: floatGentle 5s ease-in-out infinite;
+}
+
+/* Glowing Border Beam */
+.border-beam-box {
+  position: relative;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.border-beam-box::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  background: conic-gradient(
+    from 180deg at 50% 50%,
+    transparent 0deg,
+    rgba(131, 110, 249, 0.8) 60deg,
+    transparent 120deg
+  );
+  animation: rotateBeam 4s linear infinite;
+  z-index: 0;
+}
+
+.border-beam-inner {
+  position: relative;
+  z-index: 1;
+  margin: 1px;
+  background: var(--bg-card);
+  border-radius: calc(var(--radius-lg) - 1px);
+}
+
+@keyframes rotateBeam {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Device Frame Simulation */
+.phone-mockup {
+  position: relative;
+  width: 310px;
+  height: 620px;
+  background: #0f1017;
+  border-radius: 46px;
+  border: 4px solid #232535;
+  box-shadow: 
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 25px 60px -15px rgba(0, 0, 0, 0.8),
+    0 0 40px -10px rgba(131, 110, 249, 0.3);
+  overflow: hidden;
+  user-select: none;
+}
+
+.phone-island {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90px;
+  height: 22px;
+  background: #000000;
+  border-radius: 20px;
+  z-index: 30;
+}
+
+/* Grid & Layout Helpers */
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 900px) {
+  .bento-grid {
+    grid-template-columns: 1fr;
+  }
+}

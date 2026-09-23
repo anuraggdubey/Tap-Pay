@@ -11,7 +11,9 @@
     "test": "jest --forceExit",
     "compile:contracts": "npx hardhat compile",
     "test:contracts": "npx hardhat test",
-    "deploy:monad": "npx hardhat run scripts/deploy.js --network monad_testnet"
+    "deploy:monad": "npx hardhat run scripts/deploy.js --network monad_testnet",
+    "web:dev": "npm --prefix web run dev",
+    "web:build": "npm --prefix web run build"
   },
   "dependencies": {
     "@ethersproject/shims": "^5.8.0",

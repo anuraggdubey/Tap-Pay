@@ -109,8 +109,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDownload }) => {
               <span>Contracts</span>
               <ChevronDown size={14} opacity={0.6} />
             </a>
-            <a href="#hackathon" className="phantom-nav-item">
-              <span>Support</span>
+            <a
+              href="https://x.com/tapxpay"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="phantom-nav-item"
+            >
+              <span>Community (𝕏)</span>
             </a>
           </nav>
 

@@ -1,280 +1,210 @@
-/* Phantom.com Style Effects & Components */
+/* Authentic Phantom.com Visual Effects & Components */
 
-/* Translucent Glass Panel */
-.glass-panel {
-  background: var(--bg-glass);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
+/* Floating Navigation Pill */
+.phantom-nav-pill {
+  background: var(--nav-bg-light);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: var(--radius-pill);
+  box-shadow: 0 8px 30px rgba(60, 49, 91, 0.08);
+  border: 1px solid rgba(60, 49, 91, 0.06);
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.glass-panel:hover {
-  border-color: var(--border-hover);
+.phantom-nav-pill.is-dark {
+  background: var(--nav-bg-dark);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #FFFDF8;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
 }
 
-.glass-panel-glow {
-  background: var(--bg-glass);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(131, 110, 249, 0.25);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 0 40px -10px rgba(131, 110, 249, 0.25);
-}
-
-/* Phantom Buttons */
-.btn-phantom-primary {
+/* Primary Pill Buttons */
+.phantom-btn-pill {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  background-color: #ffffff;
-  color: #0a0b0e;
-  font-weight: 700;
-  font-size: 15px;
-  padding: 12px 26px;
-  border-radius: var(--radius-full);
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 4px 20px rgba(255, 255, 255, 0.2);
-}
-
-.btn-phantom-primary:hover {
-  transform: translateY(-2px) scale(1.02);
-  background-color: #f3f4f6;
-  box-shadow: 0 6px 28px rgba(255, 255, 255, 0.35);
-}
-
-.btn-phantom-primary:active {
-  transform: translateY(0) scale(0.98);
-}
-
-.btn-phantom-purple {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  background: linear-gradient(135deg, #836ef9 0%, #684ff6 100%);
-  color: #ffffff;
-  font-weight: 700;
-  font-size: 15px;
-  padding: 12px 28px;
-  border-radius: var(--radius-full);
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 8px 30px rgba(131, 110, 249, 0.45);
-}
-
-.btn-phantom-purple:hover {
-  transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 10px 40px rgba(131, 110, 249, 0.65);
-}
-
-.btn-phantom-secondary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  background: rgba(255, 255, 255, 0.06);
-  color: #ffffff;
+  gap: 8px;
+  background: var(--pill-bg);
+  color: var(--pill-text);
   font-weight: 600;
-  font-size: 15px;
-  padding: 12px 24px;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--border-subtle);
-  backdrop-filter: blur(12px);
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  font-size: 14px;
+  padding: 10px 22px;
+  border-radius: var(--radius-pill);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease;
+  white-space: nowrap;
 }
 
-.btn-phantom-secondary:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.25);
-  transform: translateY(-2px);
+.phantom-btn-pill:hover {
+  background: var(--pill-hover);
+  transform: scale(1.02);
 }
 
-/* Badges */
-.badge-pill {
+.phantom-btn-pill:active {
+  transform: scale(0.98);
+}
+
+/* Hero CTA Pill */
+.phantom-btn-hero {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #E2DDFE;
+  color: #3C315B;
+  font-weight: 700;
+  font-size: 16px;
+  padding: 16px 36px;
+  border-radius: var(--radius-pill);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+}
+
+.phantom-btn-hero:hover {
+  transform: scale(1.03);
+  box-shadow: 0 12px 40px rgba(226, 221, 254, 0.4);
+}
+
+.phantom-btn-hero:active {
+  transform: scale(0.98);
+}
+
+/* See More Action Pill (Signature Phantom Button) */
+.phantom-see-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 20px;
+  border-radius: var(--radius-pill);
+  background: #E2DDFE;
+  color: #3C315B;
+  font-weight: 600;
+  font-size: 14px;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.phantom-see-more:hover {
+  background: #D6CEFD;
+  transform: translateY(-1px);
+}
+
+/* Big Section Titles */
+.phantom-section-title {
+  font-size: clamp(44px, 6.2vw, 84px);
+  font-weight: 400;
+  line-height: 1.04;
+  letter-spacing: -0.035em;
+  color: #3C315B;
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.phantom-section-title.is-dark {
+  color: #FFFDF8;
+}
+
+/* Hero Card Container */
+.phantom-hero-card {
+  margin: 0 24px;
+  border-radius: var(--radius-card);
+  background: #0D0D12;
+  color: #FFFDF8;
+  padding: 100px 40px 60px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 25px 60px -15px rgba(25, 18, 45, 0.3);
+}
+
+@media (max-width: 768px) {
+  .phantom-hero-card {
+    margin: 0 12px;
+    padding: 70px 20px 40px;
+    border-radius: 24px;
+  }
+}
+
+/* Hero Cosmic Atmosphere */
+.phantom-hero-bg {
+  position: absolute;
+  inset: 0;
+  background: 
+    radial-gradient(circle at 50% 35%, rgba(131, 110, 249, 0.28) 0%, rgba(60, 49, 91, 0.15) 45%, transparent 75%),
+    radial-gradient(circle at 80% 80%, rgba(99, 102, 241, 0.12) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+/* Phantom Card with Behind Shadow Layer */
+.phantom-card-wrapper {
+  position: relative;
+}
+
+.phantom-card-shadow-layer {
+  position: absolute;
+  inset: 0;
+  background: #0D0D12;
+  border-radius: var(--radius-card);
+  transform: rotate(2deg) translateY(6px);
+  z-index: 0;
+}
+
+.phantom-card-main {
+  position: relative;
+  z-index: 1;
+  border-radius: var(--radius-card);
+  padding: 40px 32px;
+  box-shadow: 0 10px 40px rgba(60, 49, 91, 0.08);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justifyContent: space-between;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.phantom-card-main:hover {
+  transform: translateY(-4px);
+}
+
+/* Circular Icon Button */
+.phantom-icon-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #FDFCFE;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #3C315B;
+  box-shadow: 0 4px 15px rgba(60, 49, 91, 0.08);
+  border: 1px solid rgba(60, 49, 91, 0.06);
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.phantom-icon-btn:hover {
+  background: #F0EEFE;
+  transform: scale(1.05);
+}
+
+/* Card Badge Pill */
+.phantom-tag {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 6px 14px;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-pill);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.02em;
-  background: rgba(131, 110, 249, 0.12);
-  border: 1px solid rgba(131, 110, 249, 0.25);
-  color: var(--accent-purple-light);
-}
-
-.badge-glow {
-  position: relative;
-  overflow: hidden;
-}
-
-.badge-glow::after {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle, rgba(131, 110, 249, 0.3) 0%, transparent 60%);
-  pointer-events: none;
-}
-
-/* Gradient Text */
-.gradient-text-purple {
-  background: linear-gradient(135deg, #ffffff 30%, #ab9ff2 70%, #836ef9 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.gradient-text-subtle {
-  background: linear-gradient(180deg, #ffffff 0%, #c4c6d6 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-/* Concentric NFC Ripple Waves */
-.nfc-wave-container {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.nfc-wave-ring {
-  position: absolute;
-  border-radius: 50%;
-  border: 2px solid rgba(131, 110, 249, 0.6);
-  pointer-events: none;
-  animation: nfcPulse 2.8s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
-}
-
-.nfc-wave-ring:nth-child(1) {
-  width: 70px;
-  height: 70px;
-  animation-delay: 0s;
-}
-
-.nfc-wave-ring:nth-child(2) {
-  width: 120px;
-  height: 120px;
-  animation-delay: 0.6s;
-}
-
-.nfc-wave-ring:nth-child(3) {
-  width: 180px;
-  height: 180px;
-  animation-delay: 1.2s;
-}
-
-@keyframes nfcPulse {
-  0% {
-    transform: scale(0.6);
-    opacity: 0.9;
-    border-color: rgba(131, 110, 249, 0.9);
-  }
-  70% {
-    opacity: 0.3;
-  }
-  100% {
-    transform: scale(1.6);
-    opacity: 0;
-    border-color: rgba(131, 110, 249, 0);
-  }
 }
 
 /* Floating animation */
-@keyframes floatGentle {
+@keyframes phantomFloat {
   0%, 100% {
-    transform: translateY(0px) rotate(0deg);
+    transform: translateY(0px);
   }
   50% {
-    transform: translateY(-8px) rotate(0.5deg);
+    transform: translateY(-8px);
   }
 }
 
-.animate-float {
-  animation: floatGentle 5s ease-in-out infinite;
-}
-
-/* Glowing Border Beam */
-.border-beam-box {
-  position: relative;
-  background: var(--bg-card);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-}
-
-.border-beam-box::before {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  background: conic-gradient(
-    from 180deg at 50% 50%,
-    transparent 0deg,
-    rgba(131, 110, 249, 0.8) 60deg,
-    transparent 120deg
-  );
-  animation: rotateBeam 4s linear infinite;
-  z-index: 0;
-}
-
-.border-beam-inner {
-  position: relative;
-  z-index: 1;
-  margin: 1px;
-  background: var(--bg-card);
-  border-radius: calc(var(--radius-lg) - 1px);
-}
-
-@keyframes rotateBeam {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-/* Device Frame Simulation */
-.phone-mockup {
-  position: relative;
-  width: 310px;
-  height: 620px;
-  background: #0f1017;
-  border-radius: 46px;
-  border: 4px solid #232535;
-  box-shadow: 
-    0 0 0 1px rgba(255, 255, 255, 0.1),
-    0 25px 60px -15px rgba(0, 0, 0, 0.8),
-    0 0 40px -10px rgba(131, 110, 249, 0.3);
-  overflow: hidden;
-  user-select: none;
-}
-
-.phone-island {
-  position: absolute;
-  top: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 90px;
-  height: 22px;
-  background: #000000;
-  border-radius: 20px;
-  z-index: 30;
-}
-
-/* Grid & Layout Helpers */
-.bento-grid {
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  gap: 20px;
-}
-
-@media (max-width: 900px) {
-  .bento-grid {
-    grid-template-columns: 1fr;
-  }
+.phantom-floating {
+  animation: phantomFloat 4s ease-in-out infinite;
 }

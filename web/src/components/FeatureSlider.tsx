@@ -1,280 +1,224 @@
 import React, { useState } from 'react';
-import { Radio, AtSign, Shield, Zap, Check, ArrowRight } from 'lucide-react';
+import { ArrowUpRight, Radio, AtSign, Zap, Check, RotateCcw } from 'lucide-react';
 
 export const FeatureSlider: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<number>(0);
+  // Interactive mini simulation for Card 1
+  const [tapStep, setTapStep] = useState<'idle' | 'tapping' | 'done'>('idle');
+  const [keypadAmount, setKeypadAmount] = useState('15');
 
-  const features = [
-    {
-      id: 0,
-      icon: Radio,
-      tag: 'NFC TAP-TO-PAY',
-      title: 'Phone-to-phone contact without terminals',
-      desc: 'The sender phone reads the receiver’s address over NFC Host Card Emulation (HCE), then automatically broadcasts payWithLog to TapPayLedger. No POS machine required.',
-      details: [
-        'Android HostApduService HCE terminal emulation',
-        'ISO-DEP / APDU protocol exchange in 250ms',
-        'Atomic pass-through on-chain settlement',
-      ],
-      previewType: 'nfc',
-    },
-    {
-      id: 1,
-      icon: AtSign,
-      tag: 'USERNAME REGISTRY',
-      title: 'Pay friends instantly using @username',
-      desc: 'Forget tedious 42-character hex addresses. Claim your on-chain handle with UsernameRegistry.sol and send native MON with a tactile Cash App–style keypad.',
-      details: [
-        'On-chain mapping (UsernameRegistry.sol)',
-        'Reverse lookup on all transaction receipts',
-        'Cash App–style fluid numeric entry',
-      ],
-      previewType: 'username',
-    },
-    {
-      id: 2,
-      icon: Shield,
-      tag: 'NON-CUSTODIAL',
-      title: 'Secured by Android Hardware Keystore',
-      desc: 'Your private keys never leave your physical device. Protected by Android Keystore and biometric auth via react-native-keychain. No custodial balances, zero middleman risk.',
-      details: [
-        'Hardware-backed Android Keystore integration',
-        'Non-custodial: funds go directly to recipient',
-        'ReentrancyGuard & session-based replay protection',
-      ],
-      previewType: 'security',
-    },
-    {
-      id: 3,
-      icon: Zap,
-      tag: 'MONAD TESTNET',
-      title: '~1s Finality with Native MON Settling',
-      desc: 'Built specifically for Monad’s parallelized EVM architecture. Payments settle with near-instant finality and negligible gas fees on Monad Testnet (Chain ID 10143).',
-      details: [
-        '10,000 TPS parallelized execution pipeline',
-        '1-second block finality for instant receipts',
-        'Standard EVM compatibility with ethers.js v6',
-      ],
-      previewType: 'monad',
-    },
-  ];
-
-  const current = features[activeTab];
+  const triggerTap = () => {
+    setTapStep('tapping');
+    setTimeout(() => {
+      setTapStep('done');
+    }, 1200);
+  };
 
   return (
     <section
-      id="features"
+      id="how-it-works"
       style={{
-        padding: '100px 0',
+        padding: '120px 0 80px',
         position: 'relative',
-        zIndex: 1,
       }}
     >
-      <div className="container">
-        {/* Section Header */}
-        <div style={{ textAlign: 'center', maxWidth: '720px', margin: '0 auto 60px' }}>
-          <div className="badge-pill" style={{ marginBottom: '16px' }}>
-            <Zap size={14} color="#836ef9" />
-            <span>Built for Speed &amp; Self-Custody</span>
-          </div>
-          <h2
-            style={{
-              fontSize: 'clamp(32px, 4vw, 50px)',
-              fontWeight: 800,
-              letterSpacing: '-0.03em',
-              marginBottom: '16px',
-            }}
-          >
-            Engineering contactless crypto on <span className="gradient-text-purple">Android</span>
+      <div className="phantom-container">
+        {/* Phantom Big Section Title */}
+        <div style={{ textAlign: 'center', marginBottom: '60px' }}>
+          <h2 className="phantom-section-title">
+            Contactless tools
+            <br />
+            for <span style={{ display: 'inline-flex', verticalAlign: 'middle', padding: '0 8px' }}>
+              <Radio size={48} color="#836EF9" />
+            </span> everyone
           </h2>
-          <p style={{ color: '#9ea0b2', fontSize: '17px', lineHeight: 1.6 }}>
-            TapPay blends native mobile hardware capabilities with high-throughput smart contract rails.
-          </p>
+
+          {/* Signature Phantom 'See more ↗' Pill */}
+          <a href="#demo" className="phantom-see-more">
+            <span>See more</span>
+            <ArrowUpRight size={16} />
+          </a>
         </div>
 
-        {/* Feature Tab Selector (Phantom Pill Selector) */}
+        {/* 3 Horizontal Phantom Cards */}
         <div
           style={{
-            display: 'flex',
-            justifyContent: 'center',
-            gap: '8px',
-            flexWrap: 'wrap',
-            marginBottom: '40px',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+            gap: '24px',
           }}
+          className="phantom-cards-grid"
         >
-          {features.map((feat) => {
-            const Icon = feat.icon;
-            const isActive = activeTab === feat.id;
-            return (
-              <button
-                key={feat.id}
-                onClick={() => setActiveTab(feat.id)}
+          {/* Card 1: Tap to Pay (Lavender Card with Stacked Shadow Layer) */}
+          <div className="phantom-card-wrapper">
+            <div className="phantom-card-shadow-layer" />
+            <div
+              className="phantom-card-main"
+              style={{
+                background: '#EAE6FE',
+                color: '#3C315B',
+              }}
+            >
+              <div>
+                <div
+                  style={{
+                    fontSize: '12px',
+                    fontWeight: 800,
+                    letterSpacing: '0.06em',
+                    color: '#836EF9',
+                    marginBottom: '12px',
+                  }}
+                >
+                  PHONE-TO-PHONE NFC
+                </div>
+                <h3
+                  style={{
+                    fontSize: '28px',
+                    fontWeight: 700,
+                    letterSpacing: '-0.02em',
+                    lineHeight: 1.25,
+                    marginBottom: '20px',
+                  }}
+                >
+                  Pay and receive with an instant phone tap.
+                </h3>
+              </div>
+
+              {/* Interactive Demonstration Area */}
+              <div
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '10px 20px',
-                  borderRadius: '9999px',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  transition: 'all 0.25s ease',
-                  background: isActive ? '#ffffff' : 'rgba(255, 255, 255, 0.05)',
-                  color: isActive ? '#0a0b0e' : '#9ea0b2',
-                  border: isActive ? '1px solid #ffffff' : '1px solid rgba(255, 255, 255, 0.08)',
-                  boxShadow: isActive ? '0 4px 20px rgba(255, 255, 255, 0.25)' : 'none',
+                  background: '#FDFCFE',
+                  borderRadius: '24px',
+                  padding: '24px',
+                  marginTop: '20px',
+                  boxShadow: '0 8px 24px rgba(60, 49, 91, 0.06)',
                 }}
               >
-                <Icon size={16} color={isActive ? '#0a0b0e' : '#836ef9'} />
-                <span>{feat.tag}</span>
-              </button>
-            );
-          })}
-        </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div
+                      style={{
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '50%',
+                        background: '#836EF9',
+                        color: '#fff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 700,
+                        fontSize: '12px',
+                      }}
+                    >
+                      M
+                    </div>
+                    <span style={{ fontSize: '14px', fontWeight: 700 }}>@misbah</span>
+                  </div>
+                  <span style={{ fontSize: '13px', fontWeight: 800, color: '#836EF9' }}>5.0 MON</span>
+                </div>
 
-        {/* Dynamic Feature Display Showcase */}
-        <div
-          className="glass-panel feature-showcase-grid"
-          style={{
-            padding: '48px',
-            background: 'linear-gradient(135deg, rgba(20, 21, 32, 0.95) 0%, rgba(13, 14, 22, 0.98) 100%)',
-            border: '1px solid rgba(131, 110, 249, 0.25)',
-            display: 'grid',
-            gridTemplateColumns: '1.1fr 0.9fr',
-            gap: '40px',
-            alignItems: 'center',
-          }}
-        >
-          {/* Left: Text & Specs */}
-          <div>
-            <div
-              style={{
-                fontSize: '12px',
-                fontWeight: 800,
-                color: '#ab9ff2',
-                letterSpacing: '0.06em',
-                marginBottom: '12px',
-              }}
-            >
-              {current.tag}
-            </div>
-            <h3
-              style={{
-                fontSize: 'clamp(24px, 3vw, 36px)',
-                fontWeight: 800,
-                letterSpacing: '-0.02em',
-                lineHeight: 1.25,
-                marginBottom: '18px',
-              }}
-            >
-              {current.title}
-            </h3>
-            <p
-              style={{
-                fontSize: '16px',
-                lineHeight: 1.6,
-                color: '#9ea0b2',
-                marginBottom: '28px',
-              }}
-            >
-              {current.desc}
-            </p>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '30px' }}>
-              {current.details.map((detail, idx) => (
-                <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                {tapStep === 'done' ? (
                   <div
                     style={{
-                      width: '22px',
-                      height: '22px',
-                      borderRadius: '50%',
-                      background: 'rgba(34, 197, 94, 0.15)',
-                      color: '#22c55e',
+                      background: 'rgba(34, 197, 94, 0.12)',
+                      color: '#15803d',
+                      borderRadius: '16px',
+                      padding: '14px',
+                      textAlign: 'center',
+                      fontSize: '14px',
+                      fontWeight: 700,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      flexShrink: 0,
+                      gap: '8px',
                     }}
                   >
-                    <Check size={14} />
+                    <Check size={18} />
+                    <span>Payment Received via NFC!</span>
                   </div>
-                  <span style={{ fontSize: '14px', color: '#e2e4ed', fontWeight: 500 }}>{detail}</span>
-                </div>
-              ))}
+                ) : (
+                  <button
+                    onClick={triggerTap}
+                    disabled={tapStep === 'tapping'}
+                    className="phantom-btn-pill"
+                    style={{
+                      width: '100%',
+                      background: '#3C315B',
+                      color: '#FFFDF8',
+                      padding: '12px',
+                    }}
+                  >
+                    <Radio size={16} />
+                    <span>{tapStep === 'tapping' ? 'Holding Phones Together...' : 'Try Phone Tap'}</span>
+                  </button>
+                )}
+
+                {tapStep === 'done' && (
+                  <button
+                    onClick={() => setTapStep('idle')}
+                    style={{
+                      marginTop: '8px',
+                      width: '100%',
+                      fontSize: '12px',
+                      color: '#6C628A',
+                      textAlign: 'center',
+                    }}
+                  >
+                    Tap again
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Right: Visual Demonstration Card */}
-          <div
-            style={{
-              background: 'rgba(10, 11, 17, 0.8)',
-              borderRadius: '24px',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              padding: '30px',
-              minHeight: '340px',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
-              alignItems: 'center',
-              position: 'relative',
-              overflow: 'hidden',
-            }}
-          >
-            {current.previewType === 'nfc' && (
-              <div style={{ textAlign: 'center', width: '100%' }}>
+          {/* Card 2: Cash App Keypad (Soft Warm Cream) */}
+          <div className="phantom-card-wrapper">
+            <div className="phantom-card-shadow-layer" style={{ background: '#3C315B' }} />
+            <div
+              className="phantom-card-main"
+              style={{
+                background: '#FFF6E5',
+                color: '#3C315B',
+              }}
+            >
+              <div>
                 <div
                   style={{
-                    width: '90px',
-                    height: '90px',
-                    borderRadius: '50%',
-                    background: 'radial-gradient(circle, rgba(131, 110, 249, 0.3) 0%, rgba(131, 110, 249, 0.05) 70%)',
-                    border: '2px solid #836ef9',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    margin: '0 auto 20px',
-                    boxShadow: '0 0 40px rgba(131, 110, 249, 0.5)',
-                  }}
-                >
-                  <Radio size={44} color="#836ef9" />
-                </div>
-                <div style={{ fontSize: '18px', fontWeight: 700, marginBottom: '6px' }}>HCE Tap Handshake</div>
-                <div style={{ fontSize: '13px', color: '#9ea0b2', marginBottom: '16px' }}>
-                  AID: <code>F00102030405</code> · APDU ISO-DEP
-                </div>
-                <div
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    borderRadius: '12px',
-                    padding: '10px 16px',
                     fontSize: '12px',
-                    fontFamily: 'monospace',
-                    color: '#ab9ff2',
-                    display: 'inline-block',
+                    fontWeight: 800,
+                    letterSpacing: '0.06em',
+                    color: '#D97706',
+                    marginBottom: '12px',
                   }}
                 >
-                  payWithLog(0xEebB...1aDD, sessionHash)
+                  USERNAME REGISTRY
                 </div>
-              </div>
-            )}
-
-            {current.previewType === 'username' && (
-              <div style={{ width: '100%', maxWidth: '300px' }}>
-                <div
+                <h3
                   style={{
-                    background: 'rgba(255, 255, 255, 0.04)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '16px',
-                    padding: '16px',
-                    marginBottom: '16px',
+                    fontSize: '28px',
+                    fontWeight: 700,
+                    letterSpacing: '-0.02em',
+                    lineHeight: 1.25,
+                    marginBottom: '20px',
                   }}
                 >
-                  <div style={{ fontSize: '11px', color: '#9ea0b2', marginBottom: '6px' }}>SEARCH USERNAME</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <AtSign size={18} color="#836ef9" />
-                    <span style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>aditya</span>
-                    <span style={{ marginLeft: 'auto', fontSize: '11px', color: '#22c55e', background: 'rgba(34, 197, 94, 0.15)', padding: '2px 8px', borderRadius: '6px' }}>
-                      FOUND
-                    </span>
+                  Send money to friends with @username.
+                </h3>
+              </div>
+
+              {/* Mini Keypad UI */}
+              <div
+                style={{
+                  background: '#FDFCFE',
+                  borderRadius: '24px',
+                  padding: '20px',
+                  marginTop: '20px',
+                  boxShadow: '0 8px 24px rgba(60, 49, 91, 0.06)',
+                }}
+              >
+                <div style={{ textAlign: 'center', marginBottom: '14px' }}>
+                  <div style={{ fontSize: '11px', color: '#9890B4', marginBottom: '2px' }}>TO @ADITYA</div>
+                  <div style={{ fontSize: '28px', fontWeight: 800, color: '#3C315B' }}>
+                    {keypadAmount} <span style={{ fontSize: '16px', color: '#836EF9' }}>MON</span>
                   </div>
                 </div>
 
@@ -282,110 +226,109 @@ export const FeatureSlider: React.FC = () => {
                   style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(3, 1fr)',
-                    gap: '8px',
-                    textAlign: 'center',
+                    gap: '6px',
                   }}
                 >
-                  {['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', '⌫'].map((num, i) => (
-                    <div
-                      key={i}
+                  {['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '⌫'].map((k) => (
+                    <button
+                      key={k}
+                      onClick={() => {
+                        if (k === 'C') setKeypadAmount('0');
+                        else if (k === '⌫') setKeypadAmount((prev) => (prev.length > 1 ? prev.slice(0, -1) : '0'));
+                        else setKeypadAmount((prev) => (prev === '0' ? k : prev + k));
+                      }}
                       style={{
-                        background: 'rgba(255, 255, 255, 0.05)',
-                        padding: '12px',
+                        padding: '10px',
                         borderRadius: '10px',
-                        fontSize: '16px',
+                        background: '#F5F3FF',
+                        fontSize: '14px',
                         fontWeight: 700,
-                        color: '#fff',
+                        color: '#3C315B',
                       }}
                     >
-                      {num}
-                    </div>
+                      {k}
+                    </button>
                   ))}
                 </div>
               </div>
-            )}
+            </div>
+          </div>
 
-            {current.previewType === 'security' && (
-              <div style={{ textAlign: 'center', width: '100%' }}>
+          {/* Card 3: Monad Settlement (Soft Sky Blue) */}
+          <div className="phantom-card-wrapper">
+            <div className="phantom-card-shadow-layer" style={{ background: '#0D0D12' }} />
+            <div
+              className="phantom-card-main"
+              style={{
+                background: '#E2EFFE',
+                color: '#3C315B',
+              }}
+            >
+              <div>
                 <div
                   style={{
-                    width: '80px',
-                    height: '80px',
-                    borderRadius: '24px',
-                    background: 'rgba(34, 197, 94, 0.12)',
-                    border: '2px solid rgba(34, 197, 94, 0.4)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    margin: '0 auto 20px',
+                    fontSize: '12px',
+                    fontWeight: 800,
+                    letterSpacing: '0.06em',
+                    color: '#2563EB',
+                    marginBottom: '12px',
                   }}
                 >
-                  <Shield size={40} color="#22c55e" />
+                  HIGH THROUGHPUT
                 </div>
-                <div style={{ fontSize: '18px', fontWeight: 700, marginBottom: '6px' }}>Hardware Keystore</div>
-                <div style={{ fontSize: '13px', color: '#9ea0b2', marginBottom: '16px', maxWidth: '280px', margin: '0 auto 16px' }}>
-                  Private keys generated within Android Secure Element. Never leaves the phone.
-                </div>
-                <span
+                <h3
                   style={{
-                    fontSize: '11px',
+                    fontSize: '28px',
                     fontWeight: 700,
-                    background: 'rgba(34, 197, 94, 0.15)',
-                    color: '#22c55e',
-                    padding: '4px 12px',
-                    borderRadius: '20px',
+                    letterSpacing: '-0.02em',
+                    lineHeight: 1.25,
+                    marginBottom: '20px',
                   }}
                 >
-                  react-native-keychain
-                </span>
+                  Settled on Monad in ~1 second.
+                </h3>
               </div>
-            )}
 
-            {current.previewType === 'monad' && (
-              <div style={{ textAlign: 'center', width: '100%' }}>
-                <div
-                  style={{
-                    fontSize: '60px',
-                    fontWeight: 900,
-                    color: '#836ef9',
-                    lineHeight: 1,
-                    marginBottom: '8px',
-                    letterSpacing: '-0.04em',
-                  }}
-                >
+              {/* Telemetry Display */}
+              <div
+                style={{
+                  background: '#FDFCFE',
+                  borderRadius: '24px',
+                  padding: '24px',
+                  marginTop: '20px',
+                  boxShadow: '0 8px 24px rgba(60, 49, 91, 0.06)',
+                  textAlign: 'center',
+                }}
+              >
+                <div style={{ fontSize: '48px', fontWeight: 900, color: '#2563EB', lineHeight: 1, marginBottom: '6px' }}>
                   ~1.0s
                 </div>
-                <div style={{ fontSize: '17px', fontWeight: 700, marginBottom: '6px' }}>Block Finality</div>
-                <div style={{ fontSize: '13px', color: '#9ea0b2', marginBottom: '20px' }}>
-                  Chain ID: <code>10143</code> · Monad Testnet
+                <div style={{ fontSize: '14px', fontWeight: 700, color: '#3C315B', marginBottom: '4px' }}>
+                  On-Chain Finality
                 </div>
+                <div style={{ fontSize: '12px', color: '#6C628A', marginBottom: '16px' }}>
+                  Chain ID: 10143 · TapPayLedger.sol
+                </div>
+
                 <div
                   style={{
                     display: 'flex',
                     justifyContent: 'center',
-                    gap: '12px',
+                    gap: '8px',
                   }}
                 >
-                  <div style={{ background: 'rgba(255,255,255,0.06)', padding: '8px 14px', borderRadius: '10px', fontSize: '12px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 700, background: '#E2EFFE', color: '#2563EB', padding: '4px 10px', borderRadius: '9999px' }}>
                     10,000 TPS
-                  </div>
-                  <div style={{ background: 'rgba(255,255,255,0.06)', padding: '8px 14px', borderRadius: '10px', fontSize: '12px' }}>
-                    Asynchronous I/O
-                  </div>
+                  </span>
+                  <span style={{ fontSize: '11px', fontWeight: 700, background: '#E2EFFE', color: '#2563EB', padding: '4px 10px', borderRadius: '9999px' }}>
+                    Zero Escrow
+                  </span>
                 </div>
               </div>
-            )}
+            </div>
           </div>
         </div>
       </div>
-
-      <style>{`
-        @media (max-width: 900px) {
-          .feature-showcase-grid {
-            grid-template-columns: 1fr !important;
-          }
-        }
-      `}</style>
     </section>
   );
 };

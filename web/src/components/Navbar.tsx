@@ -1,18 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { Smartphone, Download, Menu, X, Radio, ExternalLink } from 'lucide-react';
+import { Smartphone, Download, Search, ChevronDown, Radio, Menu, X } from 'lucide-react';
 
 interface NavbarProps {
   onOpenDownload: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ onOpenDownload }) => {
-  const [scrolled, setScrolled] = useState(false);
+  const [isDarkNav, setIsDarkNav] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
+      // Invert nav on the security dark section
+      const sec = document.getElementById('security');
+      if (sec) {
+        const rect = sec.getBoundingClientRect();
+        if (rect.top <= 80 && rect.bottom >= 80) {
+          setIsDarkNav(true);
+          return;
+        }
+      }
+      setIsDarkNav(false);
     };
+
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -26,137 +36,126 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDownload }) => {
           left: 0,
           right: 0,
           zIndex: 100,
-          padding: '16px 24px',
-          transition: 'all 0.3s ease',
+          padding: '20px 24px',
+          pointerEvents: 'none',
         }}
       >
         <div
-          className="container"
+          className="phantom-container"
           style={{
-            maxWidth: '1200px',
-            margin: '0 auto',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            background: scrolled ? 'rgba(15, 16, 23, 0.85)' : 'rgba(15, 16, 23, 0.55)',
-            backdropFilter: 'blur(24px)',
-            WebkitBackdropFilter: 'blur(24px)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            borderRadius: '9999px',
-            padding: '10px 20px',
-            boxShadow: scrolled
-              ? '0 10px 30px -10px rgba(0, 0, 0, 0.8), 0 0 20px -5px rgba(131, 110, 249, 0.2)'
-              : '0 4px 20px rgba(0,0,0,0.3)',
           }}
         >
-          {/* Brand Logo */}
+          {/* Logo (Phantom Style) */}
           <a
             href="#"
             style={{
+              pointerEvents: 'auto',
               display: 'flex',
               alignItems: 'center',
-              gap: '10px',
+              gap: '8px',
               fontWeight: 800,
-              fontSize: '19px',
-              letterSpacing: '-0.02em',
+              fontSize: '22px',
+              letterSpacing: '-0.03em',
+              color: isDarkNav ? '#FFFDF8' : '#3C315B',
+              transition: 'color 0.3s ease',
             }}
           >
-            <div
-              style={{
-                width: '34px',
-                height: '34px',
-                borderRadius: '10px',
-                background: 'linear-gradient(135deg, #836ef9 0%, #4c35de 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 4px 14px rgba(131, 110, 249, 0.45)',
-              }}
-            >
-              <Radio size={18} color="#ffffff" />
-            </div>
-            <span>
-              Tap<span style={{ color: '#836ef9' }}>Pay</span>
-            </span>
-            <span
-              style={{
-                fontSize: '11px',
-                fontWeight: 700,
-                padding: '3px 8px',
-                borderRadius: '9999px',
-                background: 'rgba(131, 110, 249, 0.15)',
-                color: '#ab9ff2',
-                border: '1px solid rgba(131, 110, 249, 0.3)',
-                letterSpacing: '0.04em',
-              }}
-            >
-              MONAD
-            </span>
+            {/* Custom TapPay Contactless Ghost Mark */}
+            <svg width="32" height="28" viewBox="0 0 32 28" fill="none">
+              <path
+                d="M4 22C4 25.3 6.7 28 10 28C13.3 28 16 25.3 16 22C16 15.4 21.4 10 28 10C29.1 10 30 9.1 30 8C30 3.6 26.4 0 22 0C12.1 0 4 8.1 4 18V22Z"
+                fill={isDarkNav ? '#AB9FF2' : '#836EF9'}
+              />
+              <circle cx="11" cy="9" r="2.2" fill={isDarkNav ? '#1F1934' : '#FFFDF8'} />
+              <circle cx="18" cy="9" r="2.2" fill={isDarkNav ? '#1F1934' : '#FFFDF8'} />
+            </svg>
+            <span>tappay</span>
           </a>
 
-          {/* Desktop Navigation Links */}
+          {/* Center Navigation Pill (Exact Phantom Container) */}
           <nav
+            className={`phantom-nav-pill ${isDarkNav ? 'is-dark' : ''} nav-center-desktop`}
             style={{
+              pointerEvents: 'auto',
               display: 'none',
-              gap: '28px',
               alignItems: 'center',
+              padding: '6px 12px',
+              gap: '4px',
             }}
-            className="nav-desktop"
           >
-            <a href="#how-it-works" className="nav-link">
-              How It Works
+            <a href="#how-it-works" className="phantom-nav-item">
+              <span>Features</span>
+              <ChevronDown size={14} opacity={0.6} />
             </a>
-            <a href="#prerequisites" className="nav-link">
-              Prerequisites
+            <a href="#demo" className="phantom-nav-item">
+              <span>NFC Demo</span>
+              <ChevronDown size={14} opacity={0.6} />
             </a>
-            <a href="#features" className="nav-link">
-              Features
+            <a href="#prerequisites" className="phantom-nav-item">
+              <span>Prerequisites</span>
             </a>
-            <a href="#demo" className="nav-link">
-              NFC Demo
-            </a>
-            <a href="#security" className="nav-link">
-              Security
+            <a href="#security" className="phantom-nav-item">
+              <span>Security</span>
             </a>
             <a
               href="https://testnet.monadscan.com/address/0x5B177FEF554dA84A86be62E45fb49BB52e6D6838"
               target="_blank"
               rel="noopener noreferrer"
-              className="nav-link"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+              className="phantom-nav-item"
             >
-              Explorer <ExternalLink size={12} opacity={0.7} />
+              <span>Contracts</span>
+              <ChevronDown size={14} opacity={0.6} />
+            </a>
+            <a href="#hackathon" className="phantom-nav-item">
+              <span>Support</span>
             </a>
           </nav>
 
           {/* Right Action Buttons */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div
+            style={{
+              pointerEvents: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+            }}
+          >
+            {/* Search Icon Circle */}
             <button
               onClick={onOpenDownload}
-              className="btn-phantom-primary"
+              className="phantom-icon-btn"
+              title="Search"
               style={{
-                padding: '9px 20px',
-                fontSize: '14px',
+                background: isDarkNav ? 'rgba(255, 255, 255, 0.12)' : '#FDFCFE',
+                color: isDarkNav ? '#FFFDF8' : '#3C315B',
               }}
             >
-              <Download size={16} strokeWidth={2.4} />
-              <span>Download APK</span>
+              <Search size={18} />
             </button>
 
-            {/* Mobile Hamburger Button */}
+            {/* Download Pill Button */}
+            <button
+              onClick={onOpenDownload}
+              className="phantom-btn-pill"
+              style={{
+                background: isDarkNav ? '#836EF9' : '#E2DDFE',
+                color: isDarkNav ? '#FFFFFF' : '#3C315B',
+              }}
+            >
+              <span>Download</span>
+            </button>
+
+            {/* Mobile Toggle */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="nav-mobile-toggle"
-              aria-label="Toggle navigation"
+              className="phantom-icon-btn nav-mobile-toggle"
               style={{
                 display: 'none',
-                width: '38px',
-                height: '38px',
-                borderRadius: '50%',
-                background: 'rgba(255, 255, 255, 0.08)',
-                color: '#fff',
-                alignItems: 'center',
-                justifyContent: 'center',
+                background: isDarkNav ? 'rgba(255, 255, 255, 0.12)' : '#FDFCFE',
+                color: isDarkNav ? '#FFFDF8' : '#3C315B',
               }}
             >
               {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
@@ -165,91 +164,89 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDownload }) => {
         </div>
       </header>
 
-      {/* Mobile Slide-down Menu */}
+      {/* Mobile Menu */}
       {mobileMenuOpen && (
         <div
           style={{
             position: 'fixed',
-            top: '84px',
+            top: '80px',
             left: '16px',
             right: '16px',
-            background: 'rgba(18, 19, 28, 0.95)',
-            backdropFilter: 'blur(30px)',
-            border: '1px solid rgba(255, 255, 255, 0.12)',
+            background: '#FDFCFE',
             borderRadius: '24px',
             padding: '24px',
+            boxShadow: '0 20px 50px rgba(60, 49, 91, 0.2)',
             zIndex: 99,
             display: 'flex',
             flexDirection: 'column',
-            gap: '18px',
-            boxShadow: '0 25px 50px rgba(0,0,0,0.8)',
+            gap: '16px',
           }}
         >
           <a
             href="#how-it-works"
             onClick={() => setMobileMenuOpen(false)}
-            style={{ fontSize: '16px', fontWeight: 600, color: '#e2e4ed' }}
+            style={{ fontSize: '16px', fontWeight: 600, color: '#3C315B' }}
           >
             How It Works
           </a>
           <a
-            href="#prerequisites"
-            onClick={() => setMobileMenuOpen(false)}
-            style={{ fontSize: '16px', fontWeight: 600, color: '#e2e4ed' }}
-          >
-            Prerequisites (Android & NFC)
-          </a>
-          <a
-            href="#features"
-            onClick={() => setMobileMenuOpen(false)}
-            style={{ fontSize: '16px', fontWeight: 600, color: '#e2e4ed' }}
-          >
-            Features
-          </a>
-          <a
             href="#demo"
             onClick={() => setMobileMenuOpen(false)}
-            style={{ fontSize: '16px', fontWeight: 600, color: '#e2e4ed' }}
+            style={{ fontSize: '16px', fontWeight: 600, color: '#3C315B' }}
           >
             NFC Simulator
           </a>
           <a
+            href="#prerequisites"
+            onClick={() => setMobileMenuOpen(false)}
+            style={{ fontSize: '16px', fontWeight: 600, color: '#3C315B' }}
+          >
+            Prerequisites (Android &amp; NFC)
+          </a>
+          <a
             href="#security"
             onClick={() => setMobileMenuOpen(false)}
-            style={{ fontSize: '16px', fontWeight: 600, color: '#e2e4ed' }}
+            style={{ fontSize: '16px', fontWeight: 600, color: '#3C315B' }}
           >
-            Contracts & Keystore
+            Security &amp; Keystore
           </a>
           <button
             onClick={() => {
               setMobileMenuOpen(false);
               onOpenDownload();
             }}
-            className="btn-phantom-purple"
-            style={{ width: '100%', marginTop: '8px' }}
+            className="phantom-btn-pill"
+            style={{ width: '100%', padding: '14px', marginTop: '10px' }}
           >
-            <Smartphone size={18} />
-            <span>Download for Android</span>
+            Download TapPay APK
           </button>
         </div>
       )}
 
       <style>{`
-        .nav-link {
+        .phantom-nav-item {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          padding: 8px 16px;
+          border-radius: 9999px;
           font-size: 14px;
           font-weight: 500;
-          color: #9ea0b2;
-          transition: color 0.2s ease;
+          color: inherit;
+          transition: background 0.15s ease;
         }
-        .nav-link:hover {
-          color: #ffffff;
+        .phantom-nav-item:hover {
+          background: rgba(60, 49, 91, 0.05);
         }
-        @media (min-width: 860px) {
-          .nav-desktop {
+        .phantom-nav-pill.is-dark .phantom-nav-item:hover {
+          background: rgba(255, 255, 255, 0.1);
+        }
+        @media (min-width: 900px) {
+          .nav-center-desktop {
             display: flex !important;
           }
         }
-        @media (max-width: 859px) {
+        @media (max-width: 899px) {
           .nav-mobile-toggle {
             display: flex !important;
           }

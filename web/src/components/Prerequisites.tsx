@@ -1,304 +1,298 @@
 import React, { useState } from 'react';
-import { Smartphone, Radio, AlertTriangle, ShieldCheck, Check, Info, Cpu, Layers } from 'lucide-react';
+import { ArrowUpRight, Smartphone, Radio, Layers, Check, AlertCircle } from 'lucide-react';
 
 export const Prerequisites: React.FC = () => {
-  const [deviceCheck, setDeviceCheck] = useState({
-    os: 'android',
-    hasNfc: true,
-    twoPhones: true,
-  });
-
-  const isReady = deviceCheck.os === 'android' && deviceCheck.hasNfc;
+  const [deviceTest, setDeviceTest] = useState<'android' | 'ios'>('android');
 
   return (
     <section
       id="prerequisites"
       style={{
-        padding: '90px 0',
+        padding: '100px 0 80px',
         position: 'relative',
-        zIndex: 1,
       }}
     >
-      <div className="container">
-        {/* Section Header */}
-        <div style={{ textAlign: 'center', maxWidth: '680px', margin: '0 auto 60px' }}>
-          <div
-            className="badge-pill"
-            style={{
-              marginBottom: '16px',
-              background: 'rgba(239, 68, 68, 0.1)',
-              borderColor: 'rgba(239, 68, 68, 0.25)',
-              color: '#f87171',
-            }}
-          >
-            <AlertTriangle size={14} />
-            <span>Essential Requirements</span>
-          </div>
-          <h2
-            style={{
-              fontSize: 'clamp(32px, 4vw, 48px)',
-              fontWeight: 800,
-              letterSpacing: '-0.03em',
-              marginBottom: '16px',
-            }}
-          >
-            What you need to run <span className="gradient-text-purple">TapPay</span>
+      <div className="phantom-container">
+        {/* Section Title */}
+        <div style={{ textAlign: 'center', marginBottom: '60px' }}>
+          <h2 className="phantom-section-title">
+            Spend, Send, &amp; <span style={{ display: 'inline-flex', verticalAlign: 'middle', padding: '0 8px' }}>
+              <Smartphone size={52} color="#3C315B" />
+            </span> Tap
           </h2>
-          <p style={{ color: '#9ea0b2', fontSize: '17px', lineHeight: 1.6 }}>
-            TapPay harnesses low-level native Android NFC Host Card Emulation to turn any phone into a smart card reader & payment terminal.
-          </p>
+
+          <a href="#how-it-works" className="phantom-see-more">
+            <span>Requirements</span>
+            <ArrowUpRight size={16} />
+          </a>
         </div>
 
-        {/* 4 Core Requirement Cards */}
+        {/* 3 Horizontal Cards */}
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
             gap: '24px',
             marginBottom: '40px',
           }}
         >
-          {/* Requirement 1: Android Only */}
-          <div
-            className="glass-panel"
-            style={{
-              padding: '30px 24px',
-              position: 'relative',
-              overflow: 'hidden',
-            }}
-          >
+          {/* Card 1: Android Only (Sky Blue) */}
+          <div className="phantom-card-wrapper">
+            <div className="phantom-card-shadow-layer" style={{ background: '#1D4ED8' }} />
             <div
+              className="phantom-card-main"
               style={{
-                width: '46px',
-                height: '46px',
-                borderRadius: '14px',
-                background: 'rgba(34, 197, 94, 0.15)',
-                color: '#22c55e',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: '20px',
+                background: '#E2EFFE',
+                color: '#3C315B',
               }}
             >
-              <Smartphone size={24} />
+              <div>
+                <div
+                  style={{
+                    fontSize: '12px',
+                    fontWeight: 800,
+                    letterSpacing: '0.06em',
+                    color: '#2563EB',
+                    marginBottom: '12px',
+                  }}
+                >
+                  SYSTEM OS
+                </div>
+                <h3
+                  style={{
+                    fontSize: '28px',
+                    fontWeight: 700,
+                    letterSpacing: '-0.02em',
+                    lineHeight: 1.25,
+                    marginBottom: '14px',
+                  }}
+                >
+                  Android 10+ (API 34) Only.
+                </h3>
+                <p style={{ color: '#6C628A', fontSize: '15px', lineHeight: 1.6, marginBottom: '24px' }}>
+                  TapPay requires Android because Apple iOS restricts Host Card Emulation to Apple Pay, preventing phone-to-phone wallet reads.
+                </p>
+              </div>
+
+              <div
+                style={{
+                  background: '#FDFCFE',
+                  borderRadius: '20px',
+                  padding: '18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                }}
+              >
+                <div
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '50%',
+                    background: 'rgba(37, 99, 235, 0.1)',
+                    color: '#2563EB',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Check size={18} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 700 }}>HostApduService Native</div>
+                  <div style={{ fontSize: '11px', color: '#9890B4' }}>Full peer-to-peer NFC stack</div>
+                </div>
+              </div>
             </div>
-            <div
-              style={{
-                display: 'inline-block',
-                fontSize: '11px',
-                fontWeight: 700,
-                color: '#22c55e',
-                background: 'rgba(34, 197, 94, 0.12)',
-                padding: '3px 8px',
-                borderRadius: '6px',
-                marginBottom: '10px',
-              }}
-            >
-              OS REQUIREMENT
-            </div>
-            <h3 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '10px' }}>Android 10+ (API 34)</h3>
-            <p style={{ color: '#9ea0b2', fontSize: '14px', lineHeight: 1.6 }}>
-              TapPay is exclusively built for <strong>Android</strong>. Apple iOS restricts Host Card Emulation to Apple Pay, preventing peer-to-peer NFC wallet broadcasts.
-            </p>
           </div>
 
-          {/* Requirement 2: NFC Chip */}
-          <div
-            className="glass-panel"
-            style={{
-              padding: '30px 24px',
-              position: 'relative',
-              overflow: 'hidden',
-            }}
-          >
+          {/* Card 2: NFC Chip (Lavender) */}
+          <div className="phantom-card-wrapper">
+            <div className="phantom-card-shadow-layer" style={{ background: '#684FF6' }} />
             <div
+              className="phantom-card-main"
               style={{
-                width: '46px',
-                height: '46px',
-                borderRadius: '14px',
-                background: 'rgba(131, 110, 249, 0.15)',
-                color: '#ab9ff2',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: '20px',
+                background: '#EAE6FE',
+                color: '#3C315B',
               }}
             >
-              <Radio size={24} />
+              <div>
+                <div
+                  style={{
+                    fontSize: '12px',
+                    fontWeight: 800,
+                    letterSpacing: '0.06em',
+                    color: '#836EF9',
+                    marginBottom: '12px',
+                  }}
+                >
+                  HARDWARE SENSOR
+                </div>
+                <h3
+                  style={{
+                    fontSize: '28px',
+                    fontWeight: 700,
+                    letterSpacing: '-0.02em',
+                    lineHeight: 1.25,
+                    marginBottom: '14px',
+                  }}
+                >
+                  Physical NFC Chip Required.
+                </h3>
+                <p style={{ color: '#6C628A', fontSize: '15px', lineHeight: 1.6, marginBottom: '24px' }}>
+                  Your phone must have an integrated NFC chip toggled ON in Android settings to exchange APDU keys when held against another phone.
+                </p>
+              </div>
+
+              <div
+                style={{
+                  background: '#FDFCFE',
+                  borderRadius: '20px',
+                  padding: '18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                }}
+              >
+                <div
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '50%',
+                    background: 'rgba(131, 110, 249, 0.1)',
+                    color: '#836EF9',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Radio size={18} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 700 }}>ISO-DEP APDU Protocol</div>
+                  <div style={{ fontSize: '11px', color: '#9890B4' }}>Radio frequency communication</div>
+                </div>
+              </div>
             </div>
-            <div
-              style={{
-                display: 'inline-block',
-                fontSize: '11px',
-                fontWeight: 700,
-                color: '#ab9ff2',
-                background: 'rgba(131, 110, 249, 0.12)',
-                padding: '3px 8px',
-                borderRadius: '6px',
-                marginBottom: '10px',
-              }}
-            >
-              HARDWARE CHIP
-            </div>
-            <h3 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '10px' }}>NFC &amp; HCE Enabled</h3>
-            <p style={{ color: '#9ea0b2', fontSize: '14px', lineHeight: 1.6 }}>
-              Your device must have a physical <strong>NFC sensor</strong> enabled in system settings to transmit APDU commands between devices on contact.
-            </p>
           </div>
 
-          {/* Requirement 3: Two Devices */}
-          <div
-            className="glass-panel"
-            style={{
-              padding: '30px 24px',
-              position: 'relative',
-              overflow: 'hidden',
-            }}
-          >
+          {/* Card 3: Two Devices (Mint Green) */}
+          <div className="phantom-card-wrapper">
+            <div className="phantom-card-shadow-layer" style={{ background: '#059669' }} />
             <div
+              className="phantom-card-main"
               style={{
-                width: '46px',
-                height: '46px',
-                borderRadius: '14px',
-                background: 'rgba(56, 189, 248, 0.15)',
-                color: '#38bdf8',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: '20px',
+                background: '#E1F8F0',
+                color: '#3C315B',
               }}
             >
-              <Layers size={24} />
-            </div>
-            <div
-              style={{
-                display: 'inline-block',
-                fontSize: '11px',
-                fontWeight: 700,
-                color: '#38bdf8',
-                background: 'rgba(56, 189, 248, 0.12)',
-                padding: '3px 8px',
-                borderRadius: '6px',
-                marginBottom: '10px',
-              }}
-            >
-              TESTING SETUP
-            </div>
-            <h3 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '10px' }}>Two Physical Phones</h3>
-            <p style={{ color: '#9ea0b2', fontSize: '14px', lineHeight: 1.6 }}>
-              To test the full <strong>Tap-to-Pay</strong> loop, you need two physical Android devices: one as the sender and one as the receiver. Emulators lack NFC radios.
-            </p>
-          </div>
+              <div>
+                <div
+                  style={{
+                    fontSize: '12px',
+                    fontWeight: 800,
+                    letterSpacing: '0.06em',
+                    color: '#059669',
+                    marginBottom: '12px',
+                  }}
+                >
+                  TESTING SETUP
+                </div>
+                <h3
+                  style={{
+                    fontSize: '28px',
+                    fontWeight: 700,
+                    letterSpacing: '-0.02em',
+                    lineHeight: 1.25,
+                    marginBottom: '14px',
+                  }}
+                >
+                  Two Physical Phones Needed.
+                </h3>
+                <p style={{ color: '#6C628A', fontSize: '15px', lineHeight: 1.6, marginBottom: '24px' }}>
+                  For end-to-end tap payment testing, you need two physical Android devices (one as sender, one as receiver). Emulators cannot simulate NFC.
+                </p>
+              </div>
 
-          {/* Requirement 4: Monad Testnet */}
-          <div
-            className="glass-panel"
-            style={{
-              padding: '30px 24px',
-              position: 'relative',
-              overflow: 'hidden',
-            }}
-          >
-            <div
-              style={{
-                width: '46px',
-                height: '46px',
-                borderRadius: '14px',
-                background: 'rgba(245, 158, 11, 0.15)',
-                color: '#fbbf24',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: '20px',
-              }}
-            >
-              <Cpu size={24} />
+              <div
+                style={{
+                  background: '#FDFCFE',
+                  borderRadius: '20px',
+                  padding: '18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                }}
+              >
+                <div
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '50%',
+                    background: 'rgba(16, 185, 129, 0.1)',
+                    color: '#10B981',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Layers size={18} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 700 }}>Sender &amp; Receiver Pair</div>
+                  <div style={{ fontSize: '11px', color: '#9890B4' }}>Real physical contact testing</div>
+                </div>
+              </div>
             </div>
-            <div
-              style={{
-                display: 'inline-block',
-                fontSize: '11px',
-                fontWeight: 700,
-                color: '#fbbf24',
-                background: 'rgba(245, 158, 11, 0.12)',
-                padding: '3px 8px',
-                borderRadius: '6px',
-                marginBottom: '10px',
-              }}
-            >
-              NETWORK
-            </div>
-            <h3 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '10px' }}>Monad Testnet (10143)</h3>
-            <p style={{ color: '#9ea0b2', fontSize: '14px', lineHeight: 1.6 }}>
-              Settles on <strong>Monad Testnet</strong> (Chain ID <code>10143</code>). Claim free testnet MON tokens from the official faucet to try instant 1s settlement.
-            </p>
           </div>
         </div>
 
-        {/* Interactive Compatibility Checker Bar */}
+        {/* Device Compatibility Checker Pill */}
         <div
-          className="glass-panel"
           style={{
+            background: '#FDFCFE',
+            borderRadius: '24px',
             padding: '24px 32px',
-            background: 'linear-gradient(135deg, rgba(23, 24, 38, 0.9) 0%, rgba(18, 19, 27, 0.95) 100%)',
-            border: '1px solid rgba(131, 110, 249, 0.25)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             flexWrap: 'wrap',
             gap: '20px',
+            boxShadow: '0 8px 30px rgba(60, 49, 91, 0.06)',
           }}
         >
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-              <ShieldCheck size={20} color="#836ef9" />
-              <h4 style={{ fontSize: '17px', fontWeight: 700 }}>Quick Device Compatibility Check</h4>
-            </div>
-            <p style={{ color: '#9ea0b2', fontSize: '14px' }}>
-              Do you have an Android device with NFC enabled?
+            <h4 style={{ fontSize: '18px', fontWeight: 700, color: '#3C315B', marginBottom: '4px' }}>
+              Is your device compatible?
+            </h4>
+            <p style={{ fontSize: '14px', color: '#6C628A' }}>
+              Select your mobile operating system to verify TapPay support.
             </p>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px' }}>
-              <input
-                type="radio"
-                name="os"
-                checked={deviceCheck.os === 'android'}
-                onChange={() => setDeviceCheck({ ...deviceCheck, os: 'android' })}
-                style={{ accentColor: '#836ef9' }}
-              />
-              <span>Android (Supported)</span>
-            </label>
-
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px' }}>
-              <input
-                type="radio"
-                name="os"
-                checked={deviceCheck.os === 'ios'}
-                onChange={() => setDeviceCheck({ ...deviceCheck, os: 'ios' })}
-                style={{ accentColor: '#836ef9' }}
-              />
-              <span>iOS (Unsupported)</span>
-            </label>
-
-            <div
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button
+              onClick={() => setDeviceTest('android')}
+              className="phantom-btn-pill"
               style={{
-                padding: '8px 18px',
-                borderRadius: '9999px',
-                fontWeight: 700,
-                fontSize: '13px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                background: isReady ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                color: isReady ? '#22c55e' : '#f87171',
-                border: `1px solid ${isReady ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                background: deviceTest === 'android' ? '#3C315B' : '#E2DDFE',
+                color: deviceTest === 'android' ? '#FFFDF8' : '#3C315B',
               }}
             >
-              {isReady ? <Check size={16} /> : <AlertTriangle size={16} />}
-              <span>{isReady ? 'Your phone is TapPay Ready!' : 'Device Not Supported (Android Required)'}</span>
-            </div>
+              <Check size={16} />
+              <span>Android (Supported)</span>
+            </button>
+
+            <button
+              onClick={() => setDeviceTest('ios')}
+              className="phantom-btn-pill"
+              style={{
+                background: deviceTest === 'ios' ? '#EF4444' : '#E2DDFE',
+                color: deviceTest === 'ios' ? '#FFFFFF' : '#3C315B',
+              }}
+            >
+              <span>iOS (Unsupported)</span>
+            </button>
           </div>
         </div>
       </div>

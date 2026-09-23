@@ -1,43 +1,35 @@
 :root {
-  --bg-primary: #0a0b0e;
-  --bg-secondary: #12131b;
-  --bg-tertiary: #171824;
-  --bg-card: #13141f;
-  --bg-card-hover: #1a1c2b;
-  --bg-glass: rgba(18, 19, 27, 0.72);
-  --bg-glass-elevated: rgba(23, 24, 36, 0.85);
+  /* Exact Phantom.com Palette (Bakken & Baeck Rebrand) */
+  --canvas-bg: #E2DDFE;             /* Soft lavender page background */
+  --canvas-bg-alt: #EBE7FE;
+  --text-dark: #3C315B;              /* Rich deep slate indigo */
+  --text-dark-muted: #6C628A;
+  --text-dark-subtle: #9890B4;
 
-  --text-primary: #ffffff;
-  --text-secondary: #9ea0b2;
-  --text-muted: #67697b;
+  --hero-card-bg: #0D0D12;           /* Deep space charcoal for hero */
+  --hero-text-light: #FFFDF8;         /* Warm ivory headline */
+  --hero-text-muted: #A3A2B3;
 
-  --accent-purple: #836ef9;
-  --accent-purple-light: #ab9ff2;
-  --accent-purple-dim: rgba(131, 110, 249, 0.15);
-  --accent-monad: #836ef9;
-  --accent-monad-glow: rgba(131, 110, 249, 0.35);
+  --card-white: #FDFCFE;             /* Silk off-white */
+  --card-lavender: #EAE6FE;          /* Soft pastel lavender */
+  --card-sky: #E2EFFE;               /* Soft pastel sky */
+  --card-mint: #E1F8F0;              /* Soft pastel mint */
+  --card-cream: #FFF6E5;             /* Soft pastel warm cream */
+  --card-dark: #1F1934;              /* Deep purple for security section */
 
-  --accent-green: #22c55e;
-  --accent-green-dim: rgba(34, 197, 94, 0.15);
-  --accent-blue: #38bdf8;
-  --accent-amber: #f59e0b;
+  --pill-bg: #E2DDFE;                /* Signature Phantom lavender pill button */
+  --pill-text: #3C315B;
+  --pill-hover: #D6CEFD;
 
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-hover: rgba(255, 255, 255, 0.16);
-  --border-glow: rgba(131, 110, 249, 0.35);
+  --nav-bg-light: rgba(253, 252, 254, 0.95);
+  --nav-bg-dark: rgba(30, 24, 52, 0.92);
 
-  --radius-sm: 8px;
-  --radius-md: 14px;
-  --radius-lg: 22px;
-  --radius-xl: 32px;
-  --radius-full: 9999px;
-
-  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 
-  --shadow-subtle: 0 4px 20px rgba(0, 0, 0, 0.4);
-  --shadow-glow: 0 0 50px -10px rgba(131, 110, 249, 0.4);
-  --shadow-card: 0 20px 40px -15px rgba(0, 0, 0, 0.6);
+  --radius-pill: 9999px;
+  --radius-card: 32px;
+  --radius-card-sm: 24px;
 }
 
 *, *::before, *::after {
@@ -48,9 +40,9 @@
 
 html {
   scroll-behavior: smooth;
-  font-family: var(--font-sans);
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
+  font-family: var(--font-display);
+  background-color: var(--canvas-bg);
+  color: var(--text-dark);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -58,13 +50,10 @@ html {
 body {
   min-height: 100vh;
   overflow-x: hidden;
-  background-color: var(--bg-primary);
-  background-image: 
-    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(131, 110, 249, 0.18), transparent 70%),
-    radial-gradient(circle at 10% 30%, rgba(131, 110, 249, 0.06), transparent 40%),
-    radial-gradient(circle at 90% 70%, rgba(99, 102, 241, 0.06), transparent 40%);
-  background-attachment: fixed;
-  color: var(--text-primary);
+  background-color: var(--canvas-bg);
+  color: var(--text-dark);
+  padding: 0;
+  margin: 0;
 }
 
 a {
@@ -85,28 +74,27 @@ ul, ol {
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 10px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--bg-primary);
+  background: var(--canvas-bg);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
+  background: rgba(60, 49, 91, 0.2);
+  border-radius: 5px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(60, 49, 91, 0.35);
 }
 
-/* Container */
-.container {
-  max-width: 1240px;
+.phantom-container {
+  max-width: 1360px;
   margin: 0 auto;
   padding: 0 24px;
 }
 
 @media (max-width: 768px) {
-  .container {
+  .phantom-container {
     padding: 0 16px;
   }
 }

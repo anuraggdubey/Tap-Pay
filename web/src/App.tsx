@@ -1,44 +1,44 @@
 import React, { useState } from 'react';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
+import { FeatureSlider } from './components/FeatureSlider';
 import { Prerequisites } from './components/Prerequisites';
 import { NfcSimulator } from './components/NfcSimulator';
-import { FeatureSlider } from './components/FeatureSlider';
-import { HowItWorks } from './components/HowItWorks';
-import { KeypadSimulator } from './components/KeypadSimulator';
 import { SecurityBento } from './components/SecurityBento';
-import { HackathonStory } from './components/HackathonStory';
-import { DownloadModal } from './components/DownloadModal';
 import { Footer } from './components/Footer';
+import { DownloadModal } from './components/DownloadModal';
 
 export default function App() {
-  const [downloadModalOpen, setDownloadModalOpen] = useState(false);
+  const [downloadOpen, setDownloadOpen] = useState(false);
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Floating Header */}
-      <Navbar onOpenDownload={() => setDownloadModalOpen(true)} />
+      {/* Floating Pill Header */}
+      <Navbar onOpenDownload={() => setDownloadOpen(true)} />
 
-      {/* Main Content Sections */}
+      {/* Main Content Sections (Exact Phantom Structure) */}
       <main style={{ flex: 1 }}>
-        <Hero onOpenDownload={() => setDownloadModalOpen(true)} />
-        <Prerequisites />
-        <NfcSimulator />
+        {/* Hero Card */}
+        <Hero onOpenDownload={() => setDownloadOpen(true)} />
+
+        {/* Feature Cards: "Contactless tools for everyone" */}
         <FeatureSlider />
-        <HowItWorks />
-        <KeypadSimulator />
+
+        {/* Requirements: "Spend, Send, & Tap" */}
+        <Prerequisites />
+
+        {/* Live Interactive Phone Proximity Stage */}
+        <NfcSimulator />
+
+        {/* Security Dark Card: "Controlled by you, secured by Keystore" */}
         <SecurityBento />
-        <HackathonStory />
       </main>
 
-      {/* Footer */}
-      <Footer onOpenDownload={() => setDownloadModalOpen(true)} />
+      {/* Silk White Footer */}
+      <Footer onOpenDownload={() => setDownloadOpen(true)} />
 
-      {/* Download APK / QR Modal */}
-      <DownloadModal
-        isOpen={downloadModalOpen}
-        onClose={() => setDownloadModalOpen(false)}
-      />
+      {/* Phantom Download Modal */}
+      <DownloadModal isOpen={downloadOpen} onClose={() => setDownloadOpen(false)} />
     </div>
   );
 }

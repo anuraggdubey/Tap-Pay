@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { X, Download, Smartphone, Check, ExternalLink, QrCode, AlertCircle } from 'lucide-react';
+import { X, Smartphone, Download, QrCode } from 'lucide-react';
 
 interface DownloadModalProps {
   isOpen: boolean;
@@ -26,7 +26,7 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
   if (!isOpen) return null;
 
   const apkUrl = 'https://drive.google.com/file/d/1w3K3PTeqvt250qMJne4azXeU4D35dC8P/view?usp=drivesdk';
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(apkUrl)}&color=000000&bgcolor=ffffff&qzone=1`;
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(apkUrl)}&color=3C315B&bgcolor=ffffff&qzone=1`;
 
   return (
     <div
@@ -38,23 +38,22 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
         alignItems: 'center',
         justifyContent: 'center',
         padding: '20px',
-        backgroundColor: 'rgba(0, 0, 0, 0.75)',
+        backgroundColor: 'rgba(60, 49, 91, 0.45)',
         backdropFilter: 'blur(16px)',
         WebkitBackdropFilter: 'blur(16px)',
       }}
       onClick={onClose}
     >
       <div
-        className="glass-panel"
         style={{
           width: '100%',
-          maxWidth: '540px',
-          background: 'rgba(18, 19, 29, 0.98)',
-          border: '1px solid rgba(131, 110, 249, 0.35)',
+          maxWidth: '480px',
+          background: '#FDFCFE',
           borderRadius: '32px',
-          padding: '36px 32px',
-          boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.9), 0 0 50px rgba(131, 110, 249, 0.25)',
+          padding: '40px 32px',
+          boxShadow: '0 25px 60px rgba(60, 49, 91, 0.25)',
           position: 'relative',
+          color: '#3C315B',
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -68,12 +67,11 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
             width: '36px',
             height: '36px',
             borderRadius: '50%',
-            background: 'rgba(255, 255, 255, 0.08)',
-            color: '#fff',
+            background: '#F0EEFE',
+            color: '#3C315B',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            transition: 'background 0.2s ease',
           }}
         >
           <X size={18} />
@@ -83,96 +81,80 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
         <div style={{ textAlign: 'center', marginBottom: '28px' }}>
           <div
             style={{
-              width: '54px',
-              height: '54px',
-              borderRadius: '16px',
-              background: 'linear-gradient(135deg, #836ef9, #5037d8)',
+              width: '56px',
+              height: '56px',
+              borderRadius: '50%',
+              background: '#E2DDFE',
+              color: '#3C315B',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 16px',
-              boxShadow: '0 8px 24px rgba(131, 110, 249, 0.4)',
             }}
           >
-            <Smartphone size={28} color="#fff" />
+            <Smartphone size={28} />
           </div>
-          <h3 style={{ fontSize: '24px', fontWeight: 800, marginBottom: '6px' }}>Download TapPay APK</h3>
-          <p style={{ color: '#9ea0b2', fontSize: '14px' }}>
-            Version 1.0 · Android 10+ (API 34) · Contactless NFC Ready
+          <h3 style={{ fontSize: '26px', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: '6px' }}>
+            Download TapPay
+          </h3>
+          <p style={{ color: '#6C628A', fontSize: '15px' }}>
+            Scan with your Android camera to download the APK directly.
           </p>
         </div>
 
-        {/* QR Code Card (Scan with Phone Camera) */}
+        {/* QR Code */}
         <div
           style={{
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            background: '#ffffff',
-            borderRadius: '20px',
+            background: '#FFFFFF',
+            borderRadius: '24px',
             padding: '20px',
             marginBottom: '24px',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
+            boxShadow: '0 6px 20px rgba(60, 49, 91, 0.06)',
+            border: '1px solid rgba(60, 49, 91, 0.08)',
           }}
         >
           <img
             src={qrCodeUrl}
             alt="Scan QR to download TapPay APK"
-            style={{ width: '180px', height: '180px', display: 'block', borderRadius: '8px' }}
+            style={{ width: '200px', height: '200px', display: 'block', borderRadius: '12px' }}
           />
           <div
             style={{
-              color: '#0a0b0e',
               fontSize: '13px',
-              fontWeight: 700,
+              fontWeight: 600,
+              color: '#3C315B',
               marginTop: '12px',
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
             }}
           >
-            <QrCode size={16} />
-            <span>Scan with your Android camera</span>
+            <QrCode size={16} color="#836EF9" />
+            <span>Android 10+ (API 34) · NFC Required</span>
           </div>
         </div>
 
-        {/* Direct Download Button */}
+        {/* Direct APK Link Button */}
         <a
           href={apkUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="btn-phantom-purple"
+          className="phantom-btn-pill"
           style={{
             width: '100%',
-            padding: '15px',
-            fontSize: '16px',
-            marginBottom: '16px',
-            borderRadius: '16px',
+            background: '#3C315B',
+            color: '#FFFDF8',
+            padding: '16px',
+            fontSize: '15px',
+            borderRadius: '9999px',
           }}
         >
           <Download size={18} />
           <span>Direct Download Tap-pay.apk</span>
         </a>
-
-        {/* Installation Guidelines */}
-        <div
-          style={{
-            background: 'rgba(255, 255, 255, 0.04)',
-            borderRadius: '16px',
-            padding: '16px',
-            border: '1px solid rgba(255, 255, 255, 0.06)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: '#ab9ff2', fontSize: '13px', fontWeight: 700 }}>
-            <AlertCircle size={16} />
-            <span>Android Installation Steps</span>
-          </div>
-          <ol style={{ fontSize: '12px', color: '#9ea0b2', lineHeight: 1.6, paddingLeft: '18px' }}>
-            <li>Tap downloaded <strong>Tap-pay.apk</strong> and enable "Allow from this source".</li>
-            <li>Enable <strong>NFC</strong> in your Android Quick Settings toggles.</li>
-            <li>For end-to-end tap testing, install on two phones (one sender, one receiver).</li>
-          </ol>
-        </div>
       </div>
     </div>
   );

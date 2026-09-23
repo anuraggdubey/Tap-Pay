@@ -47,9 +47,10 @@ export const Footer: React.FC<FooterProps> = ({ onOpenDownload }) => {
           className="footer-bento-grid"
         >
           {/* LEFT COLUMN — Two stacked cards */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }} data-parallax="0.05">
             {/* Card: Deep Navy — NFC Touch */}
             <div
+              className="scroll-reveal-left scroll-delay-1"
               style={{
                 background: 'linear-gradient(145deg, #1E1B4B 0%, #312E81 100%)',
                 borderRadius: '28px',
@@ -78,6 +79,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenDownload }) => {
 
             {/* Card: Soft Pink — Send Globally */}
             <div
+              className="scroll-reveal-left scroll-delay-2"
               style={{
                 background: '#F5D0FE',
                 borderRadius: '28px',
@@ -100,6 +102,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenDownload }) => {
 
           {/* CENTER — Phone showing home screen, 70% visible from top */}
           <div
+            className="scroll-reveal-scale"
             style={{
               position: 'relative',
               display: 'flex',
@@ -147,8 +150,9 @@ export const Footer: React.FC<FooterProps> = ({ onOpenDownload }) => {
               </button>
             </div>
 
-            {/* Phone — sits at bottom, overflows down (70% visible) */}
+            {/* Phone — sits at bottom, overflows down (70% visible) with dynamic scroll lift */}
             <div
+              data-parallax="0.16"
               style={{
                 width: '260px',
                 flexShrink: 0,
@@ -182,9 +186,10 @@ export const Footer: React.FC<FooterProps> = ({ onOpenDownload }) => {
           </div>
 
           {/* RIGHT COLUMN — Two stacked cards */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }} data-parallax="0.05">
             {/* Card: Dark Teal — Security */}
             <div
+              className="scroll-reveal-right scroll-delay-1"
               style={{
                 background: 'linear-gradient(145deg, #064E3B 0%, #065F46 100%)',
                 borderRadius: '28px',
@@ -211,6 +216,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenDownload }) => {
 
             {/* Card: Peach/Salmon — Built on Monad */}
             <div
+              className="scroll-reveal-right scroll-delay-2"
               style={{
                 background: '#FECACA',
                 borderRadius: '28px',
@@ -408,7 +414,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenDownload }) => {
           color: var(--text-dark) !important;
         }
         .social-btn:hover {
-          transform: translateY(-2px);
+          opacity: 0.9;
         }
         @media (max-width: 960px) {
           .footer-bento-grid {

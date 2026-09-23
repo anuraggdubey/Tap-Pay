@@ -23,7 +23,7 @@ export const FeatureSlider: React.FC = () => {
     >
       <div className="phantom-container">
         {/* Phantom Big Section Title */}
-        <div style={{ textAlign: 'center', marginBottom: '60px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '60px' }} className="scroll-reveal">
           <h2 className="phantom-section-title">
             Contactless tools
             <br />
@@ -49,7 +49,7 @@ export const FeatureSlider: React.FC = () => {
           className="phantom-cards-grid"
         >
           {/* Card 1: Tap to Pay (Lavender Card with Stacked Shadow Layer) */}
-          <div className="phantom-card-wrapper">
+          <div className="phantom-card-wrapper scroll-reveal scroll-delay-1" data-parallax="0.04">
             <div className="phantom-card-shadow-layer" />
             <div
               className="phantom-card-main"
@@ -171,7 +171,7 @@ export const FeatureSlider: React.FC = () => {
           </div>
 
           {/* Card 2: Cash App Keypad (Soft Warm Cream) */}
-          <div className="phantom-card-wrapper">
+          <div className="phantom-card-wrapper scroll-reveal scroll-delay-2" data-parallax="-0.03">
             <div className="phantom-card-shadow-layer" style={{ background: '#3C315B' }} />
             <div
               className="phantom-card-main"
@@ -255,7 +255,7 @@ export const FeatureSlider: React.FC = () => {
           </div>
 
           {/* Card 3: Monad Settlement (Soft Sky Blue) */}
-          <div className="phantom-card-wrapper">
+          <div className="phantom-card-wrapper scroll-reveal scroll-delay-3" data-parallax="0.04">
             <div className="phantom-card-shadow-layer" style={{ background: '#0D0D12' }} />
             <div
               className="phantom-card-main"

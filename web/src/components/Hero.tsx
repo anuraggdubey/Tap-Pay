@@ -185,6 +185,7 @@ export const Hero: React.FC<HeroProps> = ({ onOpenDownload }) => {
             {/* Phone Frame */}
             <div
               className="realistic-phone-chassis"
+              data-parallax="0.09"
               style={{
                 width: '300px',
                 height: '620px',

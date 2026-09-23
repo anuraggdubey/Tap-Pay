@@ -41,7 +41,7 @@ export const NfcSimulator: React.FC = () => {
     >
       <div className="phantom-container">
         {/* Title */}
-        <div style={{ textAlign: 'center', marginBottom: '60px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '60px' }} className="scroll-reveal">
           <h2 className="phantom-section-title">
             Interactive phone-to-phone
             <br />
@@ -67,6 +67,7 @@ export const NfcSimulator: React.FC = () => {
 
         {/* Large Stage Card (Silk White) */}
         <div
+          className="scroll-reveal-scale"
           style={{
             background: '#FDFCFE',
             borderRadius: '32px',

@@ -14,7 +14,7 @@ export const Prerequisites: React.FC = () => {
     >
       <div className="phantom-container">
         {/* Section Title */}
-        <div style={{ textAlign: 'center', marginBottom: '60px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '60px' }} className="scroll-reveal">
           <h2 className="phantom-section-title">
             Spend, Send, &amp; <span style={{ display: 'inline-flex', verticalAlign: 'middle', padding: '0 8px' }}>
               <Smartphone size={52} color="#3C315B" />
@@ -37,7 +37,7 @@ export const Prerequisites: React.FC = () => {
           }}
         >
           {/* Card 1: Android Only (Sky Blue) */}
-          <div className="phantom-card-wrapper">
+          <div className="phantom-card-wrapper scroll-reveal scroll-delay-1" data-parallax="0.04">
             <div className="phantom-card-shadow-layer" style={{ background: '#1D4ED8' }} />
             <div
               className="phantom-card-main"
@@ -94,7 +94,7 @@ export const Prerequisites: React.FC = () => {
           </div>
 
           {/* Card 2: NFC Chip (Lavender) */}
-          <div className="phantom-card-wrapper">
+          <div className="phantom-card-wrapper scroll-reveal scroll-delay-2" data-parallax="-0.03">
             <div className="phantom-card-shadow-layer" style={{ background: '#684FF6' }} />
             <div
               className="phantom-card-main"
@@ -151,7 +151,7 @@ export const Prerequisites: React.FC = () => {
           </div>
 
           {/* Card 3: Two Devices (Mint Green) */}
-          <div className="phantom-card-wrapper">
+          <div className="phantom-card-wrapper scroll-reveal scroll-delay-3" data-parallax="0.04">
             <div className="phantom-card-shadow-layer" style={{ background: '#059669' }} />
             <div
               className="phantom-card-main"
@@ -210,6 +210,7 @@ export const Prerequisites: React.FC = () => {
 
         {/* Device Compatibility Checker Pill */}
         <div
+          className="scroll-reveal"
           style={{
             background: '#FDFCFE',
             borderRadius: '24px',

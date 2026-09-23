@@ -33,7 +33,8 @@ export const StatsCarousel: React.FC = () => {
               overflow: 'hidden',
               boxShadow: '0 12px 36px rgba(5, 38, 29, 0.25)',
             }}
-            className="card-geo-pattern"
+            className="card-geo-pattern scroll-reveal scroll-delay-1"
+            data-parallax="0.04"
           >
             <div>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '24px', fontWeight: 800, marginBottom: '6px', color: '#6EE7B7' }}>
@@ -65,7 +66,8 @@ export const StatsCarousel: React.FC = () => {
               overflow: 'hidden',
               boxShadow: '0 12px 36px rgba(58, 98, 214, 0.25)',
             }}
-            className="card-geo-pattern"
+            className="card-geo-pattern scroll-reveal scroll-delay-2"
+            data-parallax="-0.03"
           >
             <div>
               <div style={{ fontSize: '28px', fontWeight: 900, marginBottom: '8px' }}>
@@ -98,7 +100,8 @@ export const StatsCarousel: React.FC = () => {
               overflow: 'hidden',
               boxShadow: '0 12px 36px rgba(118, 199, 14, 0.25)',
             }}
-            className="card-geo-pattern"
+            className="card-geo-pattern scroll-reveal scroll-delay-3"
+            data-parallax="0.04"
           >
             <div>
               <h3 style={{ fontSize: '22px', fontWeight: 800, lineHeight: 1.3, color: '#132800', marginBottom: '16px' }}>
@@ -162,7 +165,8 @@ export const StatsCarousel: React.FC = () => {
               overflow: 'hidden',
               boxShadow: '0 12px 36px rgba(158, 25, 212, 0.25)',
             }}
-            className="card-geo-pattern"
+            className="card-geo-pattern scroll-reveal scroll-delay-4"
+            data-parallax="-0.03"
           >
             <div>
               <h3 style={{ fontSize: '22px', fontWeight: 800, lineHeight: 1.3, marginBottom: '8px' }}>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useScrollMotion } from './hooks/useScrollMotion';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
 import { StatsCarousel } from './components/StatsCarousel';
@@ -12,9 +13,13 @@ import { DownloadModal } from './components/DownloadModal';
 
 export default function App() {
   const [downloadOpen, setDownloadOpen] = useState(false);
+  const { scrollProgress } = useScrollMotion();
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {/* Top Ambient Scroll Progress Glow Beam */}
+      <div className="scroll-progress-beam" style={{ width: `${scrollProgress}%` }} />
+
       {/* Floating Pill Header */}
       <Navbar onOpenDownload={() => setDownloadOpen(true)} />
 

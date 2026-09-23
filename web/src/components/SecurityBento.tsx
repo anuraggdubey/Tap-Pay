@@ -23,7 +23,7 @@ export const SecurityBento: React.FC = () => {
     >
       <div className="phantom-container">
         {/* Phantom Section Title */}
-        <div style={{ textAlign: 'center', marginBottom: '60px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '60px' }} className="scroll-reveal">
           <h2 className="phantom-section-title is-dark">
             Controlled by you,
             <br />
@@ -53,7 +53,7 @@ export const SecurityBento: React.FC = () => {
           }}
         >
           {/* Card 1: Self Custodial Guarantee */}
-          <div className="phantom-card-wrapper">
+          <div className="phantom-card-wrapper scroll-reveal scroll-delay-1" data-parallax="0.04">
             <div className="phantom-card-shadow-layer" style={{ background: '#0D0D12' }} />
             <div
               className="phantom-card-main"
@@ -120,7 +120,7 @@ export const SecurityBento: React.FC = () => {
           </div>
 
           {/* Card 2: Hardware Secure Element */}
-          <div className="phantom-card-wrapper">
+          <div className="phantom-card-wrapper scroll-reveal scroll-delay-2" data-parallax="-0.03">
             <div className="phantom-card-shadow-layer" style={{ background: '#0D0D12' }} />
             <div
               className="phantom-card-main"
@@ -187,7 +187,7 @@ export const SecurityBento: React.FC = () => {
           </div>
 
           {/* Card 3: Deployed Contracts */}
-          <div className="phantom-card-wrapper">
+          <div className="phantom-card-wrapper scroll-reveal scroll-delay-3" data-parallax="0.04">
             <div className="phantom-card-shadow-layer" style={{ background: '#0D0D12' }} />
             <div
               className="phantom-card-main"

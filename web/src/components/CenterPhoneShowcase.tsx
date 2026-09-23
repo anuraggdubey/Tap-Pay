@@ -32,9 +32,10 @@ export const CenterPhoneShowcase: React.FC = () => {
           className="center-phone-grid"
         >
           {/* Left Column (2 Cards) */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }} data-parallax="0.05">
             {/* Top Left Card: Deep Navy/Indigo */}
             <div
+              className="scroll-reveal-left scroll-delay-1"
               style={{
                 background: 'linear-gradient(145deg, #130e2e 0%, #090717 100%)',
                 borderRadius: '32px',
@@ -61,6 +62,7 @@ export const CenterPhoneShowcase: React.FC = () => {
 
             {/* Bottom Left Card: Soft Lavender */}
             <div
+              className="scroll-reveal-left scroll-delay-2"
               style={{
                 background: '#EAE6FE',
                 borderRadius: '32px',
@@ -89,7 +91,8 @@ export const CenterPhoneShowcase: React.FC = () => {
           {/* Center Column: The Realistic Phone Mockup with Interactive Screen */}
           <div style={{ display: 'flex', justifyContent: 'center' }}>
             <div
-              className="realistic-phone-chassis"
+              className="realistic-phone-chassis scroll-reveal-scale"
+              data-parallax="0.14"
               style={{
                 width: '320px',
                 height: '640px',
@@ -221,9 +224,10 @@ export const CenterPhoneShowcase: React.FC = () => {
           </div>
 
           {/* Right Column (2 Cards) */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }} data-parallax="0.05">
             {/* Top Right Card: Deep Emerald Green */}
             <div
+              className="scroll-reveal-right scroll-delay-1"
               style={{
                 background: 'linear-gradient(145deg, #05261d 0%, #031711 100%)',
                 borderRadius: '32px',
@@ -250,6 +254,7 @@ export const CenterPhoneShowcase: React.FC = () => {
 
             {/* Bottom Right Card: Warm Peach/Coral */}
             <div
+              className="scroll-reveal-right scroll-delay-2"
               style={{
                 background: '#FFD7C2',
                 borderRadius: '32px',

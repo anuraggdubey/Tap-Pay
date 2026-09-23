@@ -11,7 +11,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDownload }) => {
 
   useEffect(() => {
     const handleScroll = () => {
-      // Invert nav on the security dark section
+      // Only invert nav on the dark security section
       const sec = document.getElementById('security');
       if (sec) {
         const rect = sec.getBoundingClientRect();

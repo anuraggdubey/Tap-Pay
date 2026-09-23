@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
+import { StatsCarousel } from './components/StatsCarousel';
+import { CenterPhoneShowcase } from './components/CenterPhoneShowcase';
 import { FeatureSlider } from './components/FeatureSlider';
 import { Prerequisites } from './components/Prerequisites';
 import { NfcSimulator } from './components/NfcSimulator';
@@ -16,10 +18,16 @@ export default function App() {
       {/* Floating Pill Header */}
       <Navbar onOpenDownload={() => setDownloadOpen(true)} />
 
-      {/* Main Content Sections (Exact Phantom Structure) */}
+      {/* Main Content Sections */}
       <main style={{ flex: 1 }}>
         {/* Hero Card */}
         <Hero onOpenDownload={() => setDownloadOpen(true)} />
+
+        {/* Image 1: 4 Geometric Patterned Cards (Winner, ~1s Finality, 100% Non-Custodial, Atomic Ticker) */}
+        <StatsCarousel />
+
+        {/* Image 2: Center Realistic Phone Flanked by 4 Vibrant Cards */}
+        <CenterPhoneShowcase />
 
         {/* Feature Cards: "Contactless tools for everyone" */}
         <FeatureSlider />
@@ -34,7 +42,7 @@ export default function App() {
         <SecurityBento />
       </main>
 
-      {/* Silk White Footer */}
+      {/* Footer with Two Ultra-Realistic Phones (Home & Settings) + Directory */}
       <Footer onOpenDownload={() => setDownloadOpen(true)} />
 
       {/* Phantom Download Modal */}

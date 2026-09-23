@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowUpRight } from 'lucide-react';
+import { ArrowUpRight, Radio, Shield, Smartphone, Zap } from 'lucide-react';
 
 interface FooterProps {
   onOpenDownload: () => void;
@@ -8,6 +8,16 @@ interface FooterProps {
 export const Footer: React.FC<FooterProps> = ({ onOpenDownload }) => {
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
+
+  // Parallax tilt on hover
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width - 0.5;
+    const y = (e.clientY - rect.top) / rect.height - 0.5;
+    setMousePos({ x, y });
+  };
 
   const handleSubscribe = (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,8 +29,166 @@ export const Footer: React.FC<FooterProps> = ({ onOpenDownload }) => {
   };
 
   return (
-    <footer style={{ paddingBottom: '30px' }}>
+    <footer style={{ paddingBottom: '30px', position: 'relative' }}>
       <div className="phantom-container">
+        {/* TWO ULTRA-REALISTIC PHONES SHOWCASE (HOME & SETTINGS) */}
+        <div
+          onMouseMove={handleMouseMove}
+          onMouseLeave={() => setMousePos({ x: 0, y: 0 })}
+          style={{
+            textAlign: 'center',
+            marginBottom: '70px',
+            position: 'relative',
+          }}
+        >
+          <div style={{ marginBottom: '40px' }}>
+            <div className="phantom-tag" style={{ background: '#E2DDFE', color: '#3C315B', marginBottom: '14px' }}>
+              <Smartphone size={14} />
+              <span>Native Android Interface</span>
+            </div>
+            <h2 className="phantom-section-title" style={{ marginBottom: '12px' }}>
+              Built for speed. Styled for life.
+            </h2>
+            <p style={{ color: '#6C628A', fontSize: '18px', maxWidth: '600px', margin: '0 auto' }}>
+              Experience the actual Android app: your TapPay Virtual card on the Home screen and encrypted hardware keys in Settings.
+            </p>
+          </div>
+
+          {/* Realistic Dual Phone Stage */}
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: '40px',
+              perspective: '1200px',
+              flexWrap: 'wrap',
+              padding: '20px 0',
+            }}
+          >
+            {/* Phone 1: Home Screen (TapPay Virtual Card & NFC) */}
+            <div
+              style={{
+                transform: `rotateY(${mousePos.x * 14 - 4}deg) rotateX(${-mousePos.y * 14 + 3}deg) translateY(-8px)`,
+                transition: 'transform 0.15s ease-out',
+                position: 'relative',
+              }}
+            >
+              {/* Concentric NFC Pulse radiating from the Home phone */}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '-30px',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  zIndex: 0,
+                  pointerEvents: 'none',
+                }}
+                className="nfc-wave-container"
+              >
+                <div className="nfc-wave-ring" style={{ width: '80px', height: '80px', borderColor: 'rgba(131, 110, 249, 0.7)' }} />
+                <div className="nfc-wave-ring" style={{ width: '130px', height: '130px', borderColor: 'rgba(131, 110, 249, 0.4)' }} />
+                <div className="nfc-wave-ring" style={{ width: '190px', height: '190px', borderColor: 'rgba(131, 110, 249, 0.2)' }} />
+              </div>
+
+              {/* Realistic Chassis */}
+              <div
+                className="realistic-phone-chassis"
+                style={{
+                  position: 'relative',
+                  zIndex: 1,
+                  boxShadow: '0 35px 80px -15px rgba(45, 30, 90, 0.4), 0 0 50px rgba(131, 110, 249, 0.35)',
+                }}
+              >
+                <div className="realistic-phone-camera" />
+                <div className="realistic-phone-btn-vol" />
+                <div className="realistic-phone-btn-pwr" />
+
+                {/* Screen with actual screenshot and continuous glass reflection sweep */}
+                <div className="realistic-phone-screen">
+                  <div className="glass-sheen-sweep" />
+                  <img
+                    src="/screenshots/home.png"
+                    alt="TapPay Home Screen — Card & NFC actions"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                </div>
+              </div>
+
+              {/* Caption Tag */}
+              <div
+                style={{
+                  marginTop: '16px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: '#FDFCFE',
+                  padding: '6px 16px',
+                  borderRadius: '9999px',
+                  boxShadow: '0 4px 15px rgba(60, 49, 91, 0.08)',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  color: '#3C315B',
+                }}
+              >
+                <Radio size={14} color="#836EF9" />
+                <span>Home Screen · TapPay Card</span>
+              </div>
+            </div>
+
+            {/* Phone 2: Settings Screen (Encrypted Keystore & Monad Testnet) */}
+            <div
+              style={{
+                transform: `rotateY(${mousePos.x * 14 + 4}deg) rotateX(${-mousePos.y * 14 + 3}deg) translateY(8px)`,
+                transition: 'transform 0.15s ease-out',
+                position: 'relative',
+              }}
+            >
+              {/* Realistic Chassis */}
+              <div
+                className="realistic-phone-chassis"
+                style={{
+                  boxShadow: '0 35px 80px -15px rgba(45, 30, 90, 0.4), 0 0 50px rgba(16, 185, 129, 0.25)',
+                }}
+              >
+                <div className="realistic-phone-camera" />
+                <div className="realistic-phone-btn-vol" />
+                <div className="realistic-phone-btn-pwr" />
+
+                {/* Screen with settings screenshot and continuous glass sheen sweep */}
+                <div className="realistic-phone-screen">
+                  <div className="glass-sheen-sweep" style={{ animationDelay: '3s' }} />
+                  <img
+                    src="/screenshots/settings.png"
+                    alt="TapPay Settings Screen — Network & Keystore"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                </div>
+              </div>
+
+              {/* Caption Tag */}
+              <div
+                style={{
+                  marginTop: '16px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: '#FDFCFE',
+                  padding: '6px 16px',
+                  borderRadius: '9999px',
+                  boxShadow: '0 4px 15px rgba(60, 49, 91, 0.08)',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  color: '#3C315B',
+                }}
+              >
+                <Shield size={14} color="#10B981" />
+                <span>Settings · Hardware Keystore</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Large White Silk Footer Card (Exact Phantom Geometry) */}
         <div
           style={{

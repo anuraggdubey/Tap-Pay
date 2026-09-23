@@ -36,8 +36,9 @@ export const StatsCarousel: React.FC = () => {
             className="card-geo-pattern"
           >
             <div>
-              <div style={{ fontSize: '24px', fontWeight: 800, marginBottom: '6px', color: '#6EE7B7' }}>
-                Winner ★
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '24px', fontWeight: 800, marginBottom: '6px', color: '#6EE7B7' }}>
+                <span>Winner</span>
+                <Trophy size={20} color="#6EE7B7" />
               </div>
               <h3 style={{ fontSize: '22px', fontWeight: 700, lineHeight: 1.3, color: '#FDFCFE' }}>
                 Monad India Blitz V4 Hackathon
@@ -45,21 +46,7 @@ export const StatsCarousel: React.FC = () => {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <div
-                style={{
-                  width: '54px',
-                  height: '54px',
-                  borderRadius: '50%',
-                  background: '#E1F8F0',
-                  color: '#064E3B',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 6px 20px rgba(0, 0, 0, 0.2)',
-                }}
-              >
-                <Trophy size={26} />
-              </div>
+              <Trophy size={48} color="#6EE7B7" strokeWidth={1.8} className="phantom-floating" />
             </div>
           </div>
 
@@ -89,49 +76,10 @@ export const StatsCarousel: React.FC = () => {
               </h3>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <div
-                style={{
-                  width: '42px',
-                  height: '42px',
-                  borderRadius: '50%',
-                  background: '#1E293B',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#FFF',
-                }}
-              >
-                <Smartphone size={20} />
-              </div>
-              <div
-                style={{
-                  width: '42px',
-                  height: '42px',
-                  borderRadius: '50%',
-                  background: '#1E293B',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#FFF',
-                }}
-              >
-                <Radio size={20} />
-              </div>
-              <div
-                style={{
-                  width: '42px',
-                  height: '42px',
-                  borderRadius: '50%',
-                  background: '#1E293B',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#FFF',
-                }}
-              >
-                <Zap size={20} />
-              </div>
+            <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+              <Smartphone size={32} color="#FFFFFF" strokeWidth={1.8} />
+              <Radio size={32} color="#FFFFFF" strokeWidth={1.8} />
+              <Zap size={32} color="#FFFFFF" strokeWidth={1.8} />
             </div>
           </div>
 

@@ -238,8 +238,9 @@ export const NfcSimulator: React.FC = () => {
               </div>
 
               {step === 'settled' ? (
-                <div style={{ background: '#ECFDF5', color: '#047857', padding: '12px', borderRadius: '12px', fontSize: '13px', fontWeight: 700, textAlign: 'center' }}>
-                  ✓ Sent {amount} MON via NFC
+                <div style={{ background: '#ECFDF5', color: '#047857', padding: '12px', borderRadius: '12px', fontSize: '13px', fontWeight: 700, textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                  <Check size={16} />
+                  <span>Sent {amount} MON via NFC</span>
                 </div>
               ) : (
                 <div style={{ textAlign: 'center', fontSize: '12px', color: '#9890B4', padding: '12px' }}>
@@ -250,23 +251,17 @@ export const NfcSimulator: React.FC = () => {
 
             {/* Middle Proximity Indicator */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 8px' }}>
-              <div
+              <Radio
+                size={38}
+                color={step !== 'idle' ? '#836EF9' : '#A39CC2'}
+                strokeWidth={2}
                 style={{
-                  width: '56px',
-                  height: '56px',
-                  borderRadius: '50%',
-                  background: step !== 'idle' ? '#836EF9' : '#E2DDFE',
-                  color: step !== 'idle' ? '#FFFDF8' : '#3C315B',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
                   transition: 'all 0.3s ease',
-                  boxShadow: step !== 'idle' ? '0 0 30px rgba(131, 110, 249, 0.5)' : 'none',
+                  transform: step !== 'idle' ? 'scale(1.2)' : 'scale(1)',
+                  filter: step !== 'idle' ? 'drop-shadow(0 0 16px rgba(131, 110, 249, 0.6))' : 'none',
                 }}
-              >
-                <Radio size={24} />
-              </div>
-              <span style={{ fontSize: '11px', fontWeight: 700, color: '#3C315B', marginTop: '8px' }}>
+              />
+              <span style={{ fontSize: '11px', fontWeight: 700, color: '#3C315B', marginTop: '12px' }}>
                 {step === 'settled' ? 'CONFIRMED' : 'PROXIMITY'}
               </span>
             </div>
@@ -319,8 +314,9 @@ export const NfcSimulator: React.FC = () => {
               </div>
 
               {step === 'settled' ? (
-                <div style={{ background: '#ECFDF5', color: '#047857', padding: '12px', borderRadius: '12px', fontSize: '13px', fontWeight: 700, textAlign: 'center' }}>
-                  ✓ Received +{amount} MON
+                <div style={{ background: '#ECFDF5', color: '#047857', padding: '12px', borderRadius: '12px', fontSize: '13px', fontWeight: 700, textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                  <Check size={16} />
+                  <span>Received +{amount} MON</span>
                 </div>
               ) : (
                 <div style={{ textAlign: 'center', fontSize: '12px', color: '#9890B4', padding: '12px' }}>

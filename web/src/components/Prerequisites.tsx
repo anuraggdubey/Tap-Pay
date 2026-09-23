@@ -84,20 +84,7 @@ export const Prerequisites: React.FC = () => {
                   gap: '12px',
                 }}
               >
-                <div
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '50%',
-                    background: 'rgba(37, 99, 235, 0.1)',
-                    color: '#2563EB',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Check size={18} />
-                </div>
+                <Check size={22} color="#2563EB" strokeWidth={2.5} style={{ flexShrink: 0 }} />
                 <div>
                   <div style={{ fontSize: '13px', fontWeight: 700 }}>HostApduService Native</div>
                   <div style={{ fontSize: '11px', color: '#9890B4' }}>Full peer-to-peer NFC stack</div>
@@ -154,20 +141,7 @@ export const Prerequisites: React.FC = () => {
                   gap: '12px',
                 }}
               >
-                <div
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '50%',
-                    background: 'rgba(131, 110, 249, 0.1)',
-                    color: '#836EF9',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Radio size={18} />
-                </div>
+                <Radio size={22} color="#836EF9" strokeWidth={2.5} style={{ flexShrink: 0 }} />
                 <div>
                   <div style={{ fontSize: '13px', fontWeight: 700 }}>ISO-DEP APDU Protocol</div>
                   <div style={{ fontSize: '11px', color: '#9890B4' }}>Radio frequency communication</div>
@@ -224,20 +198,7 @@ export const Prerequisites: React.FC = () => {
                   gap: '12px',
                 }}
               >
-                <div
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '50%',
-                    background: 'rgba(16, 185, 129, 0.1)',
-                    color: '#10B981',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Layers size={18} />
-                </div>
+                <Layers size={22} color="#10B981" strokeWidth={2.5} style={{ flexShrink: 0 }} />
                 <div>
                   <div style={{ fontSize: '13px', fontWeight: 700 }}>Sender &amp; Receiver Pair</div>
                   <div style={{ fontSize: '11px', color: '#9890B4' }}>Real physical contact testing</div>

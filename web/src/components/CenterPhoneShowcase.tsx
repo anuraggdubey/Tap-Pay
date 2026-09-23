@@ -53,23 +53,9 @@ export const CenterPhoneShowcase: React.FC = () => {
                 Earn &amp; Transact with Monad TapPay
               </h3>
 
-              {/* 3D Coin Badge */}
+              {/* Free Floating Coin Icon */}
               <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <div
-                  style={{
-                    width: '64px',
-                    height: '64px',
-                    borderRadius: '20px',
-                    background: 'linear-gradient(135deg, #836EF9, #4C35DE)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 8px 24px rgba(131, 110, 249, 0.45)',
-                  }}
-                  className="phantom-floating"
-                >
-                  <Coins size={32} color="#FFF" />
-                </div>
+                <Coins size={52} color="#A78BFA" strokeWidth={1.8} className="phantom-floating" />
               </div>
             </div>
 
@@ -93,23 +79,9 @@ export const CenterPhoneShowcase: React.FC = () => {
                 Send and receive money globally, instantly
               </h3>
 
-              {/* 3D Paper Plane / Send Icon */}
+              {/* Free Floating Send Icon */}
               <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <div
-                  style={{
-                    width: '64px',
-                    height: '64px',
-                    borderRadius: '20px',
-                    background: 'linear-gradient(135deg, #5B48D9, #836EF9)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 8px 24px rgba(91, 72, 217, 0.35)',
-                  }}
-                  className="phantom-floating"
-                >
-                  <Send size={28} color="#FFF" />
-                </div>
+                <Send size={46} color="#5B48D9" strokeWidth={1.8} className="phantom-floating" />
               </div>
             </div>
           </div>
@@ -270,23 +242,9 @@ export const CenterPhoneShowcase: React.FC = () => {
                 Spend anywhere with TapPay NFC, instant tap
               </h3>
 
-              {/* 3D Contactless Card Badge */}
+              {/* Free Floating Contactless Radio Icon */}
               <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <div
-                  style={{
-                    width: '64px',
-                    height: '64px',
-                    borderRadius: '20px',
-                    background: 'linear-gradient(135deg, #10B981, #047857)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 8px 24px rgba(16, 185, 129, 0.35)',
-                  }}
-                  className="phantom-floating"
-                >
-                  <Radio size={30} color="#FFF" />
-                </div>
+                <Radio size={50} color="#34D399" strokeWidth={1.8} className="phantom-floating" />
               </div>
             </div>
 
@@ -310,23 +268,9 @@ export const CenterPhoneShowcase: React.FC = () => {
                 One handle that connects to everything: @username
               </h3>
 
-              {/* 3D Swap / Exchange Badge */}
+              {/* Free Floating Swap Icon */}
               <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <div
-                  style={{
-                    width: '64px',
-                    height: '64px',
-                    borderRadius: '20px',
-                    background: 'linear-gradient(135deg, #F97316, #EA580C)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 8px 24px rgba(249, 115, 22, 0.35)',
-                  }}
-                  className="phantom-floating"
-                >
-                  <ArrowRightLeft size={28} color="#FFF" />
-                </div>
+                <ArrowRightLeft size={48} color="#EA580C" strokeWidth={1.8} className="phantom-floating" />
               </div>
             </div>
           </div>

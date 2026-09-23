@@ -63,14 +63,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDownload }) => {
               transition: 'color 0.3s ease',
             }}
           >
-            {/* Custom TapPay Contactless Ghost Mark */}
-            <svg width="32" height="28" viewBox="0 0 32 28" fill="none">
-              <path
-                d="M4 22C4 25.3 6.7 28 10 28C13.3 28 16 25.3 16 22C16 15.4 21.4 10 28 10C29.1 10 30 9.1 30 8C30 3.6 26.4 0 22 0C12.1 0 4 8.1 4 18V22Z"
-                fill={isDarkNav ? '#AB9FF2' : '#836EF9'}
-              />
-              <circle cx="11" cy="9" r="2.2" fill={isDarkNav ? '#1F1934' : '#FFFDF8'} />
-              <circle cx="18" cy="9" r="2.2" fill={isDarkNav ? '#1F1934' : '#FFFDF8'} />
+            {/* TapPay Logo — free symbol, no container */}
+            <svg width="28" height="32" viewBox="0 0 512 512" fill="none">
+              <circle cx="200" cy="120" r="62" fill={isDarkNav ? '#FFFDF8' : '#3C315B'}/>
+              <circle cx="340" cy="215" r="44" fill={isDarkNav ? 'rgba(255,253,248,0.6)' : 'rgba(60,49,91,0.6)'}/>
+              <circle cx="200" cy="400" r="72" fill={isDarkNav ? '#FFFDF8' : '#3C315B'}/>
+              <path d="M200 182 C200 215, 240 215, 340 215" stroke={isDarkNav ? '#FFFDF8' : '#3C315B'} strokeWidth="52" strokeLinecap="round" fill="none"/>
+              <path d="M200 328 L200 182" stroke={isDarkNav ? '#FFFDF8' : '#3C315B'} strokeWidth="52" strokeLinecap="round" fill="none"/>
             </svg>
             <span>tappay</span>
           </a>
@@ -115,7 +114,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDownload }) => {
               rel="noopener noreferrer"
               className="phantom-nav-item"
             >
-              <span>Community (𝕏)</span>
+              <span>Community</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style={{ opacity: 0.8, marginLeft: '2px' }}>
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+              </svg>
             </a>
           </nav>
 

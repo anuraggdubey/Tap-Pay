@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowUpRight, Video } from 'lucide-react';
+import { ArrowUpRight, Video, Radio, Send, ShieldCheck, Zap } from 'lucide-react';
 
 interface FooterProps {
   onOpenDownload: () => void;
@@ -72,7 +72,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenDownload }) => {
                 </p>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '18px' }}>
-                <div style={{ fontSize: '36px' }}>📡</div>
+                <Radio size={46} color="#836EF9" strokeWidth={1.8} className="phantom-floating" />
               </div>
             </div>
 
@@ -93,7 +93,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenDownload }) => {
                 Send and receive crypto, instantly
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
-                <div style={{ fontSize: '36px' }}>✈️</div>
+                <Send size={42} color="#701A75" strokeWidth={1.8} className="phantom-floating" />
               </div>
             </div>
           </div>
@@ -198,14 +198,14 @@ export const Footer: React.FC<FooterProps> = ({ onOpenDownload }) => {
             >
               <div>
                 <div style={{ fontSize: '24px', fontWeight: 800, lineHeight: 1.2, marginBottom: '10px' }}>
-                  100% Non-Custodial & Keystore secured
+                  100% Non-Custodial &amp; Keystore secured
                 </div>
                 <p style={{ fontSize: '14px', opacity: 0.75, lineHeight: 1.5 }}>
                   Your keys never leave your device. Zero escrow.
                 </p>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '18px' }}>
-                <div style={{ fontSize: '36px' }}>🛡️</div>
+                <ShieldCheck size={46} color="#34D399" strokeWidth={1.8} className="phantom-floating" />
               </div>
             </div>
 
@@ -226,7 +226,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenDownload }) => {
                 Built on Monad — sub-second finality
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
-                <div style={{ fontSize: '36px' }}>⚡</div>
+                <Zap size={44} color="#DC2626" strokeWidth={1.8} className="phantom-floating" />
               </div>
             </div>
           </div>
@@ -304,12 +304,12 @@ export const Footer: React.FC<FooterProps> = ({ onOpenDownload }) => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-dark)' }}>Follow us</div>
             <div style={{ display: 'flex', gap: '10px' }}>
-              {/* 𝕏 */}
+              {/* X */}
               <a
                 href="https://x.com/tapxpay"
                 target="_blank"
                 rel="noopener noreferrer"
-                title="𝕏 @tapxpay"
+                title="X @tapxpay"
                 style={{
                   width: '40px',
                   height: '40px',

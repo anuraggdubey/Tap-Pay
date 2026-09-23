@@ -97,12 +97,24 @@ export const SecurityBento: React.FC = () => {
                   padding: '18px',
                   fontSize: '13px',
                   fontWeight: 600,
-                  color: '#6C628A',
+                  color: '#4C3B78',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
                 }}
               >
-                ✓ ReentrancyGuard protected<br />
-                ✓ Session replay protection<br />
-                ✓ Direct peer-to-peer delivery
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Check size={16} color="#836EF9" strokeWidth={2.5} />
+                  <span>ReentrancyGuard protected</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Check size={16} color="#836EF9" strokeWidth={2.5} />
+                  <span>Session replay protection</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Check size={16} color="#836EF9" strokeWidth={2.5} />
+                  <span>Direct peer-to-peer delivery</span>
+                </div>
               </div>
             </div>
           </div>
@@ -153,11 +165,23 @@ export const SecurityBento: React.FC = () => {
                   fontSize: '13px',
                   fontWeight: 600,
                   color: '#047857',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
                 }}
               >
-                ✓ Biometric / PIN authorization<br />
-                ✓ No cloud backup vulnerability<br />
-                ✓ Zero third-party telemetry
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Check size={16} color="#10B981" strokeWidth={2.5} />
+                  <span>Biometric / PIN authorization</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Check size={16} color="#10B981" strokeWidth={2.5} />
+                  <span>No cloud backup vulnerability</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Check size={16} color="#10B981" strokeWidth={2.5} />
+                  <span>Zero third-party telemetry</span>
+                </div>
               </div>
             </div>
           </div>

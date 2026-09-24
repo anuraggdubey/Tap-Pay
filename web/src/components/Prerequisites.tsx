@@ -17,7 +17,7 @@ export const Prerequisites: React.FC = () => {
         <div style={{ textAlign: 'center', marginBottom: '60px' }} className="scroll-reveal">
           <h2 className="phantom-section-title">
             Spend, Send, &amp; <span style={{ display: 'inline-flex', verticalAlign: 'middle', padding: '0 8px' }}>
-              <Smartphone size={52} color="#3C315B" />
+              <Smartphone size={52} color="var(--text-dark)" />
             </span> Tap
           </h2>
 
@@ -238,8 +238,8 @@ export const Prerequisites: React.FC = () => {
               onClick={() => setDeviceTest('android')}
               className="phantom-btn-pill"
               style={{
-                background: deviceTest === 'android' ? '#3C315B' : '#E2DDFE',
-                color: deviceTest === 'android' ? '#FFFDF8' : '#3C315B',
+                background: deviceTest === 'android' ? 'var(--text-dark)' : 'var(--pill-bg)',
+                color: deviceTest === 'android' ? '#FFFDF8' : 'var(--text-dark)',
               }}
             >
               <Check size={16} />
@@ -250,8 +250,8 @@ export const Prerequisites: React.FC = () => {
               onClick={() => setDeviceTest('ios')}
               className="phantom-btn-pill"
               style={{
-                background: deviceTest === 'ios' ? '#EF4444' : '#E2DDFE',
-                color: deviceTest === 'ios' ? '#FFFFFF' : '#3C315B',
+                background: deviceTest === 'ios' ? '#EF4444' : 'var(--pill-bg)',
+                color: deviceTest === 'ios' ? '#FFFFFF' : 'var(--text-dark)',
               }}
             >
               <span>iOS (Unsupported)</span>

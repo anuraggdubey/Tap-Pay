@@ -14,7 +14,7 @@ export const SecurityBento: React.FC = () => {
     <section
       id="security"
       style={{
-        background: '#1F1934',
+        background: '#0D0E12',
         color: '#FFFDF8',
         padding: '120px 0',
         position: 'relative',
@@ -28,7 +28,7 @@ export const SecurityBento: React.FC = () => {
             Controlled by you,
             <br />
             secured by <span style={{ display: 'inline-flex', verticalAlign: 'middle', padding: '0 8px' }}>
-              <Lock size={48} color="#AB9FF2" />
+              <Lock size={48} color="#10B981" />
             </span> Keystore.
           </h2>
 

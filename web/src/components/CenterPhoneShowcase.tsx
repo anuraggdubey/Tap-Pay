@@ -316,7 +316,7 @@ export const CenterPhoneShowcase: React.FC = () => {
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#836EF9' }} />
               <span>Interactive Monad Prototype</span>
             </div>
-            <h2 style={{ fontSize: '28px', fontWeight: 700, letterSpacing: '-0.02em', color: '#3C315B' }}>
+            <h2 style={{ fontSize: '28px', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text-dark)' }}>
               Touch &amp; Transact
             </h2>
           </div>
@@ -492,14 +492,15 @@ export const CenterPhoneShowcase: React.FC = () => {
           }
           .mobile-scroll-prompt span {
             display: inline-block;
-            background: rgba(253, 252, 254, 0.9);
+            background: rgba(246, 244, 240, 0.95);
             backdrop-filter: blur(8px);
             padding: 8px 18px;
             border-radius: 9999px;
             font-size: 12px;
             font-weight: 700;
-            color: #3C315B;
-            box-shadow: 0 4px 15px rgba(60, 49, 91, 0.1);
+            color: var(--text-dark);
+            box-shadow: 0 4px 15px rgba(26, 26, 26, 0.08);
+            border: 1px solid rgba(26, 26, 26, 0.06);
             animation: phantomFloat 2.5s ease-in-out infinite;
           }
 

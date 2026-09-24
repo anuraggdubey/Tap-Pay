@@ -52,34 +52,36 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDownload }) => {
             justifyContent: 'space-between',
           }}
         >
-          {/* Logo (Phantom Style) */}
+          {/* Logo */}
           <a
             href="#"
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
+              gap: '10px',
               fontWeight: 800,
               fontSize: '22px',
               letterSpacing: '-0.03em',
-              color: isDarkNav ? '#FFFDF8' : '#3C315B',
-              transition: 'color 0.3s ease',
+              color: isDarkNav ? '#FFFDF8' : 'var(--text-dark)',
+              transition: 'color 0.25s ease',
               textDecoration: 'none',
               zIndex: 2,
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
             }}
           >
-            {/* TapPay Logo — free symbol, no container */}
+            {/* TapPay Logo */}
             <svg width="28" height="32" viewBox="0 0 512 512" fill="none">
-              <circle cx="200" cy="120" r="62" fill={isDarkNav ? '#FFFDF8' : '#3C315B'}/>
-              <circle cx="340" cy="215" r="44" fill={isDarkNav ? 'rgba(255,253,248,0.6)' : 'rgba(60,49,91,0.6)'}/>
-              <circle cx="200" cy="400" r="72" fill={isDarkNav ? '#FFFDF8' : '#3C315B'}/>
-              <path d="M200 182 C200 215, 240 215, 340 215" stroke={isDarkNav ? '#FFFDF8' : '#3C315B'} strokeWidth="52" strokeLinecap="round" fill="none"/>
-              <path d="M200 328 L200 182" stroke={isDarkNav ? '#FFFDF8' : '#3C315B'} strokeWidth="52" strokeLinecap="round" fill="none"/>
+              <circle cx="200" cy="120" r="62" fill="currentColor"/>
+              <circle cx="340" cy="215" r="44" fill="currentColor" opacity="0.6"/>
+              <circle cx="200" cy="400" r="72" fill="currentColor"/>
+              <path d="M200 182 C200 215, 240 215, 340 215" stroke="currentColor" strokeWidth="52" strokeLinecap="round" fill="none"/>
+              <path d="M200 328 L200 182" stroke="currentColor" strokeWidth="52" strokeLinecap="round" fill="none"/>
             </svg>
-            <span>tappay</span>
+            <span style={{ letterSpacing: '-0.02em', fontWeight: 800 }}>tappay</span>
           </a>
 
-          {/* Center Navigation Pill (Exact Phantom Container) */}
+          {/* Center Navigation Pill */}
           <nav
             className={`phantom-nav-pill ${isDarkNav ? 'is-dark' : ''} nav-center-desktop`}
             style={{
@@ -141,8 +143,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDownload }) => {
               className="phantom-icon-btn nav-search-btn"
               title="Search"
               style={{
-                background: isDarkNav ? 'rgba(255, 255, 255, 0.12)' : '#FDFCFE',
-                color: isDarkNav ? '#FFFDF8' : '#3C315B',
+                background: isDarkNav ? 'rgba(255, 255, 255, 0.12)' : 'var(--pill-bg)',
+                color: isDarkNav ? '#FFFDF8' : 'var(--text-dark)',
+                border: isDarkNav ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(26, 26, 26, 0.08)',
               }}
             >
               <Search size={18} />
@@ -153,8 +156,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDownload }) => {
               onClick={onOpenDownload}
               className="phantom-btn-pill nav-download-btn"
               style={{
-                background: isDarkNav ? '#836EF9' : '#E2DDFE',
-                color: isDarkNav ? '#FFFFFF' : '#3C315B',
+                background: isDarkNav ? '#FFFDF8' : 'var(--text-dark)',
+                color: isDarkNav ? '#0D0D12' : '#FFFFFF',
+                fontWeight: 600,
+                boxShadow: isDarkNav ? '0 4px 15px rgba(0, 0, 0, 0.3)' : '0 4px 15px rgba(26, 26, 26, 0.12)',
               }}
             >
               <span>Download</span>
@@ -166,8 +171,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDownload }) => {
               className="phantom-icon-btn nav-mobile-toggle"
               style={{
                 display: 'none',
-                background: isDarkNav ? 'rgba(255, 255, 255, 0.12)' : '#FDFCFE',
-                color: isDarkNav ? '#FFFDF8' : '#3C315B',
+                background: isDarkNav ? 'rgba(255, 255, 255, 0.12)' : 'var(--pill-bg)',
+                color: isDarkNav ? '#FFFDF8' : 'var(--text-dark)',
+                border: isDarkNav ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(26, 26, 26, 0.08)',
               }}
             >
               {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
@@ -184,10 +190,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDownload }) => {
             top: '80px',
             left: '16px',
             right: '16px',
-            background: '#FDFCFE',
+            background: 'var(--card-white)',
             borderRadius: '24px',
             padding: '24px',
-            boxShadow: '0 20px 50px rgba(60, 49, 91, 0.2)',
+            boxShadow: '0 20px 50px rgba(0, 0, 0, 0.15)',
+            border: '1px solid rgba(26, 26, 26, 0.08)',
             zIndex: 99,
             display: 'flex',
             flexDirection: 'column',
@@ -197,28 +204,28 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDownload }) => {
           <a
             href="#how-it-works"
             onClick={() => setMobileMenuOpen(false)}
-            style={{ fontSize: '16px', fontWeight: 600, color: '#3C315B' }}
+            style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-dark)' }}
           >
             How It Works
           </a>
           <a
             href="#demo"
             onClick={() => setMobileMenuOpen(false)}
-            style={{ fontSize: '16px', fontWeight: 600, color: '#3C315B' }}
+            style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-dark)' }}
           >
             NFC Simulator
           </a>
           <a
             href="#prerequisites"
             onClick={() => setMobileMenuOpen(false)}
-            style={{ fontSize: '16px', fontWeight: 600, color: '#3C315B' }}
+            style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-dark)' }}
           >
             Prerequisites (Android &amp; NFC)
           </a>
           <a
             href="#security"
             onClick={() => setMobileMenuOpen(false)}
-            style={{ fontSize: '16px', fontWeight: 600, color: '#3C315B' }}
+            style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-dark)' }}
           >
             Security &amp; Keystore
           </a>
@@ -228,7 +235,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDownload }) => {
               onOpenDownload();
             }}
             className="phantom-btn-pill"
-            style={{ width: '100%', padding: '14px', marginTop: '10px' }}
+            style={{
+              width: '100%',
+              padding: '14px',
+              marginTop: '10px',
+              background: 'var(--text-dark)',
+              color: '#FFFFFF',
+            }}
           >
             Download TapPay APK
           </button>
@@ -242,16 +255,16 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDownload }) => {
         }
         .site-navbar-header.is-scrolled {
           padding: 12px 24px;
-          background: rgba(253, 252, 254, 0.92);
+          background: var(--nav-bg-light);
           backdrop-filter: blur(20px);
           -webkit-backdrop-filter: blur(20px);
-          border-bottom: 1px solid rgba(60, 49, 91, 0.08);
-          box-shadow: 0 4px 20px rgba(60, 49, 91, 0.06);
+          border-bottom: 1px solid rgba(26, 26, 26, 0.06);
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
         }
         .site-navbar-header.is-scrolled.is-dark {
-          background: rgba(31, 25, 52, 0.92);
+          background: rgba(15, 16, 21, 0.94);
           border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
         }
 
         .phantom-nav-item {
@@ -266,7 +279,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDownload }) => {
           transition: background 0.15s ease;
         }
         .phantom-nav-item:hover {
-          background: rgba(60, 49, 91, 0.05);
+          background: rgba(26, 26, 26, 0.06);
         }
         .phantom-nav-pill.is-dark .phantom-nav-item:hover {
           background: rgba(255, 255, 255, 0.1);
@@ -279,14 +292,14 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDownload }) => {
         @media (max-width: 899px) {
           .site-navbar-header {
             padding: 12px 16px !important;
-            background: rgba(253, 252, 254, 0.94) !important;
+            background: var(--nav-bg-light) !important;
             backdrop-filter: blur(20px) !important;
             -webkit-backdrop-filter: blur(20px) !important;
-            border-bottom: 1px solid rgba(60, 49, 91, 0.08) !important;
-            box-shadow: 0 4px 18px rgba(60, 49, 91, 0.06) !important;
+            border-bottom: 1px solid rgba(26, 26, 26, 0.06) !important;
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.04) !important;
           }
           .site-navbar-header.is-dark {
-            background: rgba(31, 25, 52, 0.94) !important;
+            background: rgba(15, 16, 21, 0.94) !important;
             border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
           }
           .nav-mobile-toggle {

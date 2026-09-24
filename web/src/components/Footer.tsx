@@ -389,7 +389,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenDownload }) => {
         {/* Copyright */}
         <div
           style={{
-            borderTop: '1px solid rgba(60, 49, 91, 0.08)',
+            borderTop: '1px solid rgba(26, 26, 26, 0.08)',
             marginTop: '32px',
             paddingTop: '20px',
             display: 'flex',

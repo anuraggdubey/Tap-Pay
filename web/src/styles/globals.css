@@ -1,30 +1,31 @@
 :root {
-  /* Exact Phantom.com Palette (Bakken & Baeck Rebrand) */
-  --canvas-bg: #E2DDFE;             /* Soft lavender page background */
-  --canvas-bg-alt: #EBE7FE;
-  --text-dark: #3C315B;              /* Rich deep slate indigo */
-  --text-dark-muted: #6C628A;
-  --text-dark-subtle: #9890B4;
+  /* TapPay Original Palette — Warm paper-tone canvas */
+  --canvas-bg: #F6F4F0;               /* Warm bone / paper white */
+  --canvas-bg-alt: #EDEAE4;           /* Slightly deeper parchment */
+  --text-dark: #1A1A1A;               /* Near-black charcoal */
+  --text-dark-muted: #5A5A5A;         /* Neutral mid-grey */
+  --text-dark-subtle: #8A8A8A;        /* Soft grey */
 
-  --hero-card-bg: #0D0D12;           /* Deep space charcoal for hero */
+  --hero-card-bg: #0D0D12;            /* Deep space charcoal for hero */
   --hero-text-light: #FFFDF8;         /* Warm ivory headline */
   --hero-text-muted: #A3A2B3;
 
-  --card-white: #FDFCFE;             /* Silk off-white */
-  --card-lavender: #EAE6FE;          /* Soft pastel lavender */
-  --card-sky: #E2EFFE;               /* Soft pastel sky */
-  --card-mint: #E1F8F0;              /* Soft pastel mint */
-  --card-cream: #FFF6E5;             /* Soft pastel warm cream */
-  --card-dark: #1F1934;              /* Deep purple for security section */
+  --card-white: #FDFCFE;              /* Silk off-white */
+  --card-lavender: #EAE6FE;           /* Soft pastel lavender */
+  --card-sky: #E2EFFE;                /* Soft pastel sky */
+  --card-mint: #E1F8F0;               /* Soft pastel mint */
+  --card-cream: #FFF6E5;              /* Soft pastel warm cream */
+  --card-dark: #1F1934;               /* Deep purple for security section */
 
-  --pill-bg: #E2DDFE;                /* Signature Phantom lavender pill button */
-  --pill-text: #3C315B;
-  --pill-hover: #D6CEFD;
+  --pill-bg: #EDEDEB;                 /* Neutral warm grey pill */
+  --pill-text: #1A1A1A;
+  --pill-hover: #E0DED9;
 
-  --nav-bg-light: rgba(253, 252, 254, 0.95);
+  --nav-bg-light: rgba(246, 244, 240, 0.92);
   --nav-bg-dark: rgba(30, 24, 52, 0.92);
 
-  --font-display: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-headline: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 
   --radius-pill: 9999px;
@@ -54,6 +55,10 @@ body {
   color: var(--text-dark);
   padding: 0;
   margin: 0;
+  /* Subtle paper grain texture via CSS noise */
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 200px 200px;
 }
 
 a {
@@ -84,11 +89,11 @@ img {
   background: var(--canvas-bg);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(60, 49, 91, 0.2);
+  background: rgba(26, 26, 26, 0.15);
   border-radius: 5px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(60, 49, 91, 0.35);
+  background: rgba(26, 26, 26, 0.28);
 }
 
 .phantom-container {

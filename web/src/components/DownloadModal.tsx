@@ -26,7 +26,7 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
   if (!isOpen) return null;
 
   const apkUrl = 'https://drive.google.com/file/d/1w3K3PTeqvt250qMJne4azXeU4D35dC8P/view?usp=drivesdk';
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(apkUrl)}&color=3C315B&bgcolor=ffffff&qzone=1`;
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(apkUrl)}&color=1A1A1A&bgcolor=ffffff&qzone=1`;
 
   return (
     <div
@@ -38,7 +38,7 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
         alignItems: 'center',
         justifyContent: 'center',
         padding: '20px',
-        backgroundColor: 'rgba(60, 49, 91, 0.45)',
+        backgroundColor: 'rgba(10, 10, 15, 0.65)',
         backdropFilter: 'blur(16px)',
         WebkitBackdropFilter: 'blur(16px)',
       }}
@@ -49,12 +49,13 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
         style={{
           width: '100%',
           maxWidth: '480px',
-          background: '#FDFCFE',
+          background: '#FFFDF9',
           borderRadius: '32px',
           padding: '40px 32px',
-          boxShadow: '0 25px 60px rgba(60, 49, 91, 0.25)',
+          boxShadow: '0 25px 60px rgba(0, 0, 0, 0.25)',
           position: 'relative',
-          color: '#3C315B',
+          color: 'var(--text-dark)',
+          border: '1px solid rgba(26, 26, 26, 0.08)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -68,11 +69,13 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
             width: '36px',
             height: '36px',
             borderRadius: '50%',
-            background: '#F0EEFE',
-            color: '#3C315B',
+            background: 'var(--pill-bg)',
+            color: 'var(--text-dark)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            border: 'none',
+            cursor: 'pointer',
           }}
         >
           <X size={18} />
@@ -85,8 +88,8 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
               width: '56px',
               height: '56px',
               borderRadius: '50%',
-              background: '#E2DDFE',
-              color: '#3C315B',
+              background: 'var(--pill-bg)',
+              color: 'var(--text-dark)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -98,7 +101,7 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
           <h3 style={{ fontSize: '26px', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: '6px' }}>
             Download TapPay
           </h3>
-          <p style={{ color: '#6C628A', fontSize: '15px' }}>
+          <p style={{ color: 'var(--text-dark-muted)', fontSize: '15px' }}>
             Scan with your Android camera to download the APK directly.
           </p>
         </div>
@@ -113,8 +116,8 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
             borderRadius: '24px',
             padding: '20px',
             marginBottom: '24px',
-            boxShadow: '0 6px 20px rgba(60, 49, 91, 0.06)',
-            border: '1px solid rgba(60, 49, 91, 0.08)',
+            boxShadow: '0 6px 20px rgba(0, 0, 0, 0.05)',
+            border: '1px solid rgba(26, 26, 26, 0.08)',
           }}
         >
           <img
@@ -126,14 +129,14 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
             style={{
               fontSize: '13px',
               fontWeight: 600,
-              color: '#3C315B',
+              color: 'var(--text-dark)',
               marginTop: '12px',
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
             }}
           >
-            <QrCode size={16} color="#836EF9" />
+            <QrCode size={16} color="#10B981" />
             <span>Android 10+ (API 34) · NFC Required</span>
           </div>
         </div>
@@ -146,11 +149,17 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
           className="phantom-btn-pill"
           style={{
             width: '100%',
-            background: '#3C315B',
+            background: '#1A1A1A',
             color: '#FFFDF8',
             padding: '16px',
             fontSize: '15px',
             borderRadius: '9999px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            fontWeight: 600,
+            textDecoration: 'none',
           }}
         >
           <Download size={18} />

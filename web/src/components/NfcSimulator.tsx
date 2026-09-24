@@ -55,8 +55,8 @@ export const NfcSimulator: React.FC = () => {
               gap: '6px',
               padding: '8px 20px',
               borderRadius: '9999px',
-              background: '#E2DDFE',
-              color: '#3C315B',
+              background: 'var(--pill-bg)',
+              color: 'var(--pill-text)',
               fontWeight: 600,
               fontSize: '14px',
             }}
@@ -72,10 +72,10 @@ export const NfcSimulator: React.FC = () => {
             background: '#FDFCFE',
             borderRadius: '32px',
             padding: '44px 36px',
-            boxShadow: '0 10px 40px rgba(60, 49, 91, 0.08)',
+            boxShadow: '0 10px 40px rgba(26, 26, 26, 0.06)',
             maxWidth: '1080px',
             margin: '0 auto',
-            border: '1px solid rgba(60, 49, 91, 0.06)',
+            border: '1px solid rgba(26, 26, 26, 0.08)',
           }}
         >
           {/* Action Row */}

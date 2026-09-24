@@ -1,0 +1,20 @@
+# Mobile app native directories
+android/
+ios/
+
+# Hardhat & smart contracts
+contracts/
+artifacts/
+cache/
+typechain-types/
+
+# Scripts & temporary testing
+scripts/
+test/
+__tests__/
+docs/
+
+# Root dependencies & caches
+node_modules/
+.gradle/
+.idea/

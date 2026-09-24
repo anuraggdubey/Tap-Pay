@@ -113,3 +113,7 @@ $RECYCLE.BIN/
 .eslintcache
 *.log
 
+# Web & Vercel
+.vercel
+dist/
+web/dist/

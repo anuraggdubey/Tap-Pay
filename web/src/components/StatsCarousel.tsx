@@ -12,9 +12,10 @@ export const StatsCarousel: React.FC = () => {
       <div className="phantom-container">
         {/* 4 Geometric Cards (Exact Image 1 Replica) */}
         <div
+          className="stats-carousel-grid"
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))',
             gap: '20px',
           }}
         >
@@ -222,6 +223,20 @@ export const StatsCarousel: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <style>{`
+        @media (max-width: 640px) {
+          .stats-carousel-grid {
+            grid-template-columns: 1fr !important;
+            gap: 16px !important;
+          }
+          .stats-carousel-grid > div {
+            min-height: 300px !important;
+            padding: 26px 20px !important;
+            border-radius: 24px !important;
+          }
+        }
+      `}</style>
     </section>
   );
 };

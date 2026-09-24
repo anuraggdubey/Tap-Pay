@@ -46,9 +46,10 @@ export const SecurityBento: React.FC = () => {
 
         {/* 3 Large Off-White Cards in Dark Section */}
         <div
+          className="security-bento-grid"
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
             gap: '24px',
           }}
         >
@@ -284,6 +285,24 @@ export const SecurityBento: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <style>{`
+        @media (max-width: 640px) {
+          #security {
+            padding: 70px 0 !important;
+          }
+          .security-bento-grid {
+            grid-template-columns: 1fr !important;
+            gap: 20px !important;
+          }
+          .security-bento-grid .phantom-card-main {
+            padding: 28px 20px !important;
+          }
+          .security-bento-grid .phantom-card-shadow-layer {
+            transform: none !important;
+          }
+        }
+      `}</style>
     </section>
   );
 };

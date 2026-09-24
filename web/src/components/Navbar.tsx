@@ -133,7 +133,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDownload }) => {
             {/* Search Icon Circle */}
             <button
               onClick={onOpenDownload}
-              className="phantom-icon-btn"
+              className="phantom-icon-btn nav-search-btn"
               title="Search"
               style={{
                 background: isDarkNav ? 'rgba(255, 255, 255, 0.12)' : '#FDFCFE',
@@ -146,7 +146,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDownload }) => {
             {/* Download Pill Button */}
             <button
               onClick={onOpenDownload}
-              className="phantom-btn-pill"
+              className="phantom-btn-pill nav-download-btn"
               style={{
                 background: isDarkNav ? '#836EF9' : '#E2DDFE',
                 color: isDarkNav ? '#FFFFFF' : '#3C315B',
@@ -256,6 +256,15 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDownload }) => {
         @media (max-width: 899px) {
           .nav-mobile-toggle {
             display: flex !important;
+          }
+        }
+        @media (max-width: 480px) {
+          .nav-search-btn {
+            display: none !important;
+          }
+          .nav-download-btn {
+            padding: 8px 14px !important;
+            font-size: 13px !important;
           }
         }
       `}</style>

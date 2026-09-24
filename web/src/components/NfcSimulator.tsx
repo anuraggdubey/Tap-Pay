@@ -67,7 +67,7 @@ export const NfcSimulator: React.FC = () => {
 
         {/* Large Stage Card (Silk White) */}
         <div
-          className="scroll-reveal-scale"
+          className="scroll-reveal-scale sim-stage-card"
           style={{
             background: '#FDFCFE',
             borderRadius: '32px',
@@ -79,6 +79,7 @@ export const NfcSimulator: React.FC = () => {
         >
           {/* Action Row */}
           <div
+            className="sim-action-row"
             style={{
               display: 'flex',
               justifyContent: 'space-between',
@@ -251,7 +252,7 @@ export const NfcSimulator: React.FC = () => {
             </div>
 
             {/* Middle Proximity Indicator */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 8px' }}>
+            <div className="sim-proximity-col" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 8px' }}>
               <Radio
                 size={38}
                 color={step !== 'idle' ? '#836EF9' : '#A39CC2'}
@@ -331,8 +332,24 @@ export const NfcSimulator: React.FC = () => {
 
       <style>{`
         @media (max-width: 800px) {
+          .sim-stage-card {
+            padding: 28px 18px !important;
+            border-radius: 24px !important;
+          }
+          .sim-action-row {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 16px !important;
+          }
+          .sim-action-row > div {
+            justify-content: center !important;
+          }
           .sim-dual-phones {
             grid-template-columns: 1fr !important;
+          }
+          .sim-proximity-col {
+            transform: rotate(90deg) !important;
+            margin: 6px 0 !important;
           }
         }
       `}</style>

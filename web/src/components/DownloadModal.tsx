@@ -45,6 +45,7 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
       onClick={onClose}
     >
       <div
+        className="phantom-modal-box"
         style={{
           width: '100%',
           maxWidth: '480px',
@@ -156,6 +157,15 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
           <span>Direct Download Tap-pay.apk</span>
         </a>
       </div>
+
+      <style>{`
+        @media (max-width: 480px) {
+          .phantom-modal-box {
+            padding: 28px 20px !important;
+            border-radius: 24px !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };

@@ -43,7 +43,7 @@ export const FeatureSlider: React.FC = () => {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
             gap: '24px',
           }}
           className="phantom-cards-grid"
@@ -329,6 +329,21 @@ export const FeatureSlider: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <style>{`
+        @media (max-width: 640px) {
+          .phantom-cards-grid {
+            grid-template-columns: 1fr !important;
+            gap: 20px !important;
+          }
+          .phantom-card-main {
+            padding: 28px 20px !important;
+          }
+          .phantom-card-shadow-layer {
+            transform: none !important;
+          }
+        }
+      `}</style>
     </section>
   );
 };

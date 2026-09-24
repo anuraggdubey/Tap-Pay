@@ -29,9 +29,10 @@ export const Prerequisites: React.FC = () => {
 
         {/* 3 Horizontal Cards */}
         <div
+          className="prereq-cards-grid"
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
             gap: '24px',
             marginBottom: '40px',
           }}
@@ -258,6 +259,21 @@ export const Prerequisites: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <style>{`
+        @media (max-width: 640px) {
+          .prereq-cards-grid {
+            grid-template-columns: 1fr !important;
+            gap: 20px !important;
+          }
+          .prereq-cards-grid .phantom-card-main {
+            padding: 28px 20px !important;
+          }
+          .prereq-cards-grid .phantom-card-shadow-layer {
+            transform: none !important;
+          }
+        }
+      `}</style>
     </section>
   );
 };

@@ -104,7 +104,7 @@ export const Hero: React.FC<HeroProps> = ({ onOpenDownload }) => {
             </p>
 
             {/* Action Buttons */}
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '44px' }}>
+            <div className="hero-action-buttons" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '44px' }}>
               <button
                 onClick={onOpenDownload}
                 className="phantom-btn-pill"
@@ -149,6 +149,7 @@ export const Hero: React.FC<HeroProps> = ({ onOpenDownload }) => {
 
             {/* Quick Stats */}
             <div
+              className="hero-quick-stats"
               style={{
                 display: 'flex',
                 gap: '40px',
@@ -359,10 +360,41 @@ export const Hero: React.FC<HeroProps> = ({ onOpenDownload }) => {
           .hero-split-grid {
             grid-template-columns: 1fr !important;
             text-align: center !important;
-            gap: 50px !important;
+            gap: 40px !important;
           }
           .hero-split-grid > div:first-child {
             align-items: center !important;
+          }
+          .hero-action-buttons {
+            justify-content: center !important;
+          }
+          .hero-quick-stats {
+            justify-content: center !important;
+          }
+        }
+        @media (max-width: 640px) {
+          #hero {
+            padding-top: 110px !important;
+            padding-bottom: 50px !important;
+            min-height: auto !important;
+          }
+          .hero-action-buttons {
+            width: 100% !important;
+            flex-direction: column !important;
+            align-items: stretch !important;
+          }
+          .hero-action-buttons button, .hero-action-buttons a {
+            width: 100% !important;
+            justify-content: center !important;
+          }
+          .hero-quick-stats {
+            gap: 20px !important;
+            justify-content: space-around !important;
+            width: 100% !important;
+          }
+          .realistic-phone-chassis {
+            width: min(290px, 86vw) !important;
+            height: min(560px, 70vh) !important;
           }
         }
       `}</style>

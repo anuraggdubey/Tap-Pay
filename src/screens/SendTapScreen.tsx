@@ -293,28 +293,36 @@ export default function SendTapScreen({navigation}: Props) {
   };
 
   if (phase !== 'idle') {
-    const copy = PHASE_COPY[phase];
     const isBusy = phase === 'broadcasting';
+    const isCompleted = phase === 'completed';
+
+    // Map TapSenderPhase to NfcWaitingCard visual phase
+    let visualPhase: 'searching' | 'broadcasting' | 'success' | 'failed';
+    if (phase === 'reading') {
+      visualPhase = 'searching';
+    } else if (phase === 'broadcasting') {
+      visualPhase = 'broadcasting';
+    } else if (phase === 'completed') {
+      visualPhase = 'success';
+    } else {
+      visualPhase = 'failed';
+    }
+
+    const gasDisplay = estimatedGasWei
+      ? formatMon(estimatedGasWei).replace(/ MON$/, '')
+      : '0.0004';
 
     return (
       <NfcWaitingCard
         accent="purple"
-        showSpinner={isBusy}
+        phase={visualPhase}
+        direction="send"
+        amount={activeAmount || amount}
+        timeLeft={timeLeft}
+        gasEstimate={gasDisplay}
         onClose={isBusy ? undefined : handleCancel}
-        title={
-          isBusy
-            ? "We're processing your payment"
-            : copy.title || 'Hold phones together'
-        }
-        subtitle={
-          isBusy
-            ? 'Crunching the numbers.'
-            : activeAmount
-            ? `Sending ${activeAmount} MON · expires in ${timeLeft}s`
-            : copy.subtitle
-        }
         footer={
-          !isBusy ? (
+          !isBusy && !isCompleted ? (
             <TouchableOpacity
               style={styles.cancelLink}
               onPress={handleCancel}

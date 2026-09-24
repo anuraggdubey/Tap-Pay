@@ -169,16 +169,9 @@ export default function ReceiveTapScreen({navigation}: Props) {
     <View style={styles.root}>
       <NfcWaitingCard
         accent="green"
-        showSpinner={!isReceiving}
+        phase={isReceiving ? 'searching' : 'broadcasting'}
+        direction="receive"
         onClose={() => navigation.goBack()}
-        title={
-          isReceiving ? 'Ready to receive' : "We're processing your payment"
-        }
-        subtitle={
-          isReceiving
-            ? 'Hold phones together. Listening for a tap…'
-            : 'Payment detected — confirming details.'
-        }
         footer={
           !!address ? (
             <Text style={styles.walletHint}>

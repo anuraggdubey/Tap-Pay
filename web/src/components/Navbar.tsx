@@ -8,9 +8,12 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({ onOpenDownload }) => {
   const [isDarkNav, setIsDarkNav] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
+      setIsScrolled(window.scrollY > 15);
+
       // Only invert nav on the dark security section
       const sec = document.getElementById('security');
       if (sec) {
@@ -23,25 +26,26 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDownload }) => {
       setIsDarkNav(false);
     };
 
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   return (
     <>
       <header
+        className={`site-navbar-header ${isScrolled ? 'is-scrolled' : ''} ${isDarkNav ? 'is-dark' : ''}`}
         style={{
           position: 'fixed',
           top: 0,
           left: 0,
           right: 0,
-          zIndex: 100,
-          padding: '20px 24px',
-          pointerEvents: 'none',
+          zIndex: 1000,
+          transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
         }}
       >
         <div
-          className="phantom-container"
+          className="phantom-container navbar-inner-container"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -52,7 +56,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDownload }) => {
           <a
             href="#"
             style={{
-              pointerEvents: 'auto',
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
@@ -61,6 +64,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDownload }) => {
               letterSpacing: '-0.03em',
               color: isDarkNav ? '#FFFDF8' : '#3C315B',
               transition: 'color 0.3s ease',
+              textDecoration: 'none',
+              zIndex: 2,
             }}
           >
             {/* TapPay Logo — free symbol, no container */}
@@ -231,6 +236,24 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDownload }) => {
       )}
 
       <style>{`
+        .site-navbar-header {
+          padding: 18px 24px;
+          background: transparent;
+        }
+        .site-navbar-header.is-scrolled {
+          padding: 12px 24px;
+          background: rgba(253, 252, 254, 0.92);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border-bottom: 1px solid rgba(60, 49, 91, 0.08);
+          box-shadow: 0 4px 20px rgba(60, 49, 91, 0.06);
+        }
+        .site-navbar-header.is-scrolled.is-dark {
+          background: rgba(31, 25, 52, 0.92);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+        }
+
         .phantom-nav-item {
           display: flex;
           align-items: center;
@@ -254,6 +277,18 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDownload }) => {
           }
         }
         @media (max-width: 899px) {
+          .site-navbar-header {
+            padding: 12px 16px !important;
+            background: rgba(253, 252, 254, 0.94) !important;
+            backdrop-filter: blur(20px) !important;
+            -webkit-backdrop-filter: blur(20px) !important;
+            border-bottom: 1px solid rgba(60, 49, 91, 0.08) !important;
+            box-shadow: 0 4px 18px rgba(60, 49, 91, 0.06) !important;
+          }
+          .site-navbar-header.is-dark {
+            background: rgba(31, 25, 52, 0.94) !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+          }
           .nav-mobile-toggle {
             display: flex !important;
           }

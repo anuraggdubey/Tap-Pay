@@ -79,9 +79,9 @@ export const Hero: React.FC<HeroProps> = ({ onOpenDownload }) => {
       setStepProgress(pct);
     }, 25);
 
-    let t1: NodeJS.Timeout;
-    let t2: NodeJS.Timeout;
-    let t3: NodeJS.Timeout;
+    let t1: ReturnType<typeof setTimeout>;
+    let t2: ReturnType<typeof setTimeout>;
+    let t3: ReturnType<typeof setTimeout>;
 
     if (currentStep === 'home') {
       setTypedAmount('0.0');

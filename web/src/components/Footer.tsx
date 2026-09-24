@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowUpRight, Video, Radio, Send, ShieldCheck, Zap } from 'lucide-react';
+import { ArrowUpRight, Radio, Send, ShieldCheck, Zap } from 'lucide-react';
 
 interface FooterProps {
   onOpenDownload: () => void;
@@ -307,30 +307,19 @@ export const Footer: React.FC<FooterProps> = ({ onOpenDownload }) => {
           </div>
 
           {/* Socials */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-dark)' }}>Follow us</div>
-            <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-dark)' }}>Follow us</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
               {/* X */}
               <a
                 href="https://x.com/tapxpay"
                 target="_blank"
                 rel="noopener noreferrer"
                 title="X @tapxpay"
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '12px',
-                  background: 'var(--text-dark)',
-                  color: '#FFFFFF',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  textDecoration: 'none',
-                  transition: 'transform 0.15s ease',
-                }}
-                className="social-btn"
+                aria-label="X @tapxpay"
+                className="social-icon-free"
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
                 </svg>
               </a>
@@ -341,21 +330,10 @@ export const Footer: React.FC<FooterProps> = ({ onOpenDownload }) => {
                 target="_blank"
                 rel="noopener noreferrer"
                 title="GitHub"
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '12px',
-                  background: 'var(--text-dark)',
-                  color: '#FFFFFF',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  textDecoration: 'none',
-                  transition: 'transform 0.15s ease',
-                }}
-                className="social-btn"
+                aria-label="GitHub"
+                className="social-icon-free"
               >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                   <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
                 </svg>
               </a>
@@ -366,21 +344,17 @@ export const Footer: React.FC<FooterProps> = ({ onOpenDownload }) => {
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Video Demo"
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '12px',
-                  background: 'var(--text-dark)',
-                  color: '#FFFFFF',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  textDecoration: 'none',
-                  transition: 'transform 0.15s ease',
-                }}
-                className="social-btn"
+                aria-label="Video Demo"
+                className="social-icon-free"
               >
-                <Video size={18} />
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path d="M7 4.5v15a1 1 0 0 0 1.52.85l12.5-7.5a1 1 0 0 0 0-1.7l-12.5-7.5A1 1 0 0 0 7 4.5z" />
+                </svg>
               </a>
             </div>
           </div>
@@ -413,8 +387,19 @@ export const Footer: React.FC<FooterProps> = ({ onOpenDownload }) => {
         .footer-link-item:hover {
           color: var(--text-dark) !important;
         }
-        .social-btn:hover {
-          opacity: 0.9;
+        .social-icon-free {
+          color: var(--text-dark);
+          opacity: 0.72;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          text-decoration: none;
+          transition: opacity 0.18s ease, transform 0.18s ease, color 0.18s ease;
+        }
+        .social-icon-free:hover {
+          opacity: 1;
+          color: #000000;
+          transform: translateY(-2px);
         }
         @media (max-width: 960px) {
           .footer-bento-grid {

@@ -26,6 +26,7 @@ export const MONAD_CONFIG = {
   contracts: {
     usernameRegistry: '0xEebB05F9AF06908eCb7bFa5F916Dde1EEa231aDD' as `0x${string}`,
     tapPayLedger: '0x5B177FEF554dA84A86be62E45fb49BB52e6D6838' as `0x${string}`,
+    multiTokenLedger: '0x9830B8638085a0da1eDB5e2f0Daa110d24B82f7E' as `0x${string}`, // Deployed Sep 27, 2026
   },
 
   // Backend API (for session management + username caching)

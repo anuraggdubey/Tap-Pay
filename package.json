@@ -13,6 +13,8 @@
     "test:contracts": "npx hardhat test",
     "deploy:monad": "npx hardhat run scripts/deploy.js --network monad_testnet",
     "web:dev": "npm --prefix web run dev",
+    "dev:web": "npm --prefix web run dev",
+    "web": "npm --prefix web run dev",
     "web:build": "npm --prefix web run build"
   },
   "dependencies": {

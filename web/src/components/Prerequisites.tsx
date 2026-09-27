@@ -14,10 +14,10 @@ export const Prerequisites: React.FC = () => {
     >
       <div className="phantom-container">
         {/* Section Title */}
-        <div style={{ textAlign: 'center', marginBottom: '60px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '60px' }} className="scroll-reveal">
           <h2 className="phantom-section-title">
             Spend, Send, &amp; <span style={{ display: 'inline-flex', verticalAlign: 'middle', padding: '0 8px' }}>
-              <Smartphone size={52} color="#3C315B" />
+              <Smartphone size={52} color="var(--text-dark)" />
             </span> Tap
           </h2>
 
@@ -29,15 +29,16 @@ export const Prerequisites: React.FC = () => {
 
         {/* 3 Horizontal Cards */}
         <div
+          className="prereq-cards-grid"
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
             gap: '24px',
             marginBottom: '40px',
           }}
         >
           {/* Card 1: Android Only (Sky Blue) */}
-          <div className="phantom-card-wrapper">
+          <div className="phantom-card-wrapper scroll-reveal scroll-delay-1" data-parallax="0.04">
             <div className="phantom-card-shadow-layer" style={{ background: '#1D4ED8' }} />
             <div
               className="phantom-card-main"
@@ -84,20 +85,7 @@ export const Prerequisites: React.FC = () => {
                   gap: '12px',
                 }}
               >
-                <div
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '50%',
-                    background: 'rgba(37, 99, 235, 0.1)',
-                    color: '#2563EB',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Check size={18} />
-                </div>
+                <Check size={22} color="#2563EB" strokeWidth={2.5} style={{ flexShrink: 0 }} />
                 <div>
                   <div style={{ fontSize: '13px', fontWeight: 700 }}>HostApduService Native</div>
                   <div style={{ fontSize: '11px', color: '#9890B4' }}>Full peer-to-peer NFC stack</div>
@@ -107,7 +95,7 @@ export const Prerequisites: React.FC = () => {
           </div>
 
           {/* Card 2: NFC Chip (Lavender) */}
-          <div className="phantom-card-wrapper">
+          <div className="phantom-card-wrapper scroll-reveal scroll-delay-2" data-parallax="-0.03">
             <div className="phantom-card-shadow-layer" style={{ background: '#684FF6' }} />
             <div
               className="phantom-card-main"
@@ -154,20 +142,7 @@ export const Prerequisites: React.FC = () => {
                   gap: '12px',
                 }}
               >
-                <div
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '50%',
-                    background: 'rgba(131, 110, 249, 0.1)',
-                    color: '#836EF9',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Radio size={18} />
-                </div>
+                <Radio size={22} color="#836EF9" strokeWidth={2.5} style={{ flexShrink: 0 }} />
                 <div>
                   <div style={{ fontSize: '13px', fontWeight: 700 }}>ISO-DEP APDU Protocol</div>
                   <div style={{ fontSize: '11px', color: '#9890B4' }}>Radio frequency communication</div>
@@ -177,7 +152,7 @@ export const Prerequisites: React.FC = () => {
           </div>
 
           {/* Card 3: Two Devices (Mint Green) */}
-          <div className="phantom-card-wrapper">
+          <div className="phantom-card-wrapper scroll-reveal scroll-delay-3" data-parallax="0.04">
             <div className="phantom-card-shadow-layer" style={{ background: '#059669' }} />
             <div
               className="phantom-card-main"
@@ -224,20 +199,7 @@ export const Prerequisites: React.FC = () => {
                   gap: '12px',
                 }}
               >
-                <div
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '50%',
-                    background: 'rgba(16, 185, 129, 0.1)',
-                    color: '#10B981',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Layers size={18} />
-                </div>
+                <Layers size={22} color="#10B981" strokeWidth={2.5} style={{ flexShrink: 0 }} />
                 <div>
                   <div style={{ fontSize: '13px', fontWeight: 700 }}>Sender &amp; Receiver Pair</div>
                   <div style={{ fontSize: '11px', color: '#9890B4' }}>Real physical contact testing</div>
@@ -249,6 +211,7 @@ export const Prerequisites: React.FC = () => {
 
         {/* Device Compatibility Checker Pill */}
         <div
+          className="scroll-reveal"
           style={{
             background: '#FDFCFE',
             borderRadius: '24px',
@@ -275,8 +238,8 @@ export const Prerequisites: React.FC = () => {
               onClick={() => setDeviceTest('android')}
               className="phantom-btn-pill"
               style={{
-                background: deviceTest === 'android' ? '#3C315B' : '#E2DDFE',
-                color: deviceTest === 'android' ? '#FFFDF8' : '#3C315B',
+                background: deviceTest === 'android' ? 'var(--text-dark)' : 'var(--pill-bg)',
+                color: deviceTest === 'android' ? '#FFFDF8' : 'var(--text-dark)',
               }}
             >
               <Check size={16} />
@@ -287,8 +250,8 @@ export const Prerequisites: React.FC = () => {
               onClick={() => setDeviceTest('ios')}
               className="phantom-btn-pill"
               style={{
-                background: deviceTest === 'ios' ? '#EF4444' : '#E2DDFE',
-                color: deviceTest === 'ios' ? '#FFFFFF' : '#3C315B',
+                background: deviceTest === 'ios' ? '#EF4444' : 'var(--pill-bg)',
+                color: deviceTest === 'ios' ? '#FFFFFF' : 'var(--text-dark)',
               }}
             >
               <span>iOS (Unsupported)</span>
@@ -296,6 +259,21 @@ export const Prerequisites: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <style>{`
+        @media (max-width: 640px) {
+          .prereq-cards-grid {
+            grid-template-columns: 1fr !important;
+            gap: 20px !important;
+          }
+          .prereq-cards-grid .phantom-card-main {
+            padding: 28px 20px !important;
+          }
+          .prereq-cards-grid .phantom-card-shadow-layer {
+            transform: none !important;
+          }
+        }
+      `}</style>
     </section>
   );
 };

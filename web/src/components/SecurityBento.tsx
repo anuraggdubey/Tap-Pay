@@ -14,7 +14,7 @@ export const SecurityBento: React.FC = () => {
     <section
       id="security"
       style={{
-        background: '#1F1934',
+        background: '#0D0E12',
         color: '#FFFDF8',
         padding: '120px 0',
         position: 'relative',
@@ -23,12 +23,12 @@ export const SecurityBento: React.FC = () => {
     >
       <div className="phantom-container">
         {/* Phantom Section Title */}
-        <div style={{ textAlign: 'center', marginBottom: '60px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '60px' }} className="scroll-reveal">
           <h2 className="phantom-section-title is-dark">
             Controlled by you,
             <br />
             secured by <span style={{ display: 'inline-flex', verticalAlign: 'middle', padding: '0 8px' }}>
-              <Lock size={48} color="#AB9FF2" />
+              <Lock size={48} color="#10B981" />
             </span> Keystore.
           </h2>
 
@@ -46,14 +46,15 @@ export const SecurityBento: React.FC = () => {
 
         {/* 3 Large Off-White Cards in Dark Section */}
         <div
+          className="security-bento-grid"
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
             gap: '24px',
           }}
         >
           {/* Card 1: Self Custodial Guarantee */}
-          <div className="phantom-card-wrapper">
+          <div className="phantom-card-wrapper scroll-reveal scroll-delay-1" data-parallax="0.04">
             <div className="phantom-card-shadow-layer" style={{ background: '#0D0D12' }} />
             <div
               className="phantom-card-main"
@@ -97,18 +98,30 @@ export const SecurityBento: React.FC = () => {
                   padding: '18px',
                   fontSize: '13px',
                   fontWeight: 600,
-                  color: '#6C628A',
+                  color: '#4C3B78',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
                 }}
               >
-                ✓ ReentrancyGuard protected<br />
-                ✓ Session replay protection<br />
-                ✓ Direct peer-to-peer delivery
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Check size={16} color="#836EF9" strokeWidth={2.5} />
+                  <span>ReentrancyGuard protected</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Check size={16} color="#836EF9" strokeWidth={2.5} />
+                  <span>Session replay protection</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Check size={16} color="#836EF9" strokeWidth={2.5} />
+                  <span>Direct peer-to-peer delivery</span>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Card 2: Hardware Secure Element */}
-          <div className="phantom-card-wrapper">
+          <div className="phantom-card-wrapper scroll-reveal scroll-delay-2" data-parallax="-0.03">
             <div className="phantom-card-shadow-layer" style={{ background: '#0D0D12' }} />
             <div
               className="phantom-card-main"
@@ -153,17 +166,29 @@ export const SecurityBento: React.FC = () => {
                   fontSize: '13px',
                   fontWeight: 600,
                   color: '#047857',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
                 }}
               >
-                ✓ Biometric / PIN authorization<br />
-                ✓ No cloud backup vulnerability<br />
-                ✓ Zero third-party telemetry
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Check size={16} color="#10B981" strokeWidth={2.5} />
+                  <span>Biometric / PIN authorization</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Check size={16} color="#10B981" strokeWidth={2.5} />
+                  <span>No cloud backup vulnerability</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Check size={16} color="#10B981" strokeWidth={2.5} />
+                  <span>Zero third-party telemetry</span>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Card 3: Deployed Contracts */}
-          <div className="phantom-card-wrapper">
+          <div className="phantom-card-wrapper scroll-reveal scroll-delay-3" data-parallax="0.04">
             <div className="phantom-card-shadow-layer" style={{ background: '#0D0D12' }} />
             <div
               className="phantom-card-main"
@@ -260,6 +285,24 @@ export const SecurityBento: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <style>{`
+        @media (max-width: 640px) {
+          #security {
+            padding: 70px 0 !important;
+          }
+          .security-bento-grid {
+            grid-template-columns: 1fr !important;
+            gap: 20px !important;
+          }
+          .security-bento-grid .phantom-card-main {
+            padding: 28px 20px !important;
+          }
+          .security-bento-grid .phantom-card-shadow-layer {
+            transform: none !important;
+          }
+        }
+      `}</style>
     </section>
   );
 };

@@ -19,11 +19,10 @@ After completing each item, update this file and note the date.
 
 ## 🚀 Next Actions for Tomorrow
 
-1. **Setup Deployment Wallet**: Create a `.env` file in the root directory with `DEPLOYER_PRIVATE_KEY=<your_testnet_private_key>` (export a burner wallet from MetaMask). Get Monad Testnet MON from `https://faucet.monad.xyz` to pay for deployment gas.
-2. **Deploy to Testnet (Phase 3C)**: Run `npx hardhat run scripts/deployMultiTokenLedger.js --network monad_testnet`. This will deploy the ledger and mock AUSD/USDC.
-3. **Update Config**: Copy the deployed `MultiTokenLedger` address into `src/config/monad.ts`.
-4. **Coordinate with Anurag (Phase 4B)**: Give him the new `transferService.ts` and `tokenBalance.ts` so he can start wiring up the UI for the Token Selector and Cross-Border Send button.
-5. **App Testing (Phase 1C & 2C)**: Boot up the Android emulator/device and test the Face ID registration and token fetching flows end-to-end.
+1. **Mock Passkey Flow (Phase 1C)**: Because we don't own the `tappay.app` domain to host `assetlinks.json` (required by Android Digital Asset Links), we will mock the `meraAuth.ts` register function to instantly generate a wallet and bypass the Android Passkey loading screen.
+2. **Final UI/UX Polish (Phase 4B)**: Anurag needs to finalize the AUSD balance display on the home screen and ensure the receipt shows the correct token type.
+3. **Record the Demo Video (Phase 5)**: With the mock in place, record the end-to-end flow: Tapping Register -> Mock Wallet created -> Select AUSD -> Send -> Instant Monad Settlement.
+4. **Contract Verification (Phase 3C)**: Check if Monadscan API is back up and run the verification command for `MultiTokenLedger`.
 
 ---
 
@@ -211,7 +210,7 @@ After completing each item, update this file and note the date.
 | 4 | Do we need Agora API keys for staging? | ❓ Need to check | — |
 | 5 | Is Monad mainnet live? | ✅ Resolved | Yes — launched Nov 24, 2025 |
 | 6 | Can we verify MultiTokenLedger? | 🚨 Blocked | Monadscan API returning timeouts/JSON errors. Waiting for resolution. |
-| 7 | Can we test Mera Passkey E2E? | 🚨 Blocked | Android CLI fails to install/hangs in current environment. Need physical device or alternate emulator setup. |
+| 7 | Can we test Mera Passkey E2E? | 🚨 Blocked | Android enforces Digital Asset Links for Passkeys. Without hosting `assetlinks.json` on `tappay.app`, Google Password Manager hangs natively. Workaround: Mock the flow for the demo video. |
 
 ---
 

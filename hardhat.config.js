@@ -30,4 +30,22 @@ module.exports = {
     cache: "./cache",
     artifacts: "./artifacts",
   },
+  etherscan: {
+    apiKey: {
+      monad_testnet: "empty",
+    },
+    customChains: [
+      {
+        network: "monad_testnet",
+        chainId: 10143,
+        urls: {
+          apiURL: "https://api-testnet.monadscan.xyz/api",
+          browserURL: "https://testnet.monadscan.com",
+        },
+      },
+    ],
+  },
+  sourcify: {
+    enabled: true
+  }
 };

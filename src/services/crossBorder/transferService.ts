@@ -11,13 +11,13 @@
  *   5. Returns transaction result for UI display
  *
  * NOTE: This is a NEW file. Does NOT modify any existing services.
- *       It IMPORTS from registry.ts (read-only) for username resolution.
  */
 
 import {ethers} from 'ethers';
 import {sendTokenTransfer, TransferResult} from '../tokens/tokenTransfer';
 import {getTokenBalance, TokenBalance} from '../tokens/tokenBalance';
 import {getAvailableTokens, TokenInfo} from '../../config/tokens';
+import {resolveUsername} from '../registry';
 
 // ─── Types ────────────────────────────────────────────────────────
 
@@ -64,13 +64,10 @@ export async function executeCrossBorderTransfer(
   let resolvedAddress: string;
   let resolvedUsername: string | undefined;
 
-  if (recipient.startsWith('@')) {
-    // Username resolution — try to import registry.ts dynamically
-    // We import dynamically to avoid modifying the import chain
-    const username = recipient.slice(1); // Remove @ prefix
-    try {
-      const registry = await import('../registry');
-      const address = await registry.resolveUsername(username);
+    if (recipient.startsWith('@')) {
+      const username = recipient.slice(1);
+      try {
+        const address = await resolveUsername(username);
       if (!address) {
         return {
           txHash: null,

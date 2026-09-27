@@ -23,9 +23,10 @@ import {truncateAddress, formatMon} from '../utils/format';
 import {
   checkSufficientBalance,
   estimateGasCost,
-  sendPayment,
   BalanceCheckResult,
 } from '../services/wallet';
+import {executeCrossBorderTransfer} from '../services/crossBorder/transferService';
+import {getAvailableTokens} from '../config/tokens';
 import {recordTransaction} from '../services/history';
 import ConfirmPaymentModal from '../components/ConfirmPaymentModal';
 import InsufficientBalanceModal from '../components/InsufficientBalanceModal';
@@ -42,6 +43,8 @@ export default function UsernamePayScreen({navigation}: Props) {
   const [searching, setSearching] = useState(false);
   const [sending, setSending] = useState(false);
   const [estimatedGasWei, setEstimatedGasWei] = useState<bigint | null>(null);
+  const availableTokens = getAvailableTokens();
+  const [selectedToken, setSelectedToken] = useState('AUSD');
 
   // Modals
   const [confirmModalVisible, setConfirmModalVisible] = useState(false);
@@ -142,15 +145,16 @@ export default function UsernamePayScreen({navigation}: Props) {
 
     setSending(true);
     try {
-      const result = await sendPayment(
-        resolvedAddress,
-        balanceCheckData.amountWei,
-      );
+      const result = await executeCrossBorderTransfer({
+        recipient: username ? `@${username}` : resolvedAddress,
+        amount: amount,
+        tokenSymbol: selectedToken,
+      });
 
       setSending(false);
       setConfirmModalVisible(false);
 
-      if (result.txHash) {
+      if (result.success && result.txHash) {
         // Refresh balance in background
         refreshBalance();
 
@@ -232,7 +236,28 @@ export default function UsernamePayScreen({navigation}: Props) {
         {/* Amount Input */}
         {resolvedAddress && (
           <>
-            <Text style={[styles.label, {marginTop: 24}]}>Amount (MON)</Text>
+            <Text style={[styles.label, {marginTop: 24}]}>Select Token</Text>
+            <View style={styles.tokenSelector}>
+              {availableTokens.map((token) => (
+                <TouchableOpacity
+                  key={token.symbol}
+                  style={[
+                    styles.tokenButton,
+                    selectedToken === token.symbol && styles.tokenButtonActive,
+                  ]}
+                  onPress={() => setSelectedToken(token.symbol)}>
+                  <Text
+                    style={[
+                      styles.tokenButtonText,
+                      selectedToken === token.symbol && styles.tokenButtonTextActive,
+                    ]}>
+                    {token.symbol}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={[styles.label, {marginTop: 16}]}>Amount ({selectedToken})</Text>
             <TextInput
               style={styles.amountInput}
               placeholder="0.00"
@@ -319,4 +344,9 @@ const styles = StyleSheet.create({
   balanceHint: {fontSize: 14, color: '#666', textAlign: 'center', marginBottom: 36},
   sendButton: {backgroundColor: '#7C5CFC', paddingVertical: 18, borderRadius: 16, alignItems: 'center'},
   sendButtonText: {fontSize: 18, fontWeight: '700', color: '#FFFFFF'},
+  tokenSelector: {flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16, gap: 8},
+  tokenButton: {flex: 1, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: '#33334A', backgroundColor: '#14141E', alignItems: 'center'},
+  tokenButtonActive: {borderColor: '#7C5CFC', backgroundColor: 'rgba(124, 92, 252, 0.15)'},
+  tokenButtonText: {fontSize: 14, fontWeight: '600', color: '#8888AA'},
+  tokenButtonTextActive: {color: '#7C5CFC'},
 });

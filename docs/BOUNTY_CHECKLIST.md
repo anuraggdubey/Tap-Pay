@@ -138,7 +138,7 @@ After completing each item, update this file and note the date.
 
 ### 3C: Contract Deployment
 - [x] Deploy MultiTokenLedger to Monad testnet (Sep 27) — `0x9830B8638085a0da1eDB5e2f0Daa110d24B82f7E`
-- [ ] Verify contract on Monadscan
+- [!] Verify contract on Monadscan (Blocked: Monadscan API timeouts/errors)
 - [x] Update `src/config/monad.ts` with new contract address (Sep 27)
 - [ ] Test contract from the app end-to-end
 
@@ -156,10 +156,10 @@ After completing each item, update this file and note the date.
       — Return clear success/failure status
 
 ### 4B: UI/UX Updates (Coordinate with Anurag)
-- [ ] Discuss with Anurag: new "Cross-Border" screen or modify existing?
-- [ ] Token selector component (pick AUSD/USDC/USDT/MON)
+- [x] Discuss with Anurag: new "Cross-Border" screen or modify existing?
+- [x] Token selector component (pick AUSD/USDC/USDT/MON)
+- [x] "Send Cross-Border" button that goes to Username Pay with token selection
 - [ ] Show AUSD balance prominently on home screen
-- [ ] "Send Cross-Border" button that goes to Username Pay with token selection
 - [ ] Transaction receipt shows token type (AUSD, USDC, etc.)
 - [ ] Success animation after instant settlement (~600ms on Monad)
 
@@ -175,7 +175,7 @@ After completing each item, update this file and note the date.
 > instantly."
 
 ### 5A: Demo Scenario Script
-- [ ] Write step-by-step demo script:
+- [x] Write step-by-step demo script:
       1. Fresh app install → Passkey registration (Face ID)
       2. Show AUSD balance on home screen
       3. Send AUSD to another user via @username
@@ -193,10 +193,10 @@ After completing each item, update this file and note the date.
 - [ ] Testnet has enough AUSD for demo (get from faucet/team)
 
 ### 5C: Submission Materials
-- [ ] Update README.md with bounty info
+- [x] Update README.md with bounty info
 - [ ] Record final demo video
 - [ ] Take clean screenshots
-- [ ] Write project description for hackathon submission
+- [x] Write project description for hackathon submission
 - [ ] Submit project before deadline (Oct 14, 09:29 GMT+5:30)
 
 ---
@@ -210,6 +210,8 @@ After completing each item, update this file and note the date.
 | 3 | Can WebAuthn work in React Native WebView? | ✅ Not Needed | Mera works natively via `react-native-passkey` — no WebView needed |
 | 4 | Do we need Agora API keys for staging? | ❓ Need to check | — |
 | 5 | Is Monad mainnet live? | ✅ Resolved | Yes — launched Nov 24, 2025 |
+| 6 | Can we verify MultiTokenLedger? | 🚨 Blocked | Monadscan API returning timeouts/JSON errors. Waiting for resolution. |
+| 7 | Can we test Mera Passkey E2E? | 🚨 Blocked | Android CLI fails to install/hangs in current environment. Need physical device or alternate emulator setup. |
 
 ---
 
@@ -221,10 +223,10 @@ After completing each item, update this file and note the date.
 | Phase 1: Mera Passkey | 🟡 Code Complete, Needs Testing | 60% |
 | Phase 2: Multi-Token | 🟡 Code Complete, Needs Testing | 65% |
 | Phase 3: Smart Contracts | ✅ Deployed to Testnet | 85% |
-| Phase 4: Cross-Border UX | 🟡 Service Complete, UI Pending | 40% |
+| Phase 4: Cross-Border UX | 🟡 Service Complete & Unit Tested, UI Pending | 50% |
 | Phase 5: Demo Prep | ⬜ Not Started | 0% |
 
-**Overall Progress: ~70%**
+**Overall Progress: ~72%**
 
 ---
 

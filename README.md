@@ -45,6 +45,15 @@ Keys stay on-device (Android Keystore via `react-native-keychain`). No custodial
 
 ---
 
+## 🏆 Agora Bounty: Cross-Border Payments
+
+TapPay has been expanded for the **Best Cross-Border Payments App on Monad** bounty:
+- **Agora Dollar (AUSD) Integration**: Seamlessly send stablecoins (AUSD, USDC, USDT) cross-border using `@username` resolution.
+- **Passkey Onboarding (Mera)**: Frictionless account creation and transaction signing using Face ID / Fingerprint via `@category-labs/mera`.
+- **Instant Settlement**: Harnessing Monad's ~1s finality for instant international remittances.
+
+---
+
 ## Deployed Contracts (Monad Testnet)
 
 **Network:** Monad Testnet · Chain ID `10143` · ~1s finality
@@ -53,8 +62,15 @@ Keys stay on-device (Android Keystore via `react-native-keychain`). No custodial
 |:---------|:--------|:---------|
 | **UsernameRegistry** | `0xEebB05F9AF06908eCb7bFa5F916Dde1EEa231aDD` | [View on Monadscan](https://testnet.monadscan.com/address/0xEebB05F9AF06908eCb7bFa5F916Dde1EEa231aDD) |
 | **TapPayLedger** | `0x5B177FEF554dA84A86be62E45fb49BB52e6D6838` | [View on Monadscan](https://testnet.monadscan.com/address/0x5B177FEF554dA84A86be62E45fb49BB52e6D6838) |
+| **MultiTokenLedger** | `0x9830B8638085a0da1eDB5e2f0Daa110d24B82f7E` | [View on Monadscan](https://testnet.monadscan.com/address/0x9830B8638085a0da1eDB5e2f0Daa110d24B82f7E) |
 
 **Deployer:** [`0x1406Fe936D971A0dAE9a19DD3354b900B08Fa002`](https://testnet.monadscan.com/address/0x1406Fe936D971A0dAE9a19DD3354b900B08Fa002)
+
+### MultiTokenLedger (Agora Bounty)
+
+New payment rail deployed specifically for cross-border transactions. Supports native MON and ERC-20 tokens (like AUSD).
+- Takes standard ERC-20 `transferFrom` deposits and routes them to the recipient atomically.
+- Extends the `PaymentLogged` event to include the token address.
 
 ### TapPayLedger
 

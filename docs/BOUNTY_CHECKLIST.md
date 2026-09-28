@@ -99,15 +99,15 @@ After completing each item, update this file and note the date.
       — Return transaction hash
 
 ### 2C: Testing
-- [ ] Test fetching AUSD balance
-- [ ] Test fetching USDC balance
-- [ ] Test fetching USDT balance
-- [ ] Test sending AUSD to another address
-- [ ] Test sending USDC to another address
-- [ ] Test sending USDT to another address
-- [ ] Test sending MON still works (regression test)
-- [ ] Test with zero balance (should show friendly error)
-- [ ] Test with insufficient balance (should show friendly error)
+- [x] Test fetching AUSD balance
+- [x] Test fetching USDC balance
+- [x] Test fetching USDT balance
+- [x] Test sending AUSD to another address
+- [x] Test sending USDC to another address
+- [x] Test sending USDT to another address
+- [x] Test sending MON still works (regression test)
+- [x] Test with zero balance (should show friendly error)
+- [x] Test with insufficient balance (should show friendly error)
 
 ---
 

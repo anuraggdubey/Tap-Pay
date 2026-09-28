@@ -27,9 +27,10 @@ import {truncateAddress, formatMon} from '../utils/format';
 import {
   checkSufficientBalance,
   estimateGasCost,
-  sendPayment,
   BalanceCheckResult,
 } from '../services/wallet';
+import {executeCrossBorderTransfer} from '../services/crossBorder/transferService';
+import {getAvailableTokens} from '../config/tokens';
 import {recordTransaction} from '../services/history';
 import ConfirmPaymentModal from '../components/ConfirmPaymentModal';
 import InsufficientBalanceModal from '../components/InsufficientBalanceModal';
@@ -66,6 +67,9 @@ export default function SendPaymentScreen({navigation}: Props) {
   const [amount, setAmount] = useState('');
   const [estimatedGasWei, setEstimatedGasWei] = useState<bigint | null>(null);
   const [sending, setSending] = useState(false);
+  
+  const availableTokens = getAvailableTokens();
+  const [selectedToken, setSelectedToken] = useState('AUSD');
 
   // Modals
   const [confirmModalVisible, setConfirmModalVisible] = useState(false);
@@ -240,11 +244,15 @@ export default function SendPaymentScreen({navigation}: Props) {
 
     setSending(true);
     try {
-      const result = await sendPayment(resolvedAddress, balanceCheckData.amountWei);
+      const result = await executeCrossBorderTransfer({
+        recipient: resolvedUsername ? `@${resolvedUsername}` : resolvedAddress,
+        amount: amount,
+        tokenSymbol: selectedToken,
+      });
       setSending(false);
       setConfirmModalVisible(false);
 
-      if (result.txHash) {
+      if (result.success && result.txHash) {
         refreshBalance();
         recordTransaction({
           direction: 'sent',
@@ -260,6 +268,7 @@ export default function SendPaymentScreen({navigation}: Props) {
           amount,
           recipient: resolvedAddress,
           counterpartyUsername: resolvedUsername || undefined,
+          tokenSymbol: selectedToken,
         });
       } else {
         Alert.alert('Payment Failed', result.error || 'Transaction could not be broadcast.');
@@ -309,7 +318,14 @@ export default function SendPaymentScreen({navigation}: Props) {
             {displayAmount}
           </Text>
           <View style={styles.currencyRow}>
-            <Text style={styles.currencyText}>MON</Text>
+            {availableTokens.map((t) => (
+              <TouchableOpacity 
+                key={t.symbol} 
+                onPress={() => setSelectedToken(t.symbol)}
+                style={[styles.tokenPill, selectedToken === t.symbol && styles.tokenPillActive]}>
+                <Text style={[styles.tokenPillText, selectedToken === t.symbol && styles.tokenPillTextActive]}>{t.symbol}</Text>
+              </TouchableOpacity>
+            ))}
             {estimatedGasWei !== null && validateAmount(amount).valid && (
               <Text style={styles.gasHint}>
                 Gas ~{formatMon(estimatedGasWei).replace(/ MON$/, '')}
@@ -646,6 +662,26 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#636366',
     fontFamily: 'monospace',
+  },
+  tokenPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#33334A',
+    backgroundColor: '#14141E',
+  },
+  tokenPillActive: {
+    borderColor: '#7C5CFC',
+    backgroundColor: 'rgba(124, 92, 252, 0.15)',
+  },
+  tokenPillText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#8888AA',
+  },
+  tokenPillTextActive: {
+    color: '#7C5CFC',
   },
   keypad: {
     paddingBottom: 8,

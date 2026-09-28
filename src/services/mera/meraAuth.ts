@@ -19,9 +19,9 @@
 import {
   createPasskeyWithPrfOutput,
   getPasskeyPrfOutput,
-  getEvmAddress,
 } from '@category-labs/mera';
 import { reactNativeWebAuthnClient } from '@category-labs/mera/react-native-webauthn-client';
+import { ethers } from 'ethers';
 
 // ─── Types ────────────────────────────────────────────────────────
 
@@ -67,9 +67,11 @@ export async function register(
     });
 
     if (result && result.prfOutput) {
-      const address = getEvmAddress(result.prfOutput);
+      const privateKeyHex = ethers.hexlify(result.prfOutput);
+      const wallet = new ethers.Wallet(privateKeyHex);
+      const address = wallet.address;
       _meraAddress = address;
-      _meraSession = { privateKey: result.prfOutput, credentialId: result.credentialId };
+      _meraSession = { privateKey: result.prfOutput, credentialId: result.credentialId, privateKeyHex };
       _meraInitialized = true;
 
       return {
@@ -101,9 +103,11 @@ export async function login(): Promise<MeraAccountResult> {
     });
 
     if (result && result.prfOutput) {
-      const address = getEvmAddress(result.prfOutput);
+      const privateKeyHex = ethers.hexlify(result.prfOutput);
+      const wallet = new ethers.Wallet(privateKeyHex);
+      const address = wallet.address;
       _meraAddress = address;
-      _meraSession = { privateKey: result.prfOutput, credentialId: result.credentialId };
+      _meraSession = { privateKey: result.prfOutput, credentialId: result.credentialId, privateKeyHex };
       _meraInitialized = true;
 
       return {

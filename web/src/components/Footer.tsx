@@ -145,7 +145,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenDownload }) => {
                   marginBottom: '20px',
                 }}
               >
-                Download APK
+                Coming soon
                 <ArrowUpRight size={16} />
               </button>
             </div>

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { X, Smartphone, Download, QrCode } from 'lucide-react';
+import { X, Smartphone, Clock, ArrowUpRight } from 'lucide-react';
 
 interface DownloadModalProps {
   isOpen: boolean;
@@ -24,9 +24,6 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
-
-  const apkUrl = 'https://drive.google.com/file/d/1w3K3PTeqvt250qMJne4azXeU4D35dC8P/view?usp=drivesdk';
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(apkUrl)}&color=1A1A1A&bgcolor=ffffff&qzone=1`;
 
   return (
     <div
@@ -59,7 +56,6 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Close Button */}
         <button
           onClick={onClose}
           style={{
@@ -81,7 +77,6 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
           <X size={18} />
         </button>
 
-        {/* Modal Header */}
         <div style={{ textAlign: 'center', marginBottom: '28px' }}>
           <div
             style={{
@@ -99,51 +94,48 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
             <Smartphone size={28} />
           </div>
           <h3 style={{ fontSize: '26px', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: '6px' }}>
-            Download TapPay
+            Android app — coming soon
           </h3>
-          <p style={{ color: 'var(--text-dark-muted)', fontSize: '15px' }}>
-            Scan with your Android camera to download the APK directly.
+          <p style={{ color: 'var(--text-dark-muted)', fontSize: '15px', lineHeight: 1.55, maxWidth: '360px', margin: '0 auto' }}>
+            We&apos;re still polishing NFC tap-to-pay on Monad. The public APK isn&apos;t available yet — we&apos;ll post here when it&apos;s ready.
           </p>
         </div>
 
-        {/* QR Code */}
         <div
           style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
             background: '#FFFFFF',
             borderRadius: '24px',
-            padding: '20px',
+            padding: '24px 20px',
             marginBottom: '24px',
             boxShadow: '0 6px 20px rgba(0, 0, 0, 0.05)',
             border: '1px solid rgba(26, 26, 26, 0.08)',
+            textAlign: 'center',
           }}
         >
-          <img
-            src={qrCodeUrl}
-            alt="Scan QR to download TapPay APK"
-            style={{ width: '200px', height: '200px', display: 'block', borderRadius: '12px' }}
-          />
           <div
             style={{
-              fontSize: '13px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 16px',
+              borderRadius: '9999px',
+              background: 'var(--pill-bg)',
+              fontSize: '14px',
               fontWeight: 600,
               color: 'var(--text-dark)',
-              marginTop: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
+              marginBottom: '12px',
             }}
           >
-            <QrCode size={16} color="#10B981" />
-            <span>Android 10+ (API 34) · NFC Required</span>
+            <Clock size={16} color="#10B981" />
+            <span>Coming soon</span>
           </div>
+          <p style={{ fontSize: '13px', color: 'var(--text-dark-muted)', lineHeight: 1.5, margin: 0 }}>
+            Android 10+ · NFC required · Monad testnet
+          </p>
         </div>
 
-        {/* Direct APK Link Button */}
         <a
-          href={apkUrl}
+          href="https://x.com/tapxpay"
           target="_blank"
           rel="noopener noreferrer"
           className="phantom-btn-pill"
@@ -162,8 +154,8 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
             textDecoration: 'none',
           }}
         >
-          <Download size={18} />
-          <span>Direct Download Tap-pay.apk</span>
+          <span>Follow @tapxpay for launch updates</span>
+          <ArrowUpRight size={18} />
         </a>
       </div>
 

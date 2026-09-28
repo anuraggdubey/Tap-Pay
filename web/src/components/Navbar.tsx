@@ -151,7 +151,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDownload }) => {
               <Search size={18} />
             </button>
 
-            {/* Download Pill Button */}
+            {/* App availability */}
             <button
               onClick={onOpenDownload}
               className="phantom-btn-pill nav-download-btn"
@@ -162,7 +162,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDownload }) => {
                 boxShadow: isDarkNav ? '0 4px 15px rgba(0, 0, 0, 0.3)' : '0 4px 15px rgba(26, 26, 26, 0.12)',
               }}
             >
-              <span>Download</span>
+              <span>Coming soon</span>
             </button>
 
             {/* Mobile Toggle */}
@@ -243,7 +243,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDownload }) => {
               color: '#FFFFFF',
             }}
           >
-            Download TapPay APK
+            Android app — coming soon
           </button>
         </div>
       )}

@@ -50,7 +50,7 @@ export default function App() {
       {/* Footer with Two Ultra-Realistic Phones (Home & Settings) + Directory */}
       <Footer onOpenDownload={() => setDownloadOpen(true)} />
 
-      {/* Phantom Download Modal */}
+      {/* App availability modal (no public APK yet) */}
       <DownloadModal isOpen={downloadOpen} onClose={() => setDownloadOpen(false)} />
     </div>
   );

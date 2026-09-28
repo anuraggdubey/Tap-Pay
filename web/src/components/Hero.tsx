@@ -260,8 +260,8 @@ export const Hero: React.FC<HeroProps> = ({ onOpenDownload }) => {
                 className="hero-btn-primary"
               >
                 <Smartphone size={18} />
-                <span>Download Android APK</span>
-                <span className="btn-version-badge">v1.0 · Monad</span>
+                <span>Android app — coming soon</span>
+                <span className="btn-version-badge">NFC · Monad</span>
               </button>
 
               <a

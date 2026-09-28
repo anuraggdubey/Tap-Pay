@@ -176,9 +176,58 @@ export default function WalletSetupScreen({navigation}: Props) {
     navigation.replace('MainTabs');
   };
 
-  // DEPRECATED: Manual Import Key Screen removed in favor of Passkey login.
+  // 1. Manual Import Key Screen
   if (step === 'import') {
-    return null;
+    return (
+      <View style={[styles.screenWrapper, {paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20}]}>
+        <ScrollView contentContainerStyle={styles.innerContent} showsVerticalScrollIndicator={false}>
+          <TouchableOpacity onPress={() => setStep('welcome')} style={styles.backButton} activeOpacity={0.7}>
+            <Text style={styles.backText}>← Back</Text>
+          </TouchableOpacity>
+          <Text style={styles.stepIndicator}>SECURE IMPORT</Text>
+          <Text style={styles.viewTitle}>Import Wallet</Text>
+          <Text style={styles.viewSubtitle}>
+            Paste your private key below to securely restore your existing account onto this device.
+          </Text>
+
+          <TextInput
+            style={styles.textInput}
+            placeholder="Enter Private Key (0x...)"
+            placeholderTextColor="#545458"
+            value={privateKeyInput}
+            onChangeText={setPrivateKeyInput}
+            autoCapitalize="none"
+            autoCorrect={false}
+            secureTextEntry
+          />
+
+          <TouchableOpacity
+            style={styles.primaryPillButton}
+            onPress={async () => {
+              if (!privateKeyInput) return;
+              triggerHaptic.impactMedium();
+              setLoading(true);
+              const success = await importWallet(privateKeyInput.trim());
+              setLoading(false);
+              if (success) {
+                triggerHaptic.notificationSuccess();
+                navigation.replace('MainTabs');
+              } else {
+                triggerHaptic.notificationError();
+                Alert.alert('Import Failed', 'Invalid private key. Please check your credentials and try again.');
+              }
+            }}
+            disabled={loading || !privateKeyInput}
+            activeOpacity={0.85}>
+            {loading ? (
+              <ActivityIndicator color="#000000" />
+            ) : (
+              <Text style={styles.primaryPillText}>Import & Secure</Text>
+            )}
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
+    );
   }
 
   // 2. Username Claim Screen
@@ -326,11 +375,19 @@ export default function WalletSetupScreen({navigation}: Props) {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.secondaryTextButton}
+          style={styles.secondaryPillButton}
           onPress={handleLogin}
           disabled={loading}
+          activeOpacity={0.85}>
+          <Text style={styles.secondaryPillText}>Log In (Passkey)</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.secondaryTextButton}
+          onPress={() => setStep('import')}
+          disabled={loading}
           activeOpacity={0.7}>
-          <Text style={styles.secondaryText}>Log In with Passkey</Text>
+          <Text style={styles.secondaryText}>Restore with Private Key</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -378,6 +435,23 @@ const styles = StyleSheet.create({
   },
   primaryPillText: {
     color: '#000000',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: -0.3,
+  },
+  secondaryPillButton: {
+    width: '100%',
+    backgroundColor: '#1C1C1E',
+    paddingVertical: 18,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#2C2C2E',
+    marginBottom: 16,
+  },
+  secondaryPillText: {
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: -0.3,

@@ -74,6 +74,7 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [balanceHidden, setBalanceHidden] = useState(false);
+  const [activeToken, setActiveToken] = useState<'AUSD' | 'MON'>('AUSD');
   const [recentTx, setRecentTx] = useState<TransactionRecord[]>([]);
   const [nfcReady, setNfcReady] = useState(false);
 
@@ -315,9 +316,22 @@ export default function HomeScreen() {
         <View style={styles.metricGrid}>
           <View style={styles.metricTile}>
             <View style={styles.metricTileHeader}>
-              <Text style={styles.metricLabel}>Card Balance</Text>
+              <View style={styles.tokenSelector}>
+                <TouchableOpacity
+                  style={[styles.tokenOption, activeToken === 'AUSD' && styles.tokenOptionActive]}
+                  onPress={() => { triggerHaptic.selection(); setActiveToken('AUSD'); }}
+                  activeOpacity={0.7}>
+                  <Text style={[styles.tokenOptionText, activeToken === 'AUSD' && styles.tokenOptionTextActive]}>AUSD</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.tokenOption, activeToken === 'MON' && styles.tokenOptionActive]}
+                  onPress={() => { triggerHaptic.selection(); setActiveToken('MON'); }}
+                  activeOpacity={0.7}>
+                  <Text style={[styles.tokenOptionText, activeToken === 'MON' && styles.tokenOptionTextActive]}>MON</Text>
+                </TouchableOpacity>
+              </View>
               <TouchableOpacity
-                onPress={() => setBalanceHidden(prev => !prev)}
+                onPress={() => { triggerHaptic.selection(); setBalanceHidden(prev => !prev); }}
                 activeOpacity={0.7}
                 hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
                 <Text style={styles.eyeIcon}>{balanceHidden ? '◎' : '◉'}</Text>
@@ -325,10 +339,14 @@ export default function HomeScreen() {
             </View>
 
             <Text style={styles.metricValue}>
-              {balanceHidden ? '••••• AUSD' : `${displayAusd} AUSD`}
+              {activeToken === 'AUSD' 
+                ? (balanceHidden ? '••••• AUSD' : `${displayAusd} AUSD`)
+                : (balanceHidden ? '••••• MON' : `${balanceMon} MON`)}
             </Text>
             <Text style={styles.metricUsd}>
-              {balanceHidden ? '•••• MON' : `${balanceMon} MON`}
+              {activeToken === 'AUSD'
+                ? (balanceHidden ? '•••• MON' : `${balanceMon} MON`)
+                : (balanceHidden ? '•••• AUSD' : `${displayAusd} AUSD`)}
             </Text>
 
             <View style={styles.balanceFooter}>
@@ -1035,6 +1053,29 @@ const styles = StyleSheet.create({
     color: ios.secondaryLabel,
     marginTop: 4,
     textAlign: 'center',
+  },
+  tokenSelector: {
+    flexDirection: 'row',
+    backgroundColor: '#1C1C1E',
+    borderRadius: 16,
+    padding: 2,
+    alignItems: 'center',
+  },
+  tokenOption: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+  },
+  tokenOptionActive: {
+    backgroundColor: '#3A3A3C',
+  },
+  tokenOptionText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#8E8E93',
+  },
+  tokenOptionTextActive: {
+    color: '#FFFFFF',
   },
   txDivider: {
     height: StyleSheet.hairlineWidth,

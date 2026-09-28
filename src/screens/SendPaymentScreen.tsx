@@ -30,7 +30,7 @@ import {
   BalanceCheckResult,
 } from '../services/wallet';
 import {executeCrossBorderTransfer} from '../services/crossBorder/transferService';
-import {getAvailableTokens} from '../config/tokens';
+import {getAvailableTokens, getTokenBySymbol} from '../config/tokens';
 import {recordTransaction} from '../services/history';
 import ConfirmPaymentModal from '../components/ConfirmPaymentModal';
 import InsufficientBalanceModal from '../components/InsufficientBalanceModal';
@@ -220,13 +220,23 @@ export default function SendPaymentScreen({navigation}: Props) {
 
     setSending(true);
     try {
-      const amountWei = ethers.parseEther(amount);
-      const check = await checkSufficientBalance(address, resolvedAddress, amountWei);
-      if (!check.canAfford) {
+      const tokenInfo = getTokenBySymbol(selectedToken) || availableTokens[0];
+      const isNative = tokenInfo.isNative;
+
+      // Estimate gas by pretending it's a 0 value native transfer if it's an ERC20
+      const amountWeiForGas = isNative ? ethers.parseEther(amount) : 0n;
+      
+      const check = await checkSufficientBalance(address, resolvedAddress, amountWeiForGas);
+      
+      // If native MON, fail if insufficient MON
+      if (!check.canAfford && isNative) {
         setBalanceCheckData(check);
         setInsufficientModalVisible(true);
         return;
       }
+      
+      // For ERC20 tokens, we pass the gas check data so the modal can show the estimated gas
+      // The actual ERC20 balance check happens during the transfer via executeCrossBorderTransfer
       setBalanceCheckData(check);
       setConfirmModalVisible(true);
     } catch (err: any) {
@@ -372,9 +382,11 @@ export default function SendPaymentScreen({navigation}: Props) {
             onCancel={() => setConfirmModalVisible(false)}
             recipient={resolvedAddress || ''}
             recipientUsername={resolvedUsername}
-            amountWei={balanceCheckData.amountWei}
+            amountWei={ethers.parseEther(amount || '0')} // Only used for native rendering fallback
             gasCostWei={balanceCheckData.gasCostWei}
             loading={sending}
+            tokenSymbol={selectedToken}
+            displayAmount={amount}
           />
         )}
         {balanceCheckData && (

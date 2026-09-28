@@ -23,6 +23,8 @@ interface Props {
   amountWei: bigint;
   gasCostWei: bigint;
   loading?: boolean;
+  tokenSymbol?: string;
+  displayAmount?: string;
 }
 
 export default function ConfirmPaymentModal({
@@ -34,8 +36,13 @@ export default function ConfirmPaymentModal({
   amountWei,
   gasCostWei,
   loading = false,
+  tokenSymbol = 'MON',
+  displayAmount,
 }: Props) {
+  const isMon = tokenSymbol === 'MON';
   const totalCostWei = amountWei + gasCostWei;
+  const amountStr = isMon ? formatMon(amountWei) : `${displayAmount} ${tokenSymbol}`;
+  const totalStr = isMon ? formatMon(totalCostWei) : `${displayAmount} ${tokenSymbol} + ${formatMon(gasCostWei)}`;
 
   return (
     <Modal
@@ -53,7 +60,7 @@ export default function ConfirmPaymentModal({
 
           {/* Amount Display */}
           <View style={styles.amountBox}>
-            <Text style={styles.amountNumber}>{formatMon(amountWei)}</Text>
+            <Text style={styles.amountNumber}>{amountStr}</Text>
           </View>
 
           {/* Details Card */}
@@ -79,7 +86,7 @@ export default function ConfirmPaymentModal({
 
             <View style={styles.row}>
               <Text style={styles.totalLabel}>Total</Text>
-              <Text style={styles.totalValue}>{formatMon(totalCostWei)}</Text>
+              <Text style={styles.totalValue}>{totalStr}</Text>
             </View>
           </View>
 

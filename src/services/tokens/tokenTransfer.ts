@@ -10,7 +10,7 @@
  */
 
 import {ethers} from 'ethers';
-import {getProvider, withRpcFailover} from '../wallet';
+import {getProvider, withRpcFailover, loadPrivateKey} from '../wallet';
 import {SUPPORTED_TOKENS, ERC20_ABI, parseTokenAmount} from '../../config/tokens';
 import {getMeraSigner, hasMeraSigner} from '../mera/meraSigner';
 
@@ -102,13 +102,26 @@ export async function sendTokenTransfer(
     };
   }
 
-  // Get signer (from params, Mera, or fail)
-  const signer = params.signer || getMeraSigner();
+  // Get signer (from params, Mera, classic wallet, or fail)
+  let signer = params.signer;
+  
+  if (!signer) {
+    if (hasMeraSigner()) {
+      signer = getMeraSigner() || undefined;
+    } else {
+      // Fallback to classic wallet (this will trigger biometric prompt)
+      const pk = await loadPrivateKey('Authenticate to send payment');
+      if (pk) {
+        signer = new ethers.Wallet(pk, getProvider());
+      }
+    }
+  }
+
   if (!signer) {
     return {
       txHash: null,
       success: false,
-      error: 'No wallet connected. Please authenticate with passkey first.',
+      error: 'Authentication failed or cancelled. Please authenticate to continue.',
       tokenSymbol,
       amount,
     };

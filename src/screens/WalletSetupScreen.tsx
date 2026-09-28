@@ -26,6 +26,8 @@ import {validateUsername} from '../utils/validation';
 import {resolveUsername, registerUsername, reverseResolveAddress} from '../services/registry';
 import {triggerHaptic} from '../utils/haptics';
 import BrandLogo from '../components/BrandLogo';
+import {register as meraRegister, login as meraLogin, getSessionPrivateKey} from '../services/mera/meraAuth';
+import {ethers} from 'ethers';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'WalletSetup'>;
@@ -44,57 +46,64 @@ export default function WalletSetupScreen({navigation}: Props) {
   const [copiedAddress, setCopiedAddress] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
 
-  // Step 1: Create New Wallet
+  // Step 1: Create New Wallet (via Passkey)
   const handleCreate = async () => {
     triggerHaptic.impactMedium();
     setLoading(true);
-    const wallet = await createWallet();
-    setLoading(false);
 
-    if (wallet) {
-      setNewPrivateKey(wallet.privateKey);
-      setNewAddress(wallet.address);
-      setStep('username');
-    } else {
-      triggerHaptic.notificationError();
-      Alert.alert('Error', 'Failed to generate secure wallet. Please try again.');
+    const result = await meraRegister('TapPay User');
+    if (result.address && !result.error) {
+      const pkBytes = getSessionPrivateKey();
+      if (pkBytes) {
+        const pkHex = ethers.hexlify(pkBytes);
+        const success = await importWallet(pkHex); // Save securely to device
+        if (success) {
+          setNewPrivateKey(pkHex);
+          setNewAddress(result.address);
+          setLoading(false);
+          setStep('username');
+          return;
+        }
+      }
     }
+
+    setLoading(false);
+    triggerHaptic.notificationError();
+    Alert.alert('Registration Failed', result.error || 'Could not create secure passkey wallet.');
   };
 
-  // Step 1 Alternate: Import Existing Wallet
-  // Username is assigned per user at creation time, so importing skips username step.
-  const handleImport = async () => {
-    if (!privateKeyInput.trim()) {
-      Alert.alert('Error', 'Please enter a valid private key.');
-      return;
-    }
-
+  // Step 1 Alternate: Login (via Passkey)
+  const handleLogin = async () => {
     triggerHaptic.impactMedium();
     setLoading(true);
-    const success = await importWallet(privateKeyInput.trim());
 
-    if (success) {
-      // Try to recover existing username from Supabase (it was set during original wallet creation)
-      try {
-        const {ethers} = require('ethers');
-        const wallet = new ethers.Wallet(privateKeyInput.trim());
-        const existingUsername = await reverseResolveAddress(wallet.address);
-        if (existingUsername) {
-          await saveUsername(existingUsername);
+    const result = await meraLogin();
+    if (result.address && !result.error) {
+      const pkBytes = getSessionPrivateKey();
+      if (pkBytes) {
+        const pkHex = ethers.hexlify(pkBytes);
+        const success = await importWallet(pkHex);
+        if (success) {
+          // Try to recover existing username from Supabase
+          try {
+            const existingUsername = await reverseResolveAddress(result.address);
+            if (existingUsername) {
+              await saveUsername(existingUsername);
+            }
+          } catch {
+            // Ignore
+          }
+          setLoading(false);
+          triggerHaptic.notificationSuccess();
+          navigation.replace('MainTabs');
+          return;
         }
-      } catch {
-        // Non-critical — username can be claimed later from Account Info
       }
-
-      setLoading(false);
-      triggerHaptic.notificationSuccess();
-      // Skip username step entirely — go directly to the app
-      navigation.replace('MainTabs');
-    } else {
-      setLoading(false);
-      triggerHaptic.notificationError();
-      Alert.alert('Error', 'Invalid private key. Please check and try again.');
     }
+
+    setLoading(false);
+    triggerHaptic.notificationError();
+    Alert.alert('Login Failed', result.error || 'Could not authenticate passkey.');
   };
 
   // Step 2: Username Claim
@@ -167,48 +176,9 @@ export default function WalletSetupScreen({navigation}: Props) {
     navigation.replace('MainTabs');
   };
 
-  // 1. Import Key Screen
+  // DEPRECATED: Manual Import Key Screen removed in favor of Passkey login.
   if (step === 'import') {
-    return (
-      <View style={[styles.screenWrapper, {paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20}]}>
-        <ScrollView contentContainerStyle={styles.innerContent} showsVerticalScrollIndicator={false}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => setStep('welcome')}
-            activeOpacity={0.7}>
-            <Text style={styles.backText}>‹ Back</Text>
-          </TouchableOpacity>
-
-          <Text style={styles.viewTitle}>Import Wallet</Text>
-          <Text style={styles.viewSubtitle}>
-            Enter your 64-character private key to restore your wallet on Monad.
-          </Text>
-
-          <TextInput
-            style={styles.textInput}
-            placeholder="0x..."
-            placeholderTextColor="#545458"
-            value={privateKeyInput}
-            onChangeText={setPrivateKeyInput}
-            autoCapitalize="none"
-            autoCorrect={false}
-            secureTextEntry
-          />
-
-          <TouchableOpacity
-            style={styles.primaryPillButton}
-            onPress={handleImport}
-            disabled={loading}
-            activeOpacity={0.85}>
-            {loading ? (
-              <ActivityIndicator color="#000000" />
-            ) : (
-              <Text style={styles.primaryPillText}>Import & Continue</Text>
-            )}
-          </TouchableOpacity>
-        </ScrollView>
-      </View>
-    );
+    return null;
   }
 
   // 2. Username Claim Screen
@@ -351,15 +321,16 @@ export default function WalletSetupScreen({navigation}: Props) {
           {loading ? (
             <ActivityIndicator color="#000000" />
           ) : (
-            <Text style={styles.primaryPillText}>Create New Wallet</Text>
+            <Text style={styles.primaryPillText}>Create Account (Passkey)</Text>
           )}
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.secondaryTextButton}
-          onPress={() => setStep('import')}
+          onPress={handleLogin}
+          disabled={loading}
           activeOpacity={0.7}>
-          <Text style={styles.secondaryText}>Recover Existing Wallet</Text>
+          <Text style={styles.secondaryText}>Log In with Passkey</Text>
         </TouchableOpacity>
       </View>
     </View>

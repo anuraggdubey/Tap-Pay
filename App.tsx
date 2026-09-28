@@ -9,13 +9,16 @@
 import React from 'react';
 import {StatusBar} from 'react-native';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
-import MeraTestScreen from './src/screens/MeraTestScreen';
+import AppNavigator from './src/navigation/AppNavigator';
+import {WalletProvider} from './src/context/WalletContext';
 
 function App() {
   return (
     <SafeAreaProvider>
       <StatusBar barStyle="light-content" />
-      <MeraTestScreen />
+      <WalletProvider>
+        <AppNavigator />
+      </WalletProvider>
     </SafeAreaProvider>
   );
 }

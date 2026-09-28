@@ -41,7 +41,7 @@ export async function startHceReceiverSession(
     console.log('[HCE] Broadcasting address:', encodedAddress);
 
     const tag = new NFCTagType4({
-      type: NFCTagType4NDEFContentType.Text,
+      type: NFCTagType4NDEFContentType.URL,
       content: encodedAddress,
       writable: false,
     });

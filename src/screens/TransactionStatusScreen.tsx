@@ -26,6 +26,7 @@ import {triggerHaptic} from '../utils/haptics';
 import {updateTransactionStatus} from '../services/history';
 import {CrossIcon, ExternalLinkIcon, WalletCardIcon} from '../components/AppIcons';
 import {colors} from '../theme';
+import {getTokenBySymbol} from '../config/tokens';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'TransactionStatus'>;
@@ -100,6 +101,7 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
     counterpartyUsername,
     waitForBalance,
     expectedAmountWei,
+    tokenSymbol = 'MON',
   } = route.params;
   const {address, username, balance, refreshBalance} = useWallet();
   const insets = useSafeAreaInsets();
@@ -266,7 +268,12 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
     });
   }, [completedAt]);
 
-  const signedAmount = `${isReceived ? '+' : '-'}${amount} MON`;
+  const tokenInfo = getTokenBySymbol(tokenSymbol);
+  const tokenName = tokenInfo?.name || 'Monad';
+  const displaySymbol = tokenInfo?.symbol || 'MON';
+  const badgeLetter = displaySymbol.charAt(0);
+
+  const signedAmount = `${isReceived ? '+' : '-'}${amount} ${displaySymbol}`;
   const amountColor = isReceived ? colors.success : '#FF6B6B';
 
   if (status === 'pending') {
@@ -283,7 +290,7 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
               : 'Waiting for Monad confirmation (~1–2s)'}
           </Text>
           <View style={styles.pendingAmountChip}>
-            <Text style={styles.pendingAmount}>{amount} MON</Text>
+            <Text style={styles.pendingAmount}>{amount} {displaySymbol}</Text>
           </View>
         </View>
       </View>
@@ -339,7 +346,7 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
         </Animated.View>
 
         <Text style={styles.heroStatus}>{isReceived ? 'Received' : 'Sent'}</Text>
-        <Text style={styles.heroAmount}>{amount} MON</Text>
+        <Text style={styles.heroAmount}>{amount} {displaySymbol}</Text>
         <Text style={styles.heroTime}>{timestampLabel}</Text>
 
         <View style={styles.partyBlock}>
@@ -368,11 +375,11 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
           <View style={styles.assetRow}>
             <View style={styles.assetLeft}>
               <View style={styles.monBadge}>
-                <Text style={styles.monBadgeText}>M</Text>
+                <Text style={styles.monBadgeText}>{badgeLetter}</Text>
               </View>
               <View>
-                <Text style={styles.assetName}>Monad</Text>
-                <Text style={styles.assetTicker}>MON</Text>
+                <Text style={styles.assetName}>{tokenName}</Text>
+                <Text style={styles.assetTicker}>{displaySymbol}</Text>
               </View>
             </View>
             <View style={styles.assetRight}>

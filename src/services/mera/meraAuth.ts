@@ -39,7 +39,7 @@ export type MeraAuthState =
 
 // ─── Constants ────────────────────────────────────────────────────
 
-const MERA_RP_ID = 'tappay.app';
+const MERA_RP_ID = 'web-seven-beta-29.vercel.app';
 const MERA_RP_NAME = 'TapPay';
 
 // ─── State ────────────────────────────────────────────────────────
@@ -69,7 +69,7 @@ export async function register(
     if (result && result.prfOutput) {
       const address = getEvmAddress(result.prfOutput);
       _meraAddress = address;
-      _meraSession = { privateKey: result.prfOutput, credentialId: result.id };
+      _meraSession = { privateKey: result.prfOutput, credentialId: result.credentialId };
       _meraInitialized = true;
 
       return {

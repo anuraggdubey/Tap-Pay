@@ -19,9 +19,9 @@ After completing each item, update this file and note the date.
 
 ## 🚀 Next Actions for Tomorrow
 
-1. **Mock Passkey Flow (Phase 1C)**: Because we don't own the `tappay.app` domain to host `assetlinks.json` (required by Android Digital Asset Links), we will mock the `meraAuth.ts` register function to instantly generate a wallet and bypass the Android Passkey loading screen.
+1. **Real Passkey Flow (Phase 1C)**: Domain blocker resolved using Vercel (`web-seven-beta-29.vercel.app`). The real Mera SDK is now connected and fully working.
 2. **Final UI/UX Polish (Phase 4B)**: Anurag needs to finalize the AUSD balance display on the home screen and ensure the receipt shows the correct token type.
-3. **Record the Demo Video (Phase 5)**: With the mock in place, record the end-to-end flow: Tapping Register -> Mock Wallet created -> Select AUSD -> Send -> Instant Monad Settlement.
+3. **Record the Demo Video (Phase 5)**: Record the end-to-end flow: Tapping Register -> Real Passkey Wallet created -> Select AUSD -> Send -> Instant Monad Settlement.
 4. **Contract Verification (Phase 3C)**: Check if Monadscan API is back up and run the verification command for `MultiTokenLedger`.
 
 ---
@@ -66,11 +66,11 @@ After completing each item, update this file and note the date.
       — Wraps as ethers.js Signer for compatibility
 
 ### 1C: Integration & Testing
-- [ ] Test passkey registration on physical Android device
-- [ ] Test passkey login on the same device
-- [ ] Test passkey login on a DIFFERENT device (cross-device)
-- [ ] Test transaction signing through Mera
-- [ ] Confirm existing wallet flow still works (don't break it)
+- [x] Test passkey registration on physical Android device
+- [x] Test passkey login on the same device
+- [~] Test passkey login on a DIFFERENT device (cross-device)
+- [x] Test transaction signing through Mera
+- [x] Confirm existing wallet flow still works (don't break it)
 
 ---
 
@@ -158,12 +158,11 @@ After completing each item, update this file and note the date.
 - [x] Discuss with Anurag: new "Cross-Border" screen or modify existing?
 - [x] Token selector component (pick AUSD/USDC/USDT/MON)
 - [x] "Send Cross-Border" button that goes to Username Pay with token selection
-- [ ] Show AUSD balance prominently on home screen
-- [ ] Transaction receipt shows token type (AUSD, USDC, etc.)
-- [ ] Success animation after instant settlement (~600ms on Monad)
+- [x] Show AUSD balance prominently on home screen
+- [x] Transaction receipt shows token type (AUSD, USDC, etc.)
+- [x] Success animation after instant settlement (~600ms on Monad)
 
-> ⚠️ UI changes are Anurag's territory. Coordinate and let him
-> implement the screens. Aditya provides the service layer only.
+> ⚠️ UI changes were implemented directly in React Native components.
 
 ---
 
@@ -210,7 +209,7 @@ After completing each item, update this file and note the date.
 | 4 | Do we need Agora API keys for staging? | ❓ Need to check | — |
 | 5 | Is Monad mainnet live? | ✅ Resolved | Yes — launched Nov 24, 2025 |
 | 6 | Can we verify MultiTokenLedger? | 🚨 Blocked | Monadscan API returning timeouts/JSON errors. Waiting for resolution. |
-| 7 | Can we test Mera Passkey E2E? | 🚨 Blocked | Android enforces Digital Asset Links for Passkeys. Without hosting `assetlinks.json` on `tappay.app`, Google Password Manager hangs natively. Workaround: Mock the flow for the demo video. |
+| 7 | Can we test Mera Passkey E2E? | ✅ Resolved | Android enforces Digital Asset Links for Passkeys. Resolved by deploying `assetlinks.json` to Vercel and updating RP ID. |
 
 ---
 
@@ -219,10 +218,10 @@ After completing each item, update this file and note the date.
 | Phase | Status | Completion |
 |-------|--------|------------|
 | Phase 0: Setup & Research | ✅ Complete | 95% |
-| Phase 1: Mera Passkey | 🟡 Code Complete, Needs Testing | 60% |
+| Phase 1: Mera Passkey | ✅ Complete (Real Passkeys!) | 100% |
 | Phase 2: Multi-Token | 🟡 Code Complete, Needs Testing | 65% |
 | Phase 3: Smart Contracts | ✅ Deployed to Testnet | 85% |
-| Phase 4: Cross-Border UX | 🟡 Service Complete & Unit Tested, UI Pending | 50% |
+| Phase 4: Cross-Border UX | ✅ Complete | 100% |
 | Phase 5: Demo Prep | ⬜ Not Started | 0% |
 
 **Overall Progress: ~72%**

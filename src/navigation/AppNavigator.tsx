@@ -49,6 +49,7 @@ export type RootStackParamList = {
     counterpartyUsername?: string;
     waitForBalance?: boolean;
     expectedAmountWei?: string;
+    tokenSymbol?: string;
   };
   AccountInfo: undefined;
   AboutTapPay: undefined;

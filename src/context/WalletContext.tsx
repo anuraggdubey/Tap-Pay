@@ -18,6 +18,7 @@ import {
   deleteWallet,
 } from '../services/wallet';
 import {reverseResolve} from '../services/registry';
+import {getTokenBalance} from '../services/tokens/tokenBalance';
 
 const USERNAME_STORAGE_KEY = '@tappay_username';
 
@@ -26,6 +27,7 @@ interface WalletState {
   isInitialized: boolean;
   address: string | null;
   balance: bigint;
+  ausdBalance: bigint;
   username: string | null;
   // Actions
   createWallet: () => Promise<{address: string; privateKey: string} | null>;
@@ -43,6 +45,7 @@ export function WalletProvider({children}: {children: ReactNode}) {
   const [isInitialized, setIsInitialized] = useState(false);
   const [address, setAddress] = useState<string | null>(null);
   const [balance, setBalance] = useState<bigint>(0n);
+  const [ausdBalance, setAusdBalance] = useState<bigint>(0n);
   const [username, setUsername] = useState<string | null>(null);
 
   // Load stored username from AsyncStorage
@@ -86,6 +89,8 @@ export function WalletProvider({children}: {children: ReactNode}) {
             try {
               const bal = await getBalance(addr);
               setBalance(bal);
+              const ausdBal = await getTokenBalance(addr, 'AUSD');
+              setAusdBalance(ausdBal.balanceRaw);
             } catch {
               // Network error — balance stays 0
             }
@@ -114,6 +119,8 @@ export function WalletProvider({children}: {children: ReactNode}) {
         try {
           const bal = await getBalance(address);
           setBalance(bal);
+          const ausdBal = await getTokenBalance(address, 'AUSD');
+          setAusdBalance(ausdBal.balanceRaw);
         } catch {
           // Silently fail — keep last known balance
         }
@@ -192,6 +199,8 @@ export function WalletProvider({children}: {children: ReactNode}) {
     try {
       const bal = await getBalance(address);
       setBalance(bal);
+      const ausdBal = await getTokenBalance(address, 'AUSD');
+      setAusdBalance(ausdBal.balanceRaw);
     } catch {
       // Keep last known balance
     }
@@ -216,6 +225,7 @@ export function WalletProvider({children}: {children: ReactNode}) {
       if (deleted) {
         setAddress(null);
         setBalance(0n);
+        setAusdBalance(0n);
         setIsInitialized(false);
         setUsername(null);
         // Clear stored username
@@ -236,6 +246,7 @@ export function WalletProvider({children}: {children: ReactNode}) {
         isInitialized,
         address,
         balance,
+        ausdBalance,
         username,
         createWallet,
         importWallet,

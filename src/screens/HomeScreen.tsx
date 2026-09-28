@@ -68,7 +68,7 @@ function getTxTitle(tx: TransactionRecord): string {
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const {address, balance, username, refreshBalance} = useWallet();
+  const {address, balance, ausdBalance, username, refreshBalance} = useWallet();
   const navigation = useNavigation<NavigationProp>();
 
   const [refreshing, setRefreshing] = useState(false);
@@ -89,10 +89,11 @@ export default function HomeScreen() {
     return num.toLocaleString(undefined, {maximumFractionDigits: 3});
   }, [balance]);
 
-  const balanceUsd = useMemo(() => {
-    const num = parseFloat(ethers.formatEther(balance));
-    return (num * MON_USD_ESTIMATE).toFixed(2);
-  }, [balance]);
+  const displayAusd = useMemo(() => {
+    if (ausdBalance === undefined) return '0.00';
+    const num = parseFloat(ethers.formatUnits(ausdBalance || 0n, 6));
+    return num.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  }, [ausdBalance]);
 
   const profileLetter = useMemo(() => {
     if (username) {
@@ -324,10 +325,10 @@ export default function HomeScreen() {
             </View>
 
             <Text style={styles.metricValue}>
-              {balanceHidden ? '••••• MON' : `${balanceMon} MON`}
+              {balanceHidden ? '••••• AUSD' : `${displayAusd} AUSD`}
             </Text>
             <Text style={styles.metricUsd}>
-              {balanceHidden ? '•••• USD' : `~$${balanceUsd} USD`}
+              {balanceHidden ? '•••• MON' : `${balanceMon} MON`}
             </Text>
 
             <View style={styles.balanceFooter}>

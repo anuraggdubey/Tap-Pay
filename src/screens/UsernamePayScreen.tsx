@@ -173,6 +173,7 @@ export default function UsernamePayScreen({navigation}: Props) {
           txHash: result.txHash,
           amount,
           recipient: resolvedAddress,
+          tokenSymbol: selectedToken,
         });
       } else {
         Alert.alert('Payment Failed', result.error || 'Transaction could not be broadcast.');

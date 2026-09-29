@@ -15,12 +15,12 @@ describe('APDU Encoding/Decoding for One-Way NFC', () => {
   test('correctly encodes receiver address', () => {
     const receiver = '0x1234567890123456789012345678901234567890';
     const encoded = encodeReceiverAddress(receiver);
-    expect(encoded).toBe(`${RECEIVER_NDEF_PREFIX}1234567890123456789012345678901234567890`);
+    expect(encoded).toBe(`${RECEIVER_NDEF_PREFIX}0x1234567890123456789012345678901234567890`);
   });
 
   test('correctly decodes receiver address', () => {
     const receiver = '0xabcdef1234567890abcdef1234567890abcdef12';
-    const encoded = `${RECEIVER_NDEF_PREFIX}abcdef1234567890abcdef1234567890abcdef12`;
+    const encoded = `${RECEIVER_NDEF_PREFIX}0xabcdef1234567890abcdef1234567890abcdef12`;
     
     const decoded = decodeReceiverAddress(encoded);
     expect(decoded?.toLowerCase()).toBe(receiver.toLowerCase());

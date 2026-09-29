@@ -257,6 +257,7 @@ export const Footer: React.FC<FooterProps> = ({ onJoinWaitlist }) => {
             {[
               { label: 'Home', href: '/' },
               { label: 'Waitlist', href: '/waitlist' },
+              { label: 'Download', href: '/download' },
               { label: 'Our Product', href: '/#how-it-works' },
               { label: 'NFC Simulator', href: '/#demo' },
               { label: 'Prerequisites', href: '/#prerequisites' },

@@ -2,6 +2,7 @@ import React, { useState, FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Loader2 } from 'lucide-react';
 import { joinWaitlist } from '../services/waitlist';
+import { PlayBentoGrid } from '../components/PlayBentoGrid';
 import '../styles/waitlist.css';
 
 const MARQUEE_ITEMS = [
@@ -77,24 +78,6 @@ export default function WaitlistPage() {
               notes the day we ship. No spam, just the tap.
             </p>
 
-            <div className="waitlist-perks">
-              <div className="waitlist-perk waitlist-perk--dark">
-                <div className="waitlist-perk-kicker">01 · Access</div>
-                <div className="waitlist-perk-title">First wave install link</div>
-              </div>
-              <div className="waitlist-perk">
-                <div className="waitlist-perk-kicker">02 · Product</div>
-                <div className="waitlist-perk-title">NFC send &amp; receive</div>
-              </div>
-              <div className="waitlist-perk waitlist-perk--lavender">
-                <div className="waitlist-perk-kicker">03 · Chain</div>
-                <div className="waitlist-perk-title">~1s Monad finality</div>
-              </div>
-              <div className="waitlist-perk">
-                <div className="waitlist-perk-kicker">04 · Security</div>
-                <div className="waitlist-perk-title">Keys in Android Keystore</div>
-              </div>
-            </div>
           </div>
 
           <div className="waitlist-form-panel">
@@ -160,6 +143,10 @@ export default function WaitlistPage() {
               </>
             )}
           </div>
+        </div>
+
+        <div style={{ marginTop: 56 }}>
+          <PlayBentoGrid variant="waitlist" />
         </div>
       </div>
 

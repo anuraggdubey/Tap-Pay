@@ -42,7 +42,7 @@ export default function LandingPage() {
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <div className="scroll-progress-beam" style={{ width: `${scrollProgress}%` }} />
 
-      <Navbar onOpenDownload={() => setDownloadOpen(true)} onJoinWaitlist={goWaitlist} />
+      <Navbar onJoinWaitlist={goWaitlist} />
 
       <main style={{ flex: 1 }}>
         <Hero onJoinWaitlist={goWaitlist} />

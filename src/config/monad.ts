@@ -28,9 +28,6 @@ export const MONAD_CONFIG = {
     tapPayLedger: '0x5B177FEF554dA84A86be62E45fb49BB52e6D6838' as `0x${string}`,
     multiTokenLedger: '0x9830B8638085a0da1eDB5e2f0Daa110d24B82f7E' as `0x${string}`, // Deployed Sep 27, 2026
   },
-
-  // Backend API (for session management + username caching)
-  apiBaseUrl: 'http://192.168.7.101:3001/api/v1', // Physical device over local Wi-Fi
 };
 
 // AID for NFC HCE — hex for "TapPay" with 0xF0 prefix (proprietary AID)

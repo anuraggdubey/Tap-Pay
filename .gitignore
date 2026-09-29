@@ -117,3 +117,9 @@ $RECYCLE.BIN/
 .vercel
 dist/
 web/dist/
+
+# Build caches & scratch
+*.tsbuildinfo
+.screenshot-preview/
+web/scratch_test.js
+web/*.ps1

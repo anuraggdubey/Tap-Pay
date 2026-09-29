@@ -3,9 +3,10 @@ import { Smartphone, Download, Search, ChevronDown, Radio, Menu, X } from 'lucid
 
 interface NavbarProps {
   onOpenDownload: () => void;
+  onJoinWaitlist: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ onOpenDownload }) => {
+export const Navbar: React.FC<NavbarProps> = ({ onOpenDownload, onJoinWaitlist }) => {
   const [isDarkNav, setIsDarkNav] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -54,7 +55,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDownload }) => {
         >
           {/* Logo */}
           <a
-            href="#"
+            href="/"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -153,7 +154,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDownload }) => {
 
             {/* App availability */}
             <button
-              onClick={onOpenDownload}
+              onClick={onJoinWaitlist}
               className="phantom-btn-pill nav-download-btn"
               style={{
                 background: isDarkNav ? '#FFFDF8' : 'var(--text-dark)',
@@ -162,7 +163,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDownload }) => {
                 boxShadow: isDarkNav ? '0 4px 15px rgba(0, 0, 0, 0.3)' : '0 4px 15px rgba(26, 26, 26, 0.12)',
               }}
             >
-              <span>Coming soon</span>
+              <span>Join waitlist</span>
             </button>
 
             {/* Mobile Toggle */}
@@ -232,7 +233,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDownload }) => {
           <button
             onClick={() => {
               setMobileMenuOpen(false);
-              onOpenDownload();
+              onJoinWaitlist();
             }}
             className="phantom-btn-pill"
             style={{
@@ -243,7 +244,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDownload }) => {
               color: '#FFFFFF',
             }}
           >
-            Android app — coming soon
+            Join waitlist
           </button>
         </div>
       )}

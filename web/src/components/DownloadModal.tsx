@@ -4,9 +4,10 @@ import { X, Smartphone, Clock, ArrowUpRight } from 'lucide-react';
 interface DownloadModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onJoinWaitlist: () => void;
 }
 
-export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose }) => {
+export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose, onJoinWaitlist }) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -134,10 +135,12 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
           </p>
         </div>
 
-        <a
-          href="https://x.com/tapxpay"
-          target="_blank"
-          rel="noopener noreferrer"
+        <button
+          type="button"
+          onClick={() => {
+            onClose();
+            onJoinWaitlist();
+          }}
           className="phantom-btn-pill"
           style={{
             width: '100%',
@@ -151,11 +154,29 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
             justifyContent: 'center',
             gap: '8px',
             fontWeight: 600,
-            textDecoration: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            marginBottom: '12px',
           }}
         >
-          <span>Follow @tapxpay for launch updates</span>
+          <span>Join the waitlist</span>
           <ArrowUpRight size={18} />
+        </button>
+        <a
+          href="https://x.com/tapxpay"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: 'block',
+            textAlign: 'center',
+            fontSize: '14px',
+            fontWeight: 600,
+            color: 'var(--text-dark-muted)',
+            textDecoration: 'underline',
+            textUnderlineOffset: '3px',
+          }}
+        >
+          Follow @tapxpay
         </a>
       </div>
 

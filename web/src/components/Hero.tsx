@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 
 interface HeroProps {
-  onOpenDownload: () => void;
+  onJoinWaitlist: () => void;
 }
 
 type FlowStep = 'home' | 'amount' | 'nfc_search' | 'success' | 'history' | 'tx_detail' | 'settings';
@@ -47,7 +47,7 @@ const STEPS_ORDER: FlowStep[] = [
   'settings',
 ];
 
-export const Hero: React.FC<HeroProps> = ({ onOpenDownload }) => {
+export const Hero: React.FC<HeroProps> = ({ onJoinWaitlist }) => {
   const [currentStep, setCurrentStep] = useState<FlowStep>('home');
   const [isPaused, setIsPaused] = useState(false);
   const [typedAmount, setTypedAmount] = useState('0.0');
@@ -256,12 +256,12 @@ export const Hero: React.FC<HeroProps> = ({ onOpenDownload }) => {
             {/* Action Buttons */}
             <div className="hero-action-buttons">
               <button
-                onClick={onOpenDownload}
+                onClick={onJoinWaitlist}
                 className="hero-btn-primary"
               >
                 <Smartphone size={18} />
-                <span>Android app — coming soon</span>
-                <span className="btn-version-badge">NFC · Monad</span>
+                <span>Join the waitlist</span>
+                <span className="btn-version-badge">Early access</span>
               </button>
 
               <a

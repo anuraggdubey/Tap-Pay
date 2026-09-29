@@ -2,10 +2,10 @@ import React from 'react';
 import { ArrowUpRight, Radio, Send, ShieldCheck, Zap } from 'lucide-react';
 
 interface FooterProps {
-  onOpenDownload: () => void;
+  onJoinWaitlist: () => void;
 }
 
-export const Footer: React.FC<FooterProps> = ({ onOpenDownload }) => {
+export const Footer: React.FC<FooterProps> = ({ onJoinWaitlist }) => {
   return (
     <footer
       style={{
@@ -129,7 +129,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenDownload }) => {
                 Ready to take control of your crypto?
               </div>
               <button
-                onClick={onOpenDownload}
+                onClick={onJoinWaitlist}
                 className="phantom-btn-pill"
                 style={{
                   background: 'var(--text-dark)',
@@ -145,7 +145,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenDownload }) => {
                   marginBottom: '20px',
                 }}
               >
-                Coming soon
+                Join waitlist
                 <ArrowUpRight size={16} />
               </button>
             </div>
@@ -255,11 +255,12 @@ export const Footer: React.FC<FooterProps> = ({ onOpenDownload }) => {
           {/* Nav Links */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {[
-              { label: 'Home', href: '#' },
-              { label: 'Our Product', href: '#how-it-works' },
-              { label: 'NFC Simulator', href: '#demo' },
-              { label: 'Prerequisites', href: '#prerequisites' },
-              { label: 'Security', href: '#security' },
+              { label: 'Home', href: '/' },
+              { label: 'Waitlist', href: '/waitlist' },
+              { label: 'Our Product', href: '/#how-it-works' },
+              { label: 'NFC Simulator', href: '/#demo' },
+              { label: 'Prerequisites', href: '/#prerequisites' },
+              { label: 'Security', href: '/#security' },
             ].map((link) => (
               <a
                 key={link.label}

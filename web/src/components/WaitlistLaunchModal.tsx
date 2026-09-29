@@ -1,9 +1,7 @@
 import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 
-const DISMISS_KEY = 'tappay_waitlist_promo_dismissed_until';
 const JOINED_KEY = 'tappay_waitlist_joined';
-const SESSION_KEY = 'tappay_waitlist_promo_session';
 
 interface WaitlistLaunchModalProps {
   isOpen: boolean;
@@ -11,32 +9,12 @@ interface WaitlistLaunchModalProps {
   onJoin: () => void;
 }
 
+/** Show on every visit/refresh unless the user already joined the waitlist. */
 export function shouldShowWaitlistLaunchModal(): boolean {
   try {
-    if (localStorage.getItem(JOINED_KEY) === '1') return false;
-    const until = localStorage.getItem(DISMISS_KEY);
-    if (until && Date.now() < Number(until)) return false;
-    if (sessionStorage.getItem(SESSION_KEY) === '1') return false;
+    return localStorage.getItem(JOINED_KEY) !== '1';
   } catch {
     return true;
-  }
-  return true;
-}
-
-export function markWaitlistLaunchShown(): void {
-  try {
-    sessionStorage.setItem(SESSION_KEY, '1');
-  } catch {
-    /* ignore */
-  }
-}
-
-export function dismissWaitlistLaunchForDays(days = 2): void {
-  try {
-    localStorage.setItem(DISMISS_KEY, String(Date.now() + days * 24 * 60 * 60 * 1000));
-    sessionStorage.setItem(SESSION_KEY, '1');
-  } catch {
-    /* ignore */
   }
 }
 
@@ -56,26 +34,16 @@ export const WaitlistLaunchModal: React.FC<WaitlistLaunchModalProps> = ({ isOpen
 
   if (!isOpen) return null;
 
-  const handleLater = () => {
-    dismissWaitlistLaunchForDays(2);
-    onClose();
-  };
-
-  const handleJoin = () => {
-    markWaitlistLaunchShown();
-    onJoin();
-  };
-
   return (
     <div
       className="waitlist-launch-overlay"
       role="dialog"
       aria-modal="true"
       aria-labelledby="waitlist-launch-title"
-      onClick={handleLater}
+      onClick={onClose}
     >
       <div className="waitlist-launch-card" onClick={(e) => e.stopPropagation()}>
-        <button type="button" className="waitlist-launch-close" onClick={handleLater} aria-label="Close">
+        <button type="button" className="waitlist-launch-close" onClick={onClose} aria-label="Close">
           <X size={18} />
         </button>
 
@@ -94,10 +62,10 @@ export const WaitlistLaunchModal: React.FC<WaitlistLaunchModalProps> = ({ isOpen
             Android build goes live.
           </p>
           <div className="waitlist-launch-actions">
-            <button type="button" className="waitlist-launch-cta" onClick={handleJoin}>
+            <button type="button" className="waitlist-launch-cta" onClick={onJoin}>
               Join the waitlist
             </button>
-            <button type="button" className="waitlist-launch-ghost" onClick={handleLater}>
+            <button type="button" className="waitlist-launch-ghost" onClick={onClose}>
               Maybe later
             </button>
           </div>

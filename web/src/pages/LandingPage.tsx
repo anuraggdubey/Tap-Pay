@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
 import { useScrollMotion } from '../hooks/useScrollMotion';
 import { Navbar } from '../components/Navbar';
 import { Hero } from '../components/Hero';
@@ -11,41 +10,23 @@ import { NfcSimulator } from '../components/NfcSimulator';
 import { SecurityBento } from '../components/SecurityBento';
 import { Footer } from '../components/Footer';
 import { DownloadModal } from '../components/DownloadModal';
-import {
-  WaitlistLaunchModal,
-  markWaitlistLaunchShown,
-  shouldShowWaitlistLaunchModal,
-} from '../components/WaitlistLaunchModal';
 
-export default function LandingPage() {
-  const navigate = useNavigate();
+interface LandingPageProps {
+  onJoinWaitlist: () => void;
+}
+
+export default function LandingPage({ onJoinWaitlist }: LandingPageProps) {
   const [downloadOpen, setDownloadOpen] = useState(false);
-  const [launchOpen, setLaunchOpen] = useState(false);
   const { scrollProgress } = useScrollMotion();
-
-  const goWaitlist = () => {
-    markWaitlistLaunchShown();
-    navigate('/waitlist');
-  };
-
-  useEffect(() => {
-    const t = window.setTimeout(() => {
-      if (shouldShowWaitlistLaunchModal()) {
-        setLaunchOpen(true);
-        markWaitlistLaunchShown();
-      }
-    }, 900);
-    return () => window.clearTimeout(t);
-  }, []);
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <div className="scroll-progress-beam" style={{ width: `${scrollProgress}%` }} />
 
-      <Navbar onJoinWaitlist={goWaitlist} />
+      <Navbar onJoinWaitlist={onJoinWaitlist} />
 
       <main style={{ flex: 1 }}>
-        <Hero onJoinWaitlist={goWaitlist} />
+        <Hero onJoinWaitlist={onJoinWaitlist} />
         <StatsCarousel />
         <CenterPhoneShowcase />
         <FeatureSlider />
@@ -54,15 +35,9 @@ export default function LandingPage() {
         <SecurityBento />
       </main>
 
-      <Footer onJoinWaitlist={goWaitlist} />
+      <Footer onJoinWaitlist={onJoinWaitlist} />
 
-      <DownloadModal isOpen={downloadOpen} onClose={() => setDownloadOpen(false)} onJoinWaitlist={goWaitlist} />
-
-      <WaitlistLaunchModal
-        isOpen={launchOpen}
-        onClose={() => setLaunchOpen(false)}
-        onJoin={goWaitlist}
-      />
+      <DownloadModal isOpen={downloadOpen} onClose={() => setDownloadOpen(false)} onJoinWaitlist={onJoinWaitlist} />
     </div>
   );
 }

@@ -23,6 +23,11 @@ module.exports = {
       chainId: 10143,
       accounts: DEPLOYER_PRIVATE_KEY !== "0x" + "0".repeat(64) ? [DEPLOYER_PRIVATE_KEY] : [],
     },
+    monad_mainnet: {
+      url: "https://rpc.monad.xyz",
+      chainId: 143,
+      accounts: DEPLOYER_PRIVATE_KEY !== "0x" + "0".repeat(64) ? [DEPLOYER_PRIVATE_KEY] : [],
+    },
   },
   paths: {
     sources: "./contracts",
@@ -33,6 +38,7 @@ module.exports = {
   etherscan: {
     apiKey: {
       monad_testnet: "empty",
+      monad_mainnet: "empty",
     },
     customChains: [
       {
@@ -43,9 +49,18 @@ module.exports = {
           browserURL: "https://testnet.monadscan.com",
         },
       },
+      {
+        network: "monad_mainnet",
+        chainId: 143,
+        urls: {
+          apiURL: "https://api.monadscan.com/api",
+          browserURL: "https://monadscan.com",
+        },
+      },
     ],
   },
   sourcify: {
-    enabled: true
+    enabled: true,
+    apiUrl: "https://sourcify-api-monad.blockvision.org",
   }
 };

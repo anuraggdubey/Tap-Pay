@@ -47,9 +47,8 @@ export const SUPPORTED_TOKENS: Record<string, TokenInfo> = {
     name: 'Agora Dollar',
     symbol: 'AUSD',
     decimals: 6,
-    // Monad Mainnet: 0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a
-    // Testnet: Mock AUSD deployed Sep 27, 2026
-    contractAddress: '0xf66E722898Ca0B1060C90C248D17A13Aad833827',
+    // Monad Mainnet — Official Agora AUSD
+    contractAddress: '0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a',
     logoId: 'ausd',
     isNative: false,
     displayOrder: 1,
@@ -59,8 +58,8 @@ export const SUPPORTED_TOKENS: Record<string, TokenInfo> = {
     name: 'USD Coin',
     symbol: 'USDC',
     decimals: 6,
-    // Testnet: Mock USDC deployed Sep 27, 2026
-    contractAddress: '0x7711Ca69dFE984333C8B3027971a992D1B8Cfa82',
+    // Monad Mainnet — Official Circle USDC
+    contractAddress: '0x754704Bc059F8C67012fEd69BC8A327a5aafb603',
     logoId: 'usdc',
     isNative: false,
     displayOrder: 2,
@@ -70,8 +69,8 @@ export const SUPPORTED_TOKENS: Record<string, TokenInfo> = {
     name: 'Tether USD',
     symbol: 'USDT',
     decimals: 6,
-    // Bridged via LayerZero — address TBD, needs canonical verification
-    contractAddress: null, // Will be set once verified
+    // Monad Mainnet — Official Tether USDT
+    contractAddress: '0xe7cd86e13AC4309349F30B3435a9d337750fC82D',
     logoId: 'usdt',
     isNative: false,
     displayOrder: 3,

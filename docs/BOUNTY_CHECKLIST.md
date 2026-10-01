@@ -135,10 +135,10 @@ After completing each item, update this file and note the date.
 - [x] All tests pass locally with `npx hardhat test` (Sep 25)
 
 ### 3C: Contract Deployment
-- [x] Deploy MultiTokenLedger to Monad testnet (Sep 27) — `0x9830B8638085a0da1eDB5e2f0Daa110d24B82f7E`
-- [!] Verify contract on Monadscan (Blocked: Monadscan API timeouts/errors)
-- [x] Update `src/config/monad.ts` with new contract address (Sep 27)
-- [x] Test contract from the app end-to-end
+- [x] Deploy MultiTokenLedger to Monad mainnet — `0x15319f757FC0e600E681bC0bffD69541916F8860`
+- [x] Verify contract on Monadscan/Sourcify (Verified on Sourcify)
+- [x] Update `src/config/monad.ts` with new mainnet contract addresses
+- [ ] Test contract from the app end-to-end
 
 ---
 
@@ -207,7 +207,7 @@ After completing each item, update this file and note the date.
 | 3 | Can WebAuthn work in React Native WebView? | ✅ Not Needed | Mera works natively via `react-native-passkey` — no WebView needed |
 | 4 | Do we need Agora API keys for staging? | ❓ Need to check | — |
 | 5 | Is Monad mainnet live? | ✅ Resolved | Yes — launched Nov 24, 2025 |
-| 6 | Can we verify MultiTokenLedger? | 🚨 Blocked | Monadscan API returning timeouts/JSON errors. Waiting for resolution. |
+| 6 | Can we verify MultiTokenLedger? | ✅ Resolved | Verified successfully via Sourcify for Mainnet. |
 | 7 | Can we test Mera Passkey E2E? | ✅ Resolved | Android enforces Digital Asset Links for Passkeys. Resolved by deploying `assetlinks.json` to Vercel and updating RP ID. |
 
 ---
@@ -219,7 +219,7 @@ After completing each item, update this file and note the date.
 | Phase 0: Setup & Research | ✅ Complete | 100% |
 | Phase 1: Mera Passkey | ✅ Complete (Real Passkeys!) | 100% |
 | Phase 2: Multi-Token | ✅ Complete | 100% |
-| Phase 3: Smart Contracts | ✅ Deployed to Testnet | 100% |
+| Phase 3: Smart Contracts | ✅ Deployed to Mainnet | 100% |
 | Phase 4: Cross-Border UX | ✅ Complete | 100% |
 | Phase 5: Demo Prep | 🟡 Ready to Record | 50% |
 

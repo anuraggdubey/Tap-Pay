@@ -2,31 +2,31 @@
 // See: https://docs.monad.xyz
 
 export const MONAD_CONFIG = {
-  chainId: 10143,
-  chainName: 'Monad Testnet',
+  chainId: 143,
+  chainName: 'Monad',
   nativeCurrency: {
     name: 'MON',
     symbol: 'MON',
     decimals: 18,
   },
   rpcUrls: {
-    primary: 'https://testnet-rpc.monad.xyz',
-    fallback1: 'https://rpc.ankr.com/monad_testnet',
-    fallback2: 'https://rpc-testnet.monadinfra.com',
+    primary: 'https://rpc.monad.xyz',
+    fallback1: 'https://rpc.ankr.com/monad',
+    fallback2: 'https://monad-rpc.publicnode.com',
   },
   blockExplorer: {
     name: 'Monadscan',
-    url: 'https://testnet.monadscan.com',
+    url: 'https://monadscan.com',
     txPath: '/tx/',
     addressPath: '/address/',
   },
-  faucetUrl: 'https://faucet.monad.xyz',
+  faucetUrl: '', // No faucet on mainnet
 
   // Contract addresses — fill these after deployment
   contracts: {
-    usernameRegistry: '0xEebB05F9AF06908eCb7bFa5F916Dde1EEa231aDD' as `0x${string}`,
-    tapPayLedger: '0x5B177FEF554dA84A86be62E45fb49BB52e6D6838' as `0x${string}`,
-    multiTokenLedger: '0x9830B8638085a0da1eDB5e2f0Daa110d24B82f7E' as `0x${string}`, // Deployed Sep 27, 2026
+    usernameRegistry: '0x458DD61Db411ec1feFC069B7B094a983E3a3E265' as `0x${string}`,
+    tapPayLedger: '0x03907aE845E016f5F1605BAE4e6392C3491e03f1' as `0x${string}`,
+    multiTokenLedger: '0x15319f757FC0e600E681bC0bffD69541916F8860' as `0x${string}`,
   },
 };
 

@@ -12,6 +12,7 @@
     "compile:contracts": "npx hardhat compile",
     "test:contracts": "npx hardhat test",
     "deploy:monad": "npx hardhat run scripts/deploy.js --network monad_testnet",
+    "deploy:mainnet": "npx hardhat run scripts/deploy-mainnet.js --network monad_mainnet",
     "web:dev": "npm --prefix web run dev",
     "dev:web": "npm --prefix web run dev",
     "web": "npm --prefix web run dev",

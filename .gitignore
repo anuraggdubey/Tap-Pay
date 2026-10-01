@@ -84,6 +84,7 @@ artifacts/
 cache/
 typechain-types/
 deployed-addresses.json
+deployed-addresses-mainnet.json
 
 # Backend
 backend/node_modules/

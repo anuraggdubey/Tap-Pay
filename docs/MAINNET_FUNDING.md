@@ -44,7 +44,7 @@ Stablecoins use **6 decimals** (1.00 token = `1_000_000` units). MON uses **18 d
 | NFC tap pay (`TapPayLedger.payWithLog`) | Sender | Payment in MON + gas; min **0.0001 MON** per payment |
 | Pay tab MON (`MultiTokenLedger.payWithLog`) | Sender | Amount + gas |
 | Pay tab AUSD / USDC / USDT (`payERC20WithLog`) | Sender | Token amount + MON gas; **`approve`** to MultiTokenLedger when needed |
-| Register `@username` | — | **Supabase only** (`src/services/registry.ts`) — no on-chain gas |
+| Register `@username` | — | **Supabase only** (`chain_id` 143) — run [`supabase/migrations/001_usernames_mainnet_only.sql`](../supabase/migrations/001_usernames_mainnet_only.sql) once ([guide](./SUPABASE_MAINNET.md)) |
 | On-chain `UsernameRegistry.register()` | User | Only if you move identity fully on-chain later |
 | Mera passkey onboarding | — | No chain tokens |
 

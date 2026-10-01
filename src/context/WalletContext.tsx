@@ -58,7 +58,7 @@ export function WalletProvider({children}: {children: ReactNode}) {
         return;
       }
 
-      // Fallback: try on-chain reverse resolve if address is available
+      // Fallback: reverse-resolve @username from Supabase (mainnet registry)
       if (addr) {
         const onChainUsername = await reverseResolve(addr);
         if (onChainUsername) {

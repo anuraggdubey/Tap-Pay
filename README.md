@@ -69,7 +69,7 @@ TapPay has been expanded for the **Best Cross-Border Payments App on Monad** bou
 
 **Mainnet tokens (Pay tab):** AUSD `0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a` · USDC `0x754704Bc059F8C67012fEd69BC8A327a5aafb603` · USDT `0xe7cd86e13AC4309349F30B3435a9d337750fC82D`
 
-**@username resolution:** Supabase index (off-chain). On-chain `UsernameRegistry` is deployed for future use / verification.
+**@username resolution:** Supabase (`chain_id` **143** only). Existing handles from the testnet era are migrated to mainnet—users do not re-register. See [`docs/SUPABASE_MAINNET.md`](./docs/SUPABASE_MAINNET.md).
 
 **Pay tab / cross-border:** Routes through **MultiTokenLedger** (`payWithLog` / `payERC20WithLog`). **NFC tap (MON):** **TapPayLedger** `payWithLog`.
 

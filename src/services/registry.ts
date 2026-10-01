@@ -8,6 +8,10 @@
 import {ethers} from 'ethers';
 import {loadPrivateKey} from './wallet';
 import {supabase} from '../config/supabase';
+import {MONAD_CONFIG} from '../config/monad';
+import {TAPPAY_CHAIN_ID} from '../config/networkGuard';
+
+const ACTIVE_CHAIN_ID = MONAD_CONFIG.chainId;
 
 function normalizeUsername(username: string): string {
   return username.replace(/0/g, 'o').replace(/1/g, 'l').toLowerCase();
@@ -36,6 +40,7 @@ export async function registerUsername(
       .from('usernames')
       .select('username')
       .eq('wallet_address', address)
+      .eq('chain_id', ACTIVE_CHAIN_ID)
       .maybeSingle();
 
     if (existingAddress) {
@@ -44,11 +49,12 @@ export async function registerUsername(
 
     // 2. Insert into Supabase
     const { error } = await supabase.from('usernames').insert([
-      { 
-        username, 
+      {
+        username,
         normalized_username: normalized,
-        wallet_address: address 
-      }
+        wallet_address: address,
+        chain_id: TAPPAY_CHAIN_ID,
+      },
     ]);
 
     if (error) {
@@ -66,6 +72,7 @@ export async function registerUsername(
             .from('usernames')
             .select('username')
             .eq('normalized_username', suggestedNormalized)
+            .eq('chain_id', ACTIVE_CHAIN_ID)
             .maybeSingle();
             
           if (!exists && !suggestions.includes(suggestedName)) {
@@ -101,6 +108,7 @@ export async function resolveUsername(username: string): Promise<string | null> 
       .from('usernames')
       .select('wallet_address')
       .eq('username', username)
+      .eq('chain_id', ACTIVE_CHAIN_ID)
       .maybeSingle();
     
     return data?.wallet_address || null;
@@ -119,6 +127,7 @@ export async function reverseResolveAddress(address: string): Promise<string | n
       .from('usernames')
       .select('username')
       .eq('wallet_address', address.toLowerCase())
+      .eq('chain_id', ACTIVE_CHAIN_ID)
       .maybeSingle();
       
     return data?.username || null;

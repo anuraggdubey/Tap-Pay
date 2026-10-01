@@ -161,11 +161,13 @@ export const CenterPhoneShowcase: React.FC = () => {
     <section
       className="center-showcase-section"
       style={{
-        padding: '80px 0 100px',
+        padding: '40px 0 60px',
         position: 'relative',
       }}
     >
-      <div className="phantom-container">
+      <div className="showcase-scroll-spacer">
+        <div className="showcase-sticky-stage">
+          <div className="phantom-container">
         {/* ======================================================== */}
         {/* 1. DESKTOP VIEW: 3-Column Layout (Cards - Phone - Cards) */}
         {/* ======================================================== */}
@@ -179,10 +181,10 @@ export const CenterPhoneShowcase: React.FC = () => {
           className="center-phone-desktop-grid"
         >
           {/* Left Column (2 Cards) */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }} data-parallax="0.05">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             {/* Top Left Card: Deep Navy/Indigo */}
             <div
-              className="scroll-reveal-left scroll-delay-1"
+              className="showcase-card-l1"
               style={{
                 background: 'linear-gradient(145deg, #130e2e 0%, #090717 100%)',
                 borderRadius: '32px',
@@ -207,17 +209,18 @@ export const CenterPhoneShowcase: React.FC = () => {
 
             {/* Bottom Left Card: Soft Lavender */}
             <div
-              className="scroll-reveal-left scroll-delay-2"
+              className="showcase-card-l2"
               style={{
-                background: '#EAE6FE',
+                background: 'linear-gradient(155deg, #4F46E5 0%, #312E81 100%)',
                 borderRadius: '32px',
                 padding: '36px 30px',
-                color: '#3C315B',
+                color: '#F5F3FF',
                 minHeight: '260px',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                boxShadow: '0 10px 30px rgba(60, 49, 91, 0.06)',
+                boxShadow: '0 16px 40px rgba(49, 46, 129, 0.35)',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
                 position: 'relative',
                 overflow: 'hidden',
               }}
@@ -226,23 +229,23 @@ export const CenterPhoneShowcase: React.FC = () => {
                 Send and receive money globally, instantly
               </h3>
               <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <Send size={46} color="#5B48D9" strokeWidth={1.8} className="phantom-floating" />
+                <Send size={46} color="#C4B5FD" strokeWidth={1.8} className="phantom-floating" />
               </div>
             </div>
           </div>
 
           {/* Center Column: The Realistic Phone Mockup with Interactive Screen */}
           <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <div className="scroll-reveal-scale" data-parallax="0.14">
+            <div className="showcase-phone-inner">
               <InteractivePhone val={val} setVal={setVal} paid={paid} onPay={handlePay} />
             </div>
           </div>
 
           {/* Right Column (2 Cards) */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }} data-parallax="0.05">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             {/* Top Right Card: Deep Emerald Green */}
             <div
-              className="scroll-reveal-right scroll-delay-1"
+              className="showcase-card-r1"
               style={{
                 background: 'linear-gradient(145deg, #05261d 0%, #031711 100%)',
                 borderRadius: '32px',
@@ -267,17 +270,18 @@ export const CenterPhoneShowcase: React.FC = () => {
 
             {/* Bottom Right Card: Warm Peach/Coral */}
             <div
-              className="scroll-reveal-right scroll-delay-2"
+              className="showcase-card-r2"
               style={{
-                background: '#FFD7C2',
+                background: 'linear-gradient(155deg, #EA580C 0%, #9A3412 100%)',
                 borderRadius: '32px',
                 padding: '36px 30px',
-                color: '#3C315B',
+                color: '#FFF7ED',
                 minHeight: '260px',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                boxShadow: '0 10px 30px rgba(60, 49, 91, 0.06)',
+                boxShadow: '0 16px 40px rgba(154, 52, 18, 0.35)',
+                border: '1px solid rgba(255, 255, 255, 0.14)',
                 position: 'relative',
                 overflow: 'hidden',
               }}
@@ -286,12 +290,16 @@ export const CenterPhoneShowcase: React.FC = () => {
                 One handle that connects to everything: @username
               </h3>
               <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <ArrowRightLeft size={48} color="#EA580C" strokeWidth={1.8} className="phantom-floating" />
+                <ArrowRightLeft size={48} color="#FED7AA" strokeWidth={1.8} className="phantom-floating" />
               </div>
             </div>
           </div>
         </div>
+          </div>
+        </div>
+      </div>
 
+      <div className="phantom-container">
         {/* ======================================================== */}
         {/* 2. MOBILE VIEW: Sticky Pinned Screen & Moving Cards       */}
         {/* The screen stays still, and cards move up above it       */}

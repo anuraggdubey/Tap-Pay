@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { HeroMeshCanvas } from './effects/HeroMeshCanvas';
 import {
   Smartphone,
   Radio,
@@ -204,11 +205,12 @@ export const Hero: React.FC<HeroProps> = ({ onJoinWaitlist }) => {
   return (
     <section
       id="hero"
+      className="hero-section"
       style={{
-        background: 'var(--canvas-bg)',
+        background: 'transparent',
         color: 'var(--text-dark)',
-        paddingTop: '135px',
-        paddingBottom: '85px',
+        paddingTop: '110px',
+        paddingBottom: '48px',
         position: 'relative',
         overflow: 'hidden',
         minHeight: '100vh',
@@ -216,8 +218,9 @@ export const Hero: React.FC<HeroProps> = ({ onJoinWaitlist }) => {
         alignItems: 'center',
       }}
     >
-      {/* Refined Ambient Lighting */}
-      <div className="hero-ambient-sheen" />
+      <div className="hero-cinematic-frame">
+        <HeroMeshCanvas />
+        <div className="hero-ambient-sheen" />
 
       {/* Decorative Contactless Waves Behind Phone */}
       <div className="hero-nfc-waves-bg">
@@ -226,7 +229,7 @@ export const Hero: React.FC<HeroProps> = ({ onJoinWaitlist }) => {
         <div className="nfc-pulse-ring ring-3" />
       </div>
 
-      <div className="phantom-container" style={{ width: '100%', position: 'relative', zIndex: 2 }}>
+      <div className="phantom-container hero-content-wrap" style={{ width: '100%', position: 'relative', zIndex: 2 }}>
         <div
           style={{
             display: 'grid',
@@ -239,7 +242,10 @@ export const Hero: React.FC<HeroProps> = ({ onJoinWaitlist }) => {
           {/* ============================================================ */}
           {/* LEFT SIDE: CLEAN, EDITORIAL, NON-SLOP TYPOGRAPHY            */}
           {/* ============================================================ */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }} className="hero-text-container">
+          <div
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}
+            className="hero-text-container"
+          >
             {/* Clean, Refined Headline — No bulbous letters, no fake gradient masks */}
             <h1 className="hero-headline">
               <span className="hero-headline-line1">Tap to Pay.</span>
@@ -825,6 +831,7 @@ export const Hero: React.FC<HeroProps> = ({ onJoinWaitlist }) => {
             </div>
           </div>
         </div>
+      </div>
       </div>
 
       <style>{`

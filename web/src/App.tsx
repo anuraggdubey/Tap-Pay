@@ -7,6 +7,7 @@ import {
   WaitlistLaunchModal,
   shouldShowWaitlistLaunchModal,
 } from './components/WaitlistLaunchModal';
+import { MotionProvider } from './motion/MotionProvider';
 
 function AppRoutes() {
   const navigate = useNavigate();
@@ -41,8 +42,10 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AppRoutes />
-    </BrowserRouter>
+    <MotionProvider>
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
+    </MotionProvider>
   );
 }

@@ -1,11 +1,14 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowUpRight, Clock } from 'lucide-react';
 import { PlayBentoGrid } from '../components/PlayBentoGrid';
+import { runWaitlistPageMotion } from '../motion/initScrollAnimations';
 import '../styles/waitlist.css';
 
 export default function DownloadPage() {
   const navigate = useNavigate();
+
+  useEffect(() => runWaitlistPageMotion(), []);
 
   return (
     <div className="waitlist-page">

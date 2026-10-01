@@ -221,11 +221,15 @@ export const Navbar: React.FC<NavbarProps> = ({ onJoinWaitlist }) => {
 
       <style>{`
         .site-navbar-header {
-          padding: 18px 24px;
+          padding-block: 12px;
+          padding-inline: 0;
           background: transparent;
+          width: 100%;
+          box-sizing: border-box;
         }
         .site-navbar-header.is-scrolled {
-          padding: 12px 24px;
+          padding-block: 10px;
+          padding-inline: 0;
           background: var(--nav-bg-light);
           backdrop-filter: blur(20px);
           -webkit-backdrop-filter: blur(20px);
@@ -263,7 +267,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onJoinWaitlist }) => {
         }
         @media (max-width: 899px) {
           .site-navbar-header {
-            padding: 12px 16px !important;
+            padding-block: 10px !important;
+            padding-inline: 0 !important;
             background: var(--nav-bg-light) !important;
             backdrop-filter: blur(20px) !important;
             -webkit-backdrop-filter: blur(20px) !important;

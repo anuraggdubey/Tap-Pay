@@ -169,14 +169,18 @@ export const NfcSimulator: React.FC = () => {
   return (
     <section
       id="demo"
+      className="nfc-demo-section"
       style={{
         padding: '100px 0 80px',
         position: 'relative',
+        width: '100%',
+        maxWidth: '100%',
+        boxSizing: 'border-box',
       }}
     >
       <div className="phantom-container">
         {/* Section Title */}
-        <div style={{ textAlign: 'center', marginBottom: '40px' }} className="scroll-reveal">
+        <div style={{ textAlign: 'center', marginBottom: '40px' }} className="scroll-reveal nfc-demo-header">
           <h2 className="phantom-section-title">
             Interactive phone-to-phone
             <br />
@@ -203,15 +207,15 @@ export const NfcSimulator: React.FC = () => {
 
         {/* Large Stage Card */}
         <div
-          className="scroll-reveal-scale sim-stage-card"
+          className="sim-stage-card nfc-demo-stage"
           style={{
             background: '#FFFFFF',
             borderRadius: '32px',
             padding: '36px 32px',
-            boxShadow: '0 12px 40px rgba(0, 0, 0, 0.05)',
+            boxShadow: '0 20px 50px rgba(26, 26, 26, 0.08)',
             maxWidth: '1120px',
             margin: '0 auto',
-            border: '1px solid rgba(26, 26, 26, 0.08)',
+            border: '1px solid rgba(26, 26, 26, 0.1)',
           }}
         >
           {/* Top Control Bar */}

@@ -1,8 +1,9 @@
-import React, { useState, FormEvent } from 'react';
+import React, { useState, FormEvent, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Loader2 } from 'lucide-react';
 import { joinWaitlist } from '../services/waitlist';
 import { PlayBentoGrid } from '../components/PlayBentoGrid';
+import { runWaitlistPageMotion } from '../motion/initScrollAnimations';
 import '../styles/waitlist.css';
 
 const MARQUEE_ITEMS = [
@@ -20,6 +21,8 @@ export default function WaitlistPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+
+  useEffect(() => runWaitlistPageMotion(), []);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -145,7 +148,7 @@ export default function WaitlistPage() {
           </div>
         </div>
 
-        <div style={{ marginTop: 56 }}>
+        <div style={{ marginTop: 56 }} className="waitlist-bento-motion">
           <PlayBentoGrid variant="waitlist" />
         </div>
       </div>

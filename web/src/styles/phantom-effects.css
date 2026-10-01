@@ -393,4 +393,96 @@
   will-change: transform;
 }
 
+html.lenis-smooth-active [data-parallax] {
+  transition: none;
+}
+
+html.lenis-smooth-active .scroll-reveal,
+html.lenis-smooth-active .scroll-reveal-left,
+html.lenis-smooth-active .scroll-reveal-right,
+html.lenis-smooth-active .scroll-reveal-scale {
+  transition: none;
+}
+
+/* Ambient scroll-linked background orbs */
+.landing-motion-shell {
+  isolation: isolate;
+}
+
+.site-ambient-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.ambient-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.45;
+  transform: translate3d(0, calc(var(--scroll-y, 0px) * -0.04), 0);
+  will-change: transform;
+}
+
+.ambient-orb-a {
+  width: min(55vw, 520px);
+  height: min(55vw, 520px);
+  top: -12%;
+  left: -8%;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.22) 0%, transparent 68%);
+}
+
+.ambient-orb-b {
+  width: min(48vw, 440px);
+  height: min(48vw, 440px);
+  top: 38%;
+  right: -10%;
+  background: radial-gradient(circle, rgba(26, 26, 26, 0.08) 0%, transparent 70%);
+  transform: translate3d(0, calc(var(--scroll-y, 0px) * 0.06), 0);
+}
+
+.ambient-orb-c {
+  width: min(42vw, 380px);
+  height: min(42vw, 380px);
+  bottom: 8%;
+  left: 28%;
+  background: radial-gradient(circle, rgba(255, 253, 248, 0.55) 0%, transparent 72%);
+  transform: translate3d(0, calc(var(--scroll-y, 0px) * -0.08), 0);
+}
+
+.scroll-progress-glow {
+  position: fixed;
+  top: -1px;
+  width: 120px;
+  height: 4px;
+  margin-left: -60px;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.85) 0%, transparent 70%);
+  z-index: 9998;
+  pointer-events: none;
+  opacity: 0.85;
+  filter: blur(6px);
+  transition: left 0.12s linear;
+}
+
+.hero-phone-column {
+  transform-style: preserve-3d;
+  perspective: 1200px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-ambient-layer,
+  .scroll-progress-glow {
+    display: none;
+  }
+
+  .scroll-reveal,
+  .scroll-reveal-left,
+  .scroll-reveal-right,
+  .scroll-reveal-scale {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
 

@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { X, Smartphone, Clock, ArrowUpRight } from 'lucide-react';
+import { stopSmoothScroll, startSmoothScroll } from '../motion/lenisStore';
 
 interface DownloadModalProps {
   isOpen: boolean;
@@ -14,12 +15,15 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose, o
     };
     if (isOpen) {
       document.body.style.overflow = 'hidden';
+      stopSmoothScroll();
       window.addEventListener('keydown', handleKeyDown);
     } else {
       document.body.style.overflow = 'unset';
+      startSmoothScroll();
     }
     return () => {
       document.body.style.overflow = 'unset';
+      startSmoothScroll();
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen, onClose]);

@@ -1,0 +1,250 @@
+/* Global responsive layout — symmetric gutters, no horizontal drift */
+
+:root {
+  --page-gutter: 16px;
+  --page-max: 1360px;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --page-gutter: 20px;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --page-gutter: 24px;
+  }
+}
+
+html {
+  overflow-x: clip;
+  width: 100%;
+}
+
+body {
+  zoom: 1 !important;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+#root {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+.landing-motion-shell,
+.landing-motion-shell main {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+  box-sizing: border-box;
+}
+
+.phantom-container {
+  width: 100%;
+  max-width: var(--page-max);
+  margin-inline: auto;
+  padding-inline: var(--page-gutter);
+  padding-left: max(var(--page-gutter), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--page-gutter), env(safe-area-inset-right, 0px));
+  box-sizing: border-box;
+}
+
+/* Hero: one horizontal gutter layer (section), not frame + container */
+.hero-section {
+  width: 100%;
+  max-width: 100vw;
+  box-sizing: border-box;
+  padding-inline: var(--page-gutter);
+  padding-left: max(var(--page-gutter), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--page-gutter), env(safe-area-inset-right, 0px));
+}
+
+.hero-cinematic-frame {
+  width: 100%;
+  max-width: var(--page-max);
+  margin-inline: auto;
+  box-sizing: border-box;
+}
+
+.hero-cinematic-frame .hero-content-wrap {
+  width: 100%;
+  max-width: 100%;
+  padding-inline: 0 !important;
+}
+
+.hero-cinematic-frame .hero-nfc-waves-bg {
+  left: 50%;
+  right: auto;
+  transform: translate(-50%, -50%);
+  width: min(100%, 420px);
+  height: min(100vw, 420px);
+}
+
+.site-navbar-header {
+  width: 100%;
+  max-width: 100vw;
+  box-sizing: border-box;
+  padding-block: 12px;
+  padding-inline: var(--page-gutter);
+  padding-left: max(var(--page-gutter), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--page-gutter), env(safe-area-inset-right, 0px));
+}
+
+.site-navbar-header .navbar-inner-container {
+  padding-inline: 0 !important;
+  max-width: var(--page-max);
+}
+
+.site-ambient-layer {
+  width: 100%;
+  max-width: 100vw;
+  overflow: hidden;
+  clip-path: inset(0);
+}
+
+.brand-marquee-band {
+  width: 100%;
+  max-width: 100vw;
+  box-sizing: border-box;
+}
+
+.scroll-progress-glow {
+  display: none;
+}
+
+@media (min-width: 900px) {
+  .scroll-progress-glow {
+    display: block;
+    max-width: 100vw;
+  }
+}
+
+/* NFC demo + wide modules */
+.nfc-demo-stage,
+.sim-stage-card {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: clip;
+}
+
+.sim-dual-phone-arena {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: clip;
+}
+
+.sim-phone-wrapper {
+  width: 100%;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.nfc-simulator-chassis {
+  width: min(285px, calc(100vw - (var(--page-gutter) * 2) - 32px)) !important;
+  max-width: 100%;
+}
+
+.sim-flow-steps-tracker {
+  width: 100%;
+  max-width: 100%;
+}
+
+.sim-action-row {
+  width: 100%;
+  max-width: 100%;
+}
+
+.showcase-scroll-spacer,
+.showcase-sticky-stage,
+.center-showcase-section {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.center-phone-desktop-grid {
+  width: 100%;
+}
+
+.realistic-phone-chassis,
+.hero-phone-device {
+  max-width: calc(100vw - (var(--page-gutter) * 2) - 24px);
+}
+
+@media (max-width: 960px) {
+  .hero-section {
+    min-height: auto !important;
+    padding-top: 96px !important;
+  }
+
+  .hero-cinematic-frame {
+    padding-inline: clamp(14px, 4vw, 24px);
+    padding-block: 48px 36px;
+    border-radius: 28px;
+  }
+
+  .hero-metrics-bar {
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 100%;
+  }
+
+  .metric-divider {
+    display: none;
+  }
+
+  .hero-flow-controller {
+    max-width: 100% !important;
+  }
+}
+
+@media (max-width: 640px) {
+  :root {
+    --page-gutter: 14px;
+  }
+
+  .hero-headline {
+    font-size: clamp(28px, 8.5vw, 38px) !important;
+  }
+
+  .phantom-section-title {
+    font-size: clamp(26px, 7vw, 40px) !important;
+    padding-inline: 4px;
+  }
+
+  .sim-flow-steps-tracker {
+    justify-content: flex-start;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 6px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .sim-flow-steps-tracker::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tracker-pill {
+    flex-shrink: 0;
+  }
+
+  .sim-presets-group {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 900px) {
+  #demo,
+  .nfc-demo-section {
+    padding-block: 64px 48px !important;
+  }
+}

@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
+import { stopSmoothScroll, startSmoothScroll } from '../motion/lenisStore';
 
 const JOINED_KEY = 'tappay_waitlist_joined';
 
@@ -25,9 +26,11 @@ export const WaitlistLaunchModal: React.FC<WaitlistLaunchModalProps> = ({ isOpen
       if (e.key === 'Escape') onClose();
     };
     document.body.style.overflow = 'hidden';
+    stopSmoothScroll();
     window.addEventListener('keydown', onKey);
     return () => {
       document.body.style.overflow = '';
+      startSmoothScroll();
       window.removeEventListener('keydown', onKey);
     };
   }, [isOpen, onClose]);

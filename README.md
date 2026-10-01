@@ -114,198 +114,19 @@ A debug APK is also available from GitHub Actions if needed:
 
 ---
 
-## Social Posts
+## Social
 
 <p align="center">
   <a href="https://x.com/tapxpay">
     <img src="https://img.shields.io/badge/Follow%20TapPay%20on%20X-%40tapxpay-000000?style=for-the-badge&logo=x&logoColor=white" alt="Follow @tapxpay on X" />
   </a>
   <br/>
-  <sub><strong>X Account:</strong> Here is the link &rarr; <a href="https://x.com/tapxpay">https://x.com/tapxpay</a></sub>
+  <sub><strong>X:</strong> <a href="https://x.com/tapxpay">https://x.com/tapxpay</a></sub>
 </p>
-
-Live posts from **Monad India Blitz V4**, shown with the same media as on X and LinkedIn.
-
-<table>
-<tr>
-<td width="50%" valign="top">
-
-<p>
-<img src="docs/screenshots/social/misbah-onsite-avatar.jpg" width="40" height="40" alt="@Misbahtwts" />
-&nbsp;&nbsp;<strong>Misbah(agentic arc)</strong><br/>
-<a href="https://x.com/Misbahtwts">@Misbahtwts</a>
-</p>
-
-> At @monad hack today.
->
-> If you're here, come say hi.
 
 <p align="center">
-  <a href="https://x.com/Misbahtwts/status/2101171148813639993?s=20">
-    <img src="docs/screenshots/social/misbah-onsite.jpg" alt="Misbah onsite at Monad hack" width="100%" />
-  </a>
+  <img src="docs/screenshots/social/tappay.jpg" alt="TapPay on Monad Mainnet" width="320" />
 </p>
-
-<p><a href="https://x.com/Misbahtwts/status/2101171148813639993?s=20">View on X</a></p>
-
-</td>
-<td width="50%" valign="top">
-
-<p>
-<img src="docs/screenshots/social/misbah-cooking-avatar.jpg" width="40" height="40" alt="@Misbahtwts" />
-&nbsp;&nbsp;<strong>Misbah(agentic arc)</strong><br/>
-<a href="https://x.com/Misbahtwts">@Misbahtwts</a>
-</p>
-
-> We @anuraggdubeyy @AdityaNishad987 cooking now for monad hack.
->
-> How does this wallpaper look btw?
-
-<p align="center">
-  <a href="https://x.com/Misbahtwts/status/2101196068054769999?s=20">
-    <img src="docs/screenshots/social/misbah-cooking.jpg" alt="Team cooking at Monad hack" width="100%" />
-  </a>
-</p>
-
-<p><a href="https://x.com/Misbahtwts/status/2101196068054769999?s=20">View on X</a></p>
-
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-<p>
-<img src="docs/screenshots/social/misbah-tappay-avatar.jpg" width="40" height="40" alt="@Misbahtwts" />
-&nbsp;&nbsp;<strong>Misbah(agentic arc)</strong><br/>
-<a href="https://x.com/Misbahtwts">@Misbahtwts</a>
-</p>
-
-> Tappay....
->
-> will be sharing more details about it sooon.
->
-> @MonadIndia @geeky_kartikey
-
-<p align="center">
-  <a href="https://x.com/Misbahtwts/status/2101255579910230415?s=20">
-    <img src="docs/screenshots/social/misbah-tappay.jpg" alt="TapPay teaser post" width="100%" />
-  </a>
-</p>
-
-<p><a href="https://x.com/Misbahtwts/status/2101255579910230415?s=20">View on X</a></p>
-
-</td>
-<td width="50%" valign="top">
-
-<p>
-<img src="docs/screenshots/social/anurag-blitz-avatar.jpg" width="40" height="40" alt="@anuraggdubeyy" />
-&nbsp;&nbsp;<strong>Anurag Dubey</strong><br/>
-<a href="https://x.com/anuraggdubeyy">@anuraggdubeyy</a>
-</p>
-
-> Here at @MonadIndia Blitz V4.
-
-<p align="center">
-  <a href="https://x.com/anuraggdubeyy/status/2101171282012442744?s=20">
-    <img src="docs/screenshots/social/anurag-blitz.jpg" alt="Anurag at Monad India Blitz V4" width="100%" />
-  </a>
-</p>
-
-<p><a href="https://x.com/anuraggdubeyy/status/2101171282012442744?s=20">View on X</a></p>
-
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-<p>
-<img src="docs/screenshots/social/aditya-blitz-avatar.jpg" width="40" height="40" alt="@AdityaNishad987" />
-&nbsp;&nbsp;<strong>0xAdityaa</strong><br/>
-<a href="https://x.com/AdityaNishad987">@AdityaNishad987</a>
-</p>
-
-> At @monad Blitz V4..
-
-<p align="center">
-  <a href="https://x.com/AdityaNishad987/status/2101170921033883854?s=20">
-    <img src="docs/screenshots/social/aditya-blitz.jpg" alt="Aditya at Monad Blitz V4" width="100%" />
-  </a>
-</p>
-
-<p><a href="https://x.com/AdityaNishad987/status/2101170921033883854?s=20">View on X</a></p>
-
-</td>
-<td width="50%" valign="top">
-
-<p>
-<img src="docs/screenshots/social/misbah-cooking-avatar.jpg" width="40" height="40" alt="Misbah Ansari" />
-&nbsp;&nbsp;<strong>Misbah Ansari</strong><br/>
-<a href="https://www.linkedin.com/in/misbah-ansari-52657428a">LinkedIn</a>
-</p>
-
-> We Anurag Dubey Aditya Nishad cooking now at monad hack.
->
-> Kartikey Garg
-
-<p align="center">
-  <a href="https://www.linkedin.com/posts/misbah-ansari-52657428a_we-anurag-dubey-aditya-nishad-cooking-now-activity-7506962375024168960-KQwP">
-    <img src="docs/screenshots/social/misbah-cooking.jpg" alt="LinkedIn — cooking at Monad hack" width="100%" />
-  </a>
-</p>
-
-<p><a href="https://www.linkedin.com/posts/misbah-ansari-52657428a_we-anurag-dubey-aditya-nishad-cooking-now-activity-7506962375024168960-KQwP">View on LinkedIn</a></p>
-
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-<p>
-<img src="docs/screenshots/social/aditya-demo-avatar.jpg" width="40" height="40" alt="@AdityaNishad987" />
-&nbsp;&nbsp;<strong>0xAdityaa</strong><br/>
-<a href="https://x.com/AdityaNishad987">@AdityaNishad987</a>
-</p>
-
-> This is what we made.
->
-> TapPay at @monad BlitzV4.
->
-> Contactless Payment using NFC just tap on each others phone and payment done that’s how easy it is.
-
-<p align="center">
-  <a href="https://x.com/AdityaNishad987/status/2101275794375131270?s=20">
-    <img src="docs/screenshots/social/aditya-demo.jpg" alt="Aditya — TapPay demo video" width="100%" />
-  </a>
-</p>
-
-<p><a href="https://x.com/AdityaNishad987/status/2101275794375131270?s=20">View on X</a></p>
-
-</td>
-<td width="50%" valign="top">
-
-<p>
-<img src="docs/screenshots/social/misbah-demo-avatar.jpg" width="40" height="40" alt="@Misbahtwts" />
-&nbsp;&nbsp;<strong>Misbah(agentic arc)</strong><br/>
-<a href="https://x.com/Misbahtwts">@Misbahtwts</a>
-</p>
-
-> We made TapPay and here's the video on how it works.
->
-> if you wanna try it out, dm me
->
-> @geeky_kartikey @KushalVijay_
-
-<p align="center">
-  <a href="https://x.com/Misbahtwts/status/2101276318541496533?s=20">
-    <img src="docs/screenshots/social/aditya-demo.jpg" alt="Misbah — TapPay demo video share" width="100%" />
-  </a>
-</p>
-
-<p><a href="https://x.com/Misbahtwts/status/2101276318541496533?s=20">View on X</a></p>
-
-</td>
-</tr>
-</table>
 
 ---
 
@@ -384,7 +205,7 @@ TapPay/
 │   ├── screens/                # Home, Send/Receive Tap, Send Payment, Status…
 │   ├── components/             # UI (radar, waiting card, modals…)
 │   └── navigation/             # Stack + tabs
-├── docs/                       # Architecture, implementation specs, screenshots
+├── docs/                       # Specs, bounty, Supabase guide, screenshots
 ├── test/                       # Contract tests
 └── .github/workflows/          # APK CI
 ```
@@ -405,10 +226,13 @@ NFC Host Card Emulation needs **two physical Android phones**. Emulators cannot 
 
 ## Documentation
 
-- [`TapPay-Technical-Spec.md`](./docs/TapPay-Technical-Spec.md) — architecture
-- [`TapPay-Implementation-Plan.md`](./docs/TapPay-Implementation-Plan.md) — implementation plan
-- [`requirement.txt`](./docs/requirement.txt) — contributor setup
-- [`ADITYA_RULES.md`](./docs/ADITYA_RULES.md) — team guidelines
+| Doc | Purpose |
+|:----|:--------|
+| [`TapPay-Technical-Spec.md`](./docs/TapPay-Technical-Spec.md) | Product & architecture |
+| [`AGORA_BOUNTY_SUBMISSION.md`](./docs/AGORA_BOUNTY_SUBMISSION.md) | Agora cross-border bounty write-up |
+| [`BOUNTY_RULES.md`](./docs/BOUNTY_RULES.md) | Contributor territory & safety rules |
+| [`SUPABASE_MAINNET.md`](./docs/SUPABASE_MAINNET.md) | One-time `@username` DB migration (chain 143) |
+| [`requirement.txt`](./docs/requirement.txt) | Dev environment prerequisites |
 
 ---
 

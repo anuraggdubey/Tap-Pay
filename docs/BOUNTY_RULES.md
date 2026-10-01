@@ -83,9 +83,11 @@ hardhat.config.js
 scripts/deploy.js
 test/*
 
-docs/ADITYA_RULES.md
 docs/BOUNTY_RULES.md
-docs/BOUNTY_CHECKLIST.md
+docs/AGORA_BOUNTY_SUBMISSION.md
+docs/SUPABASE_MAINNET.md
+docs/TapPay-Technical-Spec.md
+docs/requirement.txt
 ```
 
 Plus any NEW files/folders Aditya creates (see Rule 4).
@@ -152,7 +154,7 @@ src/config/agora.ts             # Agora-specific config
 
 ### Before Writing ANY Code:
 1. ✅ Read this rules file
-2. ✅ Check the checklist (BOUNTY_CHECKLIST.md) for current progress
+2. ✅ Skim `docs/AGORA_BOUNTY_SUBMISSION.md` and `docs/TapPay-Technical-Spec.md` for current scope
 3. ✅ Confirm you are editing a file YOU own (see Rules 1-4)
 
 ### Before Every Change:
@@ -225,7 +227,6 @@ src/config/agora.ts             # Agora-specific config
 ## Resume Instructions (New Session / Token Depletion)
 
 1. Read `docs/BOUNTY_RULES.md` (this file)
-2. Read `docs/BOUNTY_CHECKLIST.md` for current progress
+2. Read `docs/TapPay-Technical-Spec.md` and `docs/AGORA_BOUNTY_SUBMISSION.md`
 3. Check what files exist in your territory (Rule 4)
-4. Continue from the first unchecked item on the checklist
-5. **NEVER modify Anurag's files** — always create new files
+4. **NEVER modify Anurag's files** — always create new files

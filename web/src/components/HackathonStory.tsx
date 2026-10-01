@@ -178,7 +178,7 @@ export const HackathonStory: React.FC = () => {
                 </div>
                 <div style={{ fontSize: '17px', fontWeight: 800, marginBottom: '6px' }}>Phone-to-Phone Tap in Real Life</div>
                 <p style={{ fontSize: '13px', color: '#9ea0b2', marginBottom: '20px' }}>
-                  Watch two real Android devices held back-to-back exchanging keys and settling on Monad Testnet.
+                  Watch two real Android devices held back-to-back exchanging keys and settling on Monad Mainnet (chain ID 143).
                 </p>
                 <a
                   href="https://drive.google.com/file/d/1f8ZO1ian1y1d4o98g1C-SuV6wPYAysDC/view?usp=sharing"

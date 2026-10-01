@@ -67,7 +67,7 @@ const InteractivePhone: React.FC<PhoneProps> = ({ val, setVal, paid, onPay, isMo
                 marginTop: '4px',
               }}
             >
-              <span>Monad Testnet</span>
+              <span>Monad Mainnet</span>
               <ChevronDown size={14} />
             </div>
           </div>

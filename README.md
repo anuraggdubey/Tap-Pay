@@ -334,7 +334,7 @@ Live posts from **Monad India Blitz V4**, shown with the same media as on X and 
 | Explorer | `https://monadscan.com` |
 | Currency | MON (18 decimals) |
 
-Configured in [`src/config/monad.ts`](./src/config/monad.ts). Funding guide: [`docs/MAINNET_FUNDING.md`](./docs/MAINNET_FUNDING.md).
+Configured in [`src/config/monad.ts`](./src/config/monad.ts). Username DB migration: [`docs/SUPABASE_MAINNET.md`](./docs/SUPABASE_MAINNET.md).
 
 Deploy mainnet contracts: `npm run deploy:mainnet` (requires `DEPLOYER_PRIVATE_KEY` and MON for gas).
 

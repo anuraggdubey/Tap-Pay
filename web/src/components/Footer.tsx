@@ -284,7 +284,7 @@ export const Footer: React.FC<FooterProps> = ({ onJoinWaitlist }) => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {[
               { label: 'Monad Docs', href: 'https://docs.monad.xyz' },
-              { label: 'Testnet Faucet', href: 'https://faucet.monad.xyz' },
+              { label: 'Monad Network', href: 'https://docs.monad.xyz/developer-essentials/network-information' },
               { label: 'MonadScan Explorer', href: 'https://monadscan.com' },
               { label: 'Privacy Policy', href: '#' },
               { label: 'Terms & Conditions', href: '#' },

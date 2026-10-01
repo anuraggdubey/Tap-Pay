@@ -575,7 +575,7 @@ export const Hero: React.FC<HeroProps> = ({ onJoinWaitlist }) => {
                     <div className="screen-fade-in sim-history-screen">
                       <div className="sim-screen-title-bar">
                         <div className="sim-history-title">Activity</div>
-                        <div className="sim-filter-pill">Monad Testnet</div>
+                        <div className="sim-filter-pill">Monad Mainnet</div>
                       </div>
 
                       {/* Filter Chips */}

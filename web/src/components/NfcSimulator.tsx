@@ -390,7 +390,7 @@ export const NfcSimulator: React.FC = () => {
                     <span>9:41</span>
                     <div className="status-chip">
                       <span className="chip-dot" />
-                      <span>Monad Testnet</span>
+                      <span>Monad Mainnet</span>
                     </div>
                     <div className="status-icons">
                       <Wifi size={12} />
@@ -654,7 +654,7 @@ export const NfcSimulator: React.FC = () => {
                     <span>9:41</span>
                     <div className="status-chip">
                       <span className="chip-dot" />
-                      <span>Monad Testnet</span>
+                      <span>Monad Mainnet</span>
                     </div>
                     <div className="status-icons">
                       <Wifi size={12} />

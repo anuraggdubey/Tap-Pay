@@ -75,7 +75,7 @@ export const StatsCarousel: React.FC = () => {
                 ~1.0s Finality
               </div>
               <h3 style={{ fontSize: '20px', fontWeight: 600, lineHeight: 1.35, opacity: 0.95 }}>
-                Sub-second contactless transactions settled on Monad Testnet
+                Sub-second contactless transactions settled on Monad Mainnet
               </h3>
             </div>
 

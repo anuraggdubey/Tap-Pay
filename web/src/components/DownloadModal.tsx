@@ -131,7 +131,7 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose, o
             <span>Coming soon</span>
           </div>
           <p style={{ fontSize: '13px', color: 'var(--text-dark-muted)', lineHeight: 1.5, margin: 0 }}>
-            Android 10+ · NFC required · Monad testnet
+            Android 10+ · NFC required · Monad Mainnet
           </p>
         </div>
 

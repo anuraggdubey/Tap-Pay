@@ -68,7 +68,7 @@ export default function AboutScreen({navigation}: Props) {
           <View style={styles.featureMeta}>
             <Text style={styles.featureTitle}>Username Pay</Text>
             <Text style={styles.featureDesc}>
-              Pay direct to human-readable handles registered on Monad Testnet
+              Pay direct to human-readable handles via TapPay username registry
             </Text>
           </View>
         </View>

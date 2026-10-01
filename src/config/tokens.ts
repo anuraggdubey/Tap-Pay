@@ -1,7 +1,7 @@
 /**
  * Token Configuration for Multi-Token Support
  *
- * Defines all supported tokens on Monad Testnet.
+ * Defines all supported tokens on Monad Mainnet.
  * AUSD is the primary token for the Agora Bounty.
  * USDC, USDT, and MON are additional tokens for a complete product.
  *
@@ -33,10 +33,7 @@ export interface TokenInfo {
 // ─── Supported Token List ─────────────────────────────────────────
 
 /**
- * All supported tokens on Monad Testnet.
- *
- * Contract addresses will be updated once we verify testnet deployments.
- * For the bounty demo, AUSD is mandatory. Others are bonus.
+ * All supported tokens on Monad Mainnet (chain ID 143).
  *
  * Decimal reference:
  *   - Stablecoins (AUSD, USDC, USDT): 6 decimals (1 AUSD = 1_000_000 units)
@@ -146,7 +143,7 @@ export function parseTokenAmount(amount: string, decimals: number): bigint {
 
 /**
  * Update a token's contract address at runtime.
- * Used when we discover or deploy testnet contracts.
+ * Used when a token address changes on a network upgrade.
  */
 export function setTokenAddress(symbol: string, address: string): void {
   const token = SUPPORTED_TOKENS[symbol.toUpperCase()];

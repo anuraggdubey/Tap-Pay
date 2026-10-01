@@ -355,7 +355,7 @@ export const Hero: React.FC<HeroProps> = ({ onJoinWaitlist }) => {
                   <span className="sim-status-time">9:41</span>
                   <div className="sim-status-chip">
                     <span className="sim-chip-dot" />
-                    <span>Monad 10143</span>
+                    <span>Monad 143</span>
                   </div>
                   <div className="sim-status-icons">
                     <Wifi size={12} />
@@ -560,7 +560,7 @@ export const Hero: React.FC<HeroProps> = ({ onJoinWaitlist }) => {
                         </div>
                         <div className="ledger-row">
                           <span className="ledger-lbl">Tx Status</span>
-                          <span className="ledger-val verified">✓ Confirmed 10143</span>
+                          <span className="ledger-val verified">✓ Confirmed 143</span>
                         </div>
                       </div>
 

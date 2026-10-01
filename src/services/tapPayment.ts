@@ -14,6 +14,7 @@ import {
   stopContinuousHceScan,
 } from './nfcReader';
 import {getBalance, sendPayment, withRpcFailover} from './wallet';
+import {createSessionIdHash} from '../utils/paymentSession';
 
 const PAYMENT_LOGGED_ABI = [
   'event PaymentLogged(address indexed from, address indexed to, uint256 amount, bytes32 sessionId, uint256 timestamp)',
@@ -33,10 +34,7 @@ export type TapSenderPhase =
   | 'completed'
   | 'failed';
 
-export function createSessionId(): string {
-  const sessionIdHex = ethers.hexlify(ethers.randomBytes(16)).replace('0x', '');
-  return `${sessionIdHex.slice(0, 8)}-${sessionIdHex.slice(8, 12)}-4${sessionIdHex.slice(13, 16)}-8${sessionIdHex.slice(17, 20)}-${sessionIdHex.slice(20, 32)}`;
-}
+export {createSessionId, createSessionIdHash} from '../utils/paymentSession';
 
 /**
  * Sender: wait for receiver address, then broadcast payment.
@@ -78,10 +76,7 @@ export async function completeSenderTap(
   // In the one-way architecture, we don't necessarily have a sessionId for the signature 
   // since we just read the address directly. We can just generate a random one for logging/history
   // or use a dummy hash if sendPayment requires it.
-  const sessionId = createSessionId();
-  const sessionIdHash = ethers.keccak256(
-    ethers.solidityPacked(['string'], [sessionId]),
-  );
+  const sessionIdHash = createSessionIdHash();
 
   const result = await sendPayment(
     receiverAddress,

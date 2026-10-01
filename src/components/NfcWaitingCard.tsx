@@ -286,7 +286,7 @@ export default function NfcWaitingCard({
       : 'Hold phone within 4cm of sender';
   } else if (isBroadcasting) {
     statusTitle = isSend ? 'Sending payment…' : 'Receiving payment…';
-    statusSub = 'Broadcasting to Monad testnet…';
+    statusSub = 'Broadcasting to Monad Mainnet…';
   } else if (isSuccess) {
     statusTitle = isSend ? 'Payment Sent!' : 'Payment Received!';
     statusSub = isSend
@@ -380,7 +380,7 @@ export default function NfcWaitingCard({
           <View style={s.successRow}>
             <Text style={s.successLabel}>Network</Text>
             <Text style={[s.successValue, {color: colors.success}]}>
-              Monad Testnet
+              Monad Mainnet
             </Text>
           </View>
         </View>

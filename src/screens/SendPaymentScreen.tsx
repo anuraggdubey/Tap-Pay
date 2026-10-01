@@ -417,7 +417,7 @@ export default function SendPaymentScreen({navigation}: Props) {
 
         <View style={styles.header}>
           <Text style={styles.pageTitle}>Send Payment</Text>
-          <Text style={styles.pageSubtitle}>Direct transfer on Monad testnet</Text>
+          <Text style={styles.pageSubtitle}>Direct transfer on Monad Mainnet</Text>
         </View>
 
         <View style={styles.modeToggle}>

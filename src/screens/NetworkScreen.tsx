@@ -107,10 +107,16 @@ export default function NetworkScreen({navigation}: Props) {
             {MONAD_CONFIG.contracts.usernameRegistry || 'Not deployed'}
           </Text>
         </View>
-        <View style={[styles.infoRow, {borderBottomWidth: 0}]}>
+        <View style={styles.infoRow}>
           <Text style={styles.infoKey}>TapPay Ledger</Text>
           <Text style={[styles.infoVal, styles.monoSmall]}>
             {MONAD_CONFIG.contracts.tapPayLedger || 'Not deployed'}
+          </Text>
+        </View>
+        <View style={[styles.infoRow, {borderBottomWidth: 0}]}>
+          <Text style={styles.infoKey}>Multi-Token Ledger</Text>
+          <Text style={[styles.infoVal, styles.monoSmall]}>
+            {MONAD_CONFIG.contracts.multiTokenLedger || 'Not deployed'}
           </Text>
         </View>
       </View>
@@ -118,26 +124,29 @@ export default function NetworkScreen({navigation}: Props) {
       {/* Quick Links (Clean Monochromatic — No highlighted colored avatars) */}
       <Text style={styles.sectionHeader}>NETWORK RESOURCES</Text>
       <View style={styles.card}>
-        <TouchableOpacity
-          style={styles.linkRow}
-          activeOpacity={0.7}
-          onPress={() => {
-            triggerHaptic.selection();
-            Linking.openURL(MONAD_CONFIG.faucetUrl);
-          }}>
-          <View style={styles.linkLeft}>
-            <View style={styles.linkIconNeutral}>
-              <FaucetIcon size={16} color="#FFFFFF" />
-            </View>
-            <View>
-              <Text style={styles.linkTitle}>Monad Faucet</Text>
-              <Text style={styles.linkSubtitle}>Request testnet MON tokens</Text>
-            </View>
-          </View>
-          <ExternalLinkIcon size={16} color="#8E8E93" />
-        </TouchableOpacity>
-
-        <View style={styles.rpcDivider} />
+        {MONAD_CONFIG.faucetUrl?.trim() ? (
+          <>
+            <TouchableOpacity
+              style={styles.linkRow}
+              activeOpacity={0.7}
+              onPress={() => {
+                triggerHaptic.selection();
+                Linking.openURL(MONAD_CONFIG.faucetUrl);
+              }}>
+              <View style={styles.linkLeft}>
+                <View style={styles.linkIconNeutral}>
+                  <FaucetIcon size={16} color="#FFFFFF" />
+                </View>
+                <View>
+                  <Text style={styles.linkTitle}>Monad Faucet</Text>
+                  <Text style={styles.linkSubtitle}>Request MON tokens</Text>
+                </View>
+              </View>
+              <ExternalLinkIcon size={16} color="#8E8E93" />
+            </TouchableOpacity>
+            <View style={styles.rpcDivider} />
+          </>
+        ) : null}
 
         <TouchableOpacity
           style={styles.linkRow}

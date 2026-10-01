@@ -285,7 +285,7 @@ export const Footer: React.FC<FooterProps> = ({ onJoinWaitlist }) => {
             {[
               { label: 'Monad Docs', href: 'https://docs.monad.xyz' },
               { label: 'Testnet Faucet', href: 'https://faucet.monad.xyz' },
-              { label: 'MonadScan Explorer', href: 'https://testnet.monadscan.com' },
+              { label: 'MonadScan Explorer', href: 'https://monadscan.com' },
               { label: 'Privacy Policy', href: '#' },
               { label: 'Terms & Conditions', href: '#' },
             ].map((link) => (
@@ -380,7 +380,7 @@ export const Footer: React.FC<FooterProps> = ({ onJoinWaitlist }) => {
           <div>© 2025 TapPay. Contactless Decentralized Payments on Monad.</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#22C55E' }} />
-            <span>Monad Testnet 10143 Operational</span>
+            <span>Monad Mainnet 143 Operational</span>
           </div>
         </div>
       </div>

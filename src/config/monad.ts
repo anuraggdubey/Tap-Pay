@@ -1,9 +1,9 @@
-// Monad Testnet Configuration
-// See: https://docs.monad.xyz
+// Monad Mainnet configuration
+// See: https://docs.monad.xyz/developer-essentials/network-information
 
 export const MONAD_CONFIG = {
   chainId: 143,
-  chainName: 'Monad',
+  chainName: 'Monad Mainnet',
   nativeCurrency: {
     name: 'MON',
     symbol: 'MON',

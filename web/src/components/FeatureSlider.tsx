@@ -307,7 +307,7 @@ export const FeatureSlider: React.FC = () => {
                   On-Chain Finality
                 </div>
                 <div style={{ fontSize: '12px', color: '#6C628A', marginBottom: '16px' }}>
-                  Chain ID: 10143 · TapPayLedger.sol
+                  Chain ID: 143 · TapPayLedger.sol
                 </div>
 
                 <div

@@ -21,6 +21,7 @@ import {useWallet} from '../context/WalletContext';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import {triggerHaptic} from '../utils/haptics';
 import {truncateAddress} from '../utils/format';
+import {MONAD_CONFIG} from '../config/monad';
 import {
   UserIcon,
   WalletCardIcon,
@@ -128,9 +129,9 @@ export default function SettingsScreen({navigation}: Props) {
           <View style={styles.statusCardLeft}>
             <View style={styles.statusLiveDot} />
             <View>
-              <Text style={styles.statusTitle}>Monad Testnet</Text>
+              <Text style={styles.statusTitle}>{MONAD_CONFIG.chainName}</Text>
               <Text style={styles.statusSubtitle}>
-                Chain ID 10143 • ~1s Finality
+                Chain ID {MONAD_CONFIG.chainId} • ~1s Finality
               </Text>
             </View>
           </View>

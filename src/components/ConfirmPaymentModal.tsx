@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import {formatMon, truncateAddress} from '../utils/format';
+import {MONAD_CONFIG} from '../config/monad';
 
 interface Props {
   visible: boolean;
@@ -56,7 +57,9 @@ export default function ConfirmPaymentModal({
           <View style={styles.grabber} />
 
           <Text style={styles.title}>Confirm Payment</Text>
-          <Text style={styles.networkBadge}>Monad Testnet • ~1s Finality</Text>
+          <Text style={styles.networkBadge}>
+            {MONAD_CONFIG.chainName} • Chain {MONAD_CONFIG.chainId} • ~1s Finality
+          </Text>
 
           {/* Amount Display */}
           <View style={styles.amountBox}>

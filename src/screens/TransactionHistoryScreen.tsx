@@ -144,7 +144,7 @@ export default function TransactionHistoryScreen() {
       {/* Clean Header Title */}
       <View style={styles.header}>
         <Text style={styles.pageTitle}>Transactions</Text>
-        <Text style={styles.pageSubtitle}>Activity on Monad testnet</Text>
+        <Text style={styles.pageSubtitle}>Activity on Monad Mainnet</Text>
       </View>
 
       {/* Filter Tabs */}

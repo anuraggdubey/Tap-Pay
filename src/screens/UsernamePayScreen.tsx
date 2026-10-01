@@ -1,6 +1,6 @@
 /**
  * UsernamePayScreen — Search username, resolve to address, pre-check balance & gas,
- * confirm with Apple Pay-style sheet, and broadcast to Monad testnet.
+ * confirm with Apple Pay-style sheet, and broadcast on Monad Mainnet.
  */
 
 import React, {useState, useCallback, useEffect} from 'react';
@@ -72,7 +72,7 @@ export default function UsernamePayScreen({navigation}: Props) {
       if (addr && addr !== ethers.ZeroAddress) {
         setResolvedAddress(addr);
       } else {
-        Alert.alert('Not Found', `Username @${username} is not registered on Monad testnet.`);
+        Alert.alert('Not Found', `Username @${username} is not registered.`);
       }
     } catch (err: any) {
       Alert.alert('Lookup Failed', err?.message || 'Could not query username registry.');
@@ -137,7 +137,7 @@ export default function UsernamePayScreen({navigation}: Props) {
     }
   };
 
-  // Final confirmation: sign and broadcast to Monad testnet
+  // Final confirmation: sign and broadcast on Monad Mainnet
   const handleConfirmSend = async () => {
     if (!resolvedAddress || !balanceCheckData) {
       return;

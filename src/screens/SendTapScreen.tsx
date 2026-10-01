@@ -60,7 +60,7 @@ const PHASE_COPY: Record<TapSenderPhase, {title: string; subtitle: string}> = {
   },
   broadcasting: {
     title: 'Sending payment',
-    subtitle: 'Broadcasting to Monad testnet…',
+    subtitle: 'Broadcasting to Monad Mainnet…',
   },
   completed: {
     title: 'Payment sent',

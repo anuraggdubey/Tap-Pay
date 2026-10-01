@@ -400,7 +400,7 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
 
           <View style={styles.metaRow}>
             <Text style={styles.metaLabel}>Network</Text>
-            <Text style={styles.metaValue}>Monad Testnet</Text>
+            <Text style={styles.metaValue}>Monad Mainnet</Text>
           </View>
         </View>
 

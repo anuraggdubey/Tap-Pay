@@ -41,14 +41,14 @@ Stablecoins use **6 decimals** (1.00 token = `1_000_000` units). MON uses **18 d
 | Deploy `MultiTokenLedger` | Deployer | `scripts/deployMultiTokenLedger.js` |
 | Whitelist AUSD / USDC / USDT on `MultiTokenLedger` | Deployer | One tx per token |
 | Explorer contract verification (optional) | Deployer | MON gas |
-| NFC tap pay (`payWithLog`) | Sender | Payment in MON + gas; min **0.0001 MON** per payment |
-| Direct MON transfer | Sender | Amount + gas |
-| Direct AUSD / USDC / USDT transfer | Sender | Token amount + **MON for gas only** |
-| Register `@username` | — | **Supabase only** today (`src/services/registry.ts`) — no on-chain gas |
+| NFC tap pay (`TapPayLedger.payWithLog`) | Sender | Payment in MON + gas; min **0.0001 MON** per payment |
+| Pay tab MON (`MultiTokenLedger.payWithLog`) | Sender | Amount + gas |
+| Pay tab AUSD / USDC / USDT (`payERC20WithLog`) | Sender | Token amount + MON gas; **`approve`** to MultiTokenLedger when needed |
+| Register `@username` | — | **Supabase only** (`src/services/registry.ts`) — no on-chain gas |
 | On-chain `UsernameRegistry.register()` | User | Only if you move identity fully on-chain later |
 | Mera passkey onboarding | — | No chain tokens |
 
-**Current Pay tab behavior:** ERC-20 sends use direct `transfer()` in [`src/services/tokens/tokenTransfer.ts`](../src/services/tokens/tokenTransfer.ts). They do **not** require `approve` to `MultiTokenLedger` unless you wire `payERC20WithLog` in the app.
+**Pay tab:** [`src/services/tokens/tokenTransfer.ts`](../src/services/tokens/tokenTransfer.ts) routes through **MultiTokenLedger** when `multiTokenLedger` is set in `monad.ts`.
 
 ---
 
@@ -154,17 +154,14 @@ If you only use **deployer + sender + light receiver**:
 
 ## Before you fund: engineering checklist
 
-Mainnet is **not** wired in Hardhat/app config yet. Complete these before spending mainnet assets:
+The mobile app targets **Monad Mainnet (143)** with contracts in [`src/config/monad.ts`](../src/config/monad.ts). Pay-tab transfers use **MultiTokenLedger**; NFC MON uses **TapPayLedger**.
 
-1. Add **`monad_mainnet`** to [`hardhat.config.js`](../hardhat.config.js) (chain **143**, RPC `https://rpc.monad.xyz`).
-2. Update [`src/config/monad.ts`](../src/config/monad.ts): chain ID **143**, RPC, explorer, deployed contract addresses.
-3. Update [`src/config/tokens.ts`](../src/config/tokens.ts) with mainnet AUSD/USDC; set USDT when verified.
-4. Deploy with `DEPLOYER_PRIVATE_KEY` set (never commit keys):
-   - `npx hardhat run scripts/deploy.js --network monad_mainnet`
-   - `npx hardhat run scripts/deployMultiTokenLedger.js --network monad_mainnet`
-5. Write deployed addresses to `deployed-addresses.json` / `monad.ts` as documented in deploy scripts.
-6. **Acquire** mainnet MON and stablecoins (bridge, swap, or issuer flow)—testnet faucet does not apply.
-7. Confirm **USDT** canonical address ([`docs/PHASE1_RESEARCH.md`](./PHASE1_RESEARCH.md) notes bridged / USDT0 variants).
+If redeploying:
+
+1. `npm run deploy:mainnet` (or `npx hardhat run scripts/deploy-mainnet.js --network monad_mainnet`) with `DEPLOYER_PRIVATE_KEY` set.
+2. Update [`src/config/monad.ts`](../src/config/monad.ts) with new addresses.
+3. Run `node scripts/check-mainnet.js` to verify owners, whitelist, and pause state.
+4. **Acquire** mainnet MON and stablecoins (bridge, swap, or issuer)—no testnet faucet on mainnet.
 
 ---
 

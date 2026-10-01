@@ -33,7 +33,7 @@ export const SecurityBento: React.FC = () => {
           </h2>
 
           <a
-            href="https://testnet.monadscan.com/address/0x5B177FEF554dA84A86be62E45fb49BB52e6D6838"
+            href="https://monadscan.com/address/0x03907aE845E016f5F1605BAE4e6392C3491e03f1"
             target="_blank"
             rel="noopener noreferrer"
             className="phantom-see-more"

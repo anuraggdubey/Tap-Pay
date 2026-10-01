@@ -75,7 +75,7 @@ export const WaitlistLaunchModal: React.FC<WaitlistLaunchModalProps> = ({ isOpen
           <div className="waitlist-launch-nfc">)))</div>
           <div className="waitlist-launch-stack">
             <div>4cm tap range · HCE native</div>
-            <div>Non-custodial · Monad testnet</div>
+            <div>Non-custodial · Monad Mainnet</div>
             <div>Launch email · one tap install</div>
           </div>
         </div>

@@ -1,9 +1,10 @@
 /**
  * Token Transfer Service — Send any supported ERC-20 or Native Token
  *
- * Handles the actual on-chain transfer of tokens:
- *   - AUSD, USDC, USDT → ERC-20 transfer() call
- *   - MON → native transfer (delegates to existing sendPayment or Mera signer)
+ * Handles on-chain transfers via MultiTokenLedger when configured:
+ *   - AUSD, USDC, USDT → approve + payERC20WithLog
+ *   - MON → payWithLog (native)
+ * Falls back to direct transfer if MultiTokenLedger is not configured.
  *
  * NOTE: This is a NEW file. Does NOT modify wallet.ts or tapPayment.ts.
  *       It IMPORTS from wallet.ts (read-only) for provider and gas estimation.
@@ -13,6 +14,11 @@ import {ethers} from 'ethers';
 import {getProvider, withRpcFailover, loadPrivateKey} from '../wallet';
 import {SUPPORTED_TOKENS, ERC20_ABI, parseTokenAmount} from '../../config/tokens';
 import {getMeraSigner, hasMeraSigner} from '../mera/meraSigner';
+import {
+  isMultiTokenLedgerEnabled,
+  sendErc20ViaMultiTokenLedger,
+  sendMonViaMultiTokenLedger,
+} from '../multiTokenLedger';
 
 // ─── Types ────────────────────────────────────────────────────────
 
@@ -165,7 +171,6 @@ async function sendNativeTransfer(
   displayAmount: string,
 ): Promise<TransferResult> {
   try {
-    // Pre-check balance
     const balance = await signer.provider!.getBalance(signer.address);
     if (balance < amountWei) {
       return {
@@ -177,10 +182,12 @@ async function sendNativeTransfer(
       };
     }
 
-    const tx = await signer.sendTransaction({
-      to,
-      value: amountWei,
-    });
+    let tx;
+    if (isMultiTokenLedgerEnabled()) {
+      tx = await sendMonViaMultiTokenLedger(signer, to, amountWei);
+    } else {
+      tx = await signer.sendTransaction({to, value: amountWei});
+    }
 
     return {
       txHash: tx.hash,
@@ -242,8 +249,17 @@ async function sendERC20Transfer(
       };
     }
 
-    // Execute the ERC-20 transfer
-    const tx = await tokenContract.transfer(to, amountRaw);
+    let tx;
+    if (isMultiTokenLedgerEnabled()) {
+      tx = await sendErc20ViaMultiTokenLedger(
+        signer,
+        contractAddress,
+        to,
+        amountRaw,
+      );
+    } else {
+      tx = await tokenContract.transfer(to, amountRaw);
+    }
 
     return {
       txHash: tx.hash,
@@ -284,6 +300,15 @@ function parseTransferError(error: any): string {
   }
   if (message.includes('ERC20: transfer to the zero address')) {
     return 'Cannot send tokens to the zero address.';
+  }
+  if (
+    message.includes('SessionAlreadyProcessed') ||
+    message.includes('SessionAlreadyUsed')
+  ) {
+    return 'This payment session was already processed. Please try again.';
+  }
+  if (message.includes('UnsupportedToken')) {
+    return 'This token is not enabled on TapPay Ledger.';
   }
 
   return error?.reason || error?.shortMessage || message;

@@ -1,6 +1,6 @@
 # TapPay
 
-Phone-to-phone contactless payments on [Monad Testnet](https://docs.monad.xyz) — NFC tap or `@username` send, settled on-chain as native MON.
+Phone-to-phone contactless payments on [Monad Mainnet](https://docs.monad.xyz) — NFC tap or `@username` send, settled on-chain (MON and stablecoins).
 
 <p align="center">
   <a href="https://x.com/tapxpay">
@@ -27,14 +27,15 @@ Phone-to-phone contactless payments on [Monad Testnet](https://docs.monad.xyz) �
 | **X Account** | [![X Account](https://img.shields.io/badge/X%20Account-%40tapxpay-000000?style=flat-square&logo=x&logoColor=white)](https://x.com/tapxpay) &nbsp; [Here is the link: x.com/tapxpay](https://x.com/tapxpay) |
 | **APK Download** | [Tap-pay.apk (Google Drive)](https://drive.google.com/file/d/1w3K3PTeqvt250qMJne4azXeU4D35dC8P/view?usp=drivesdk) |
 | **Video Demo** | [tappay.mp4 (Google Drive)](https://drive.google.com/file/d/1f8ZO1ian1y1d4o98g1C-SuV6wPYAysDC/view?usp=sharing) |
-| **UsernameRegistry** | [`0xEebB05F9AF06908eCb7bFa5F916Dde1EEa231aDD`](https://testnet.monadscan.com/address/0xEebB05F9AF06908eCb7bFa5F916Dde1EEa231aDD) |
-| **TapPayLedger** | [`0x5B177FEF554dA84A86be62E45fb49BB52e6D6838`](https://testnet.monadscan.com/address/0x5B177FEF554dA84A86be62E45fb49BB52e6D6838) |
+| **UsernameRegistry** | [`0x458DD61Db411ec1feFC069B7B094a983E3a3E265`](https://monadscan.com/address/0x458DD61Db411ec1feFC069B7B094a983E3a3E265) |
+| **TapPayLedger** | [`0x03907aE845E016f5F1605BAE4e6392C3491e03f1`](https://monadscan.com/address/0x03907aE845E016f5F1605BAE4e6392C3491e03f1) |
+| **MultiTokenLedger** | [`0x15319f757FC0e600E681bC0bffD69541916F8860`](https://monadscan.com/address/0x15319f757FC0e600E681bC0bffD69541916F8860) |
 
 ---
 
 ## What is TapPay?
 
-TapPay is a React Native wallet built for **Monad Blitz** that settles payments as native MON on Monad Testnet (Chain ID `10143`).
+TapPay is a React Native wallet that settles payments on **Monad Mainnet** (Chain ID `143`).
 
 **Two ways to pay**
 
@@ -54,17 +55,23 @@ TapPay has been expanded for the **Best Cross-Border Payments App on Monad** bou
 
 ---
 
-## Deployed Contracts (Monad Testnet)
+## Deployed Contracts (Monad Mainnet)
 
-**Network:** Monad Testnet · Chain ID `10143` · ~1s finality
+**Network:** Monad Mainnet · Chain ID `143` · ~1s finality
 
 | Contract | Address | Explorer |
 |:---------|:--------|:---------|
-| **UsernameRegistry** | `0xEebB05F9AF06908eCb7bFa5F916Dde1EEa231aDD` | [View on Monadscan](https://testnet.monadscan.com/address/0xEebB05F9AF06908eCb7bFa5F916Dde1EEa231aDD) |
-| **TapPayLedger** | `0x5B177FEF554dA84A86be62E45fb49BB52e6D6838` | [View on Monadscan](https://testnet.monadscan.com/address/0x5B177FEF554dA84A86be62E45fb49BB52e6D6838) |
-| **MultiTokenLedger** | `0x9830B8638085a0da1eDB5e2f0Daa110d24B82f7E` | [View on Monadscan](https://testnet.monadscan.com/address/0x9830B8638085a0da1eDB5e2f0Daa110d24B82f7E) |
+| **UsernameRegistry** | `0x458DD61Db411ec1feFC069B7B094a983E3a3E265` | [View on Monadscan](https://monadscan.com/address/0x458DD61Db411ec1feFC069B7B094a983E3a3E265) |
+| **TapPayLedger** | `0x03907aE845E016f5F1605BAE4e6392C3491e03f1` | [View on Monadscan](https://monadscan.com/address/0x03907aE845E016f5F1605BAE4e6392C3491e03f1) |
+| **MultiTokenLedger** | `0x15319f757FC0e600E681bC0bffD69541916F8860` | [View on Monadscan](https://monadscan.com/address/0x15319f757FC0e600E681bC0bffD69541916F8860) |
 
-**Deployer:** [`0x1406Fe936D971A0dAE9a19DD3354b900B08Fa002`](https://testnet.monadscan.com/address/0x1406Fe936D971A0dAE9a19DD3354b900B08Fa002)
+**Deployer:** [`0x1406Fe936D971A0dAE9a19DD3354b900B08Fa002`](https://monadscan.com/address/0x1406Fe936D971A0dAE9a19DD3354b900B08Fa002)
+
+**Mainnet tokens (Pay tab):** AUSD `0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a` · USDC `0x754704Bc059F8C67012fEd69BC8A327a5aafb603` · USDT `0xe7cd86e13AC4309349F30B3435a9d337750fC82D`
+
+**@username resolution:** Supabase index (off-chain). On-chain `UsernameRegistry` is deployed for future use / verification.
+
+**Pay tab / cross-border:** Routes through **MultiTokenLedger** (`payWithLog` / `payERC20WithLog`). **NFC tap (MON):** **TapPayLedger** `payWithLog`.
 
 ### MultiTokenLedger (Agora Bounty)
 
@@ -310,25 +317,26 @@ Live posts from **Monad India Blitz V4**, shown with the same media as on X and 
 | NFC / HCE | `react-native-hce`, Android `HostApduService` |
 | NFC Reader | `react-native-nfc-manager` |
 | Wallet | `ethers.js` v6 + Android Keystore (`react-native-keychain`) |
-| Chain | Monad Testnet (`10143`) |
-| Contracts | `UsernameRegistry.sol`, `TapPayLedger.sol` (Hardhat) |
-| Identity cache | Supabase username index (with on-chain registry) |
+| Chain | Monad Mainnet (`143`) |
+| Contracts | `UsernameRegistry`, `TapPayLedger`, `MultiTokenLedger` (Hardhat) |
+| Identity cache | Supabase `@username` → address |
 | CI | GitHub Actions → debug APK artifact |
 
 ---
 
-## Monad Testnet Config
+## Monad Mainnet Config
 
 | Setting | Value |
 |:--------|:------|
-| Chain ID | `10143` |
-| RPC (primary) | `https://testnet-rpc.monad.xyz` |
-| RPC (fallback) | `https://rpc.ankr.com/monad_testnet` |
-| Explorer | `https://testnet.monadscan.com` |
-| Faucet | `https://faucet.monad.xyz` |
+| Chain ID | `143` |
+| RPC (primary) | `https://rpc.monad.xyz` |
+| RPC (fallback) | `https://rpc.ankr.com/monad` |
+| Explorer | `https://monadscan.com` |
 | Currency | MON (18 decimals) |
 
-Configured in [`src/config/monad.ts`](./src/config/monad.ts).
+Configured in [`src/config/monad.ts`](./src/config/monad.ts). Funding guide: [`docs/MAINNET_FUNDING.md`](./docs/MAINNET_FUNDING.md).
+
+Deploy mainnet contracts: `npm run deploy:mainnet` (requires `DEPLOYER_PRIVATE_KEY` and MON for gas).
 
 ---
 

@@ -563,7 +563,7 @@ export const NfcSimulator: React.FC = () => {
                           </div>
                           <div className="receipt-row">
                             <span className="rk">Tx Status</span>
-                            <span className="rv green">✓ Confirmed 10143</span>
+                            <span className="rv green">✓ Confirmed 143</span>
                           </div>
                           <div className="receipt-row">
                             <span className="rk">TxHash</span>
@@ -887,13 +887,13 @@ export const NfcSimulator: React.FC = () => {
                     Atomic Settlement Confirmed on Monad (~0.82s)
                   </div>
                   <div style={{ fontSize: '11px', color: '#15803D', fontFamily: 'monospace' }}>
-                    TxHash: {txHash} · Gas: ~0.0004 MON · Chain ID: 10143
+                    TxHash: {txHash} · Gas: ~0.0004 MON · Chain ID: 143
                   </div>
                 </div>
               </div>
 
               <a
-                href="https://testnet.monadscan.com"
+                href="https://monadscan.com"
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{

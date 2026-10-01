@@ -1,6 +1,6 @@
 /**
  * TapPay App Root
- * Phone-to-phone NFC tap & username payments on Monad testnet
+ * Phone-to-phone NFC tap & username payments on Monad Mainnet
  *
  * ⚠️ TEMPORARY: Showing MeraTestScreen for passkey testing.
  * REVERT THIS after testing — restore AppNavigator.

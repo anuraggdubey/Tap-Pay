@@ -20,7 +20,7 @@ export const HowItWorks: React.FC = () => {
     {
       num: '03',
       title: 'Fund with Testnet MON',
-      desc: 'Request free testnet MON tokens from the official Monad Faucet (faucet.monad.xyz). Test transactions with zero real money risk on Chain ID 10143.',
+      desc: 'Fund your wallet with MON on Monad Mainnet (chain ID 143). Send real stablecoin and MON payments with ~1s finality.',
       tag: 'MONAD TESTNET',
       icon: Droplets,
     },

@@ -32,15 +32,23 @@ export default function InsufficientBalanceModal({
   currentBalanceWei,
   userAddress,
 }: Props) {
+  const faucetUrl = MONAD_CONFIG.faucetUrl?.trim();
+
   const handleOpenFaucet = () => {
-    Linking.openURL(MONAD_CONFIG.faucetUrl).catch(() => {
-      Alert.alert('Error', 'Unable to open faucet URL. Please visit https://faucet.monad.xyz');
+    if (!faucetUrl) {
+      return;
+    }
+    Linking.openURL(faucetUrl).catch(() => {
+      Alert.alert('Error', 'Unable to open faucet URL.');
     });
   };
 
   const handleCopyAddress = () => {
     Clipboard.setString(userAddress);
-    Alert.alert('Address Copied', 'Your wallet address has been copied to the clipboard. Paste it into the Monad testnet faucet!');
+    Alert.alert(
+      'Address Copied',
+      'Your wallet address was copied. Use it to receive MON on Monad Mainnet.',
+    );
   };
 
   return (
@@ -57,7 +65,7 @@ export default function InsufficientBalanceModal({
 
           <Text style={styles.title}>Insufficient MON</Text>
           <Text style={styles.subtitle}>
-            You do not have enough funds on Monad Testnet to cover this transaction and network gas fee.
+            You do not have enough MON on {MONAD_CONFIG.chainName} to cover this transaction and network gas fee.
           </Text>
 
           <View style={styles.breakdownCard}>
@@ -77,11 +85,13 @@ export default function InsufficientBalanceModal({
             </View>
           </View>
 
-          <TouchableOpacity
-            style={[styles.actionButton, styles.primaryButton]}
-            onPress={handleOpenFaucet}>
-            <Text style={styles.primaryButtonText}>Get Testnet MON (Faucet)</Text>
-          </TouchableOpacity>
+          {faucetUrl ? (
+            <TouchableOpacity
+              style={[styles.actionButton, styles.primaryButton]}
+              onPress={handleOpenFaucet}>
+              <Text style={styles.primaryButtonText}>Get MON (Faucet)</Text>
+            </TouchableOpacity>
+          ) : null}
 
           <TouchableOpacity
             style={[styles.actionButton, styles.secondaryButton]}

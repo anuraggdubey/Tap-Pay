@@ -1,6 +1,9 @@
 # OSX
 #
 .DS_Store
+.AppleDouble
+.LSOverride
+._*
 
 # Xcode
 #
@@ -19,6 +22,8 @@ xcuserdata
 DerivedData
 *.hmap
 *.ipa
+*.dSYM.zip
+*.dSYM/
 *.xcuserstate
 **/.xcode.env.local
 
@@ -34,12 +39,20 @@ local.properties
 *.keystore
 !debug.keystore
 .kotlin/
+*.aab
+*.ap_
+*.dex
+captures/
 
 # node.js
 #
 node_modules/
-npm-debug.log
-yarn-error.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.pnpm-store/
 
 # fastlane
 #
@@ -64,7 +77,10 @@ yarn-error.log
 .metro-health-check*
 
 # testing
+coverage/
 /coverage
+coverage.json
+.nyc_output/
 
 # Yarn
 .yarn/*
@@ -77,7 +93,17 @@ yarn-error.log
 # Environment & secrets
 .env
 .env.local
+.env.development
+.env.test
+.env.staging
 .env.production
+.env*.local
+!.env.example
+*.pem
+*.p12
+*.pfx
+*.cer
+*.crt
 
 # Hardhat / Contracts
 artifacts/
@@ -85,13 +111,16 @@ cache/
 typechain-types/
 deployed-addresses.json
 deployed-addresses-mainnet.json
+deployed-addresses*.json
+broadcast/
 
 # Backend
 backend/node_modules/
 backend/data/
 
-# APK build outputs (download from CI instead)
+# APK / Bundle build outputs (download from CI instead)
 *.apk
+*.aab
 
 # Keystore / signing (NEVER commit real keystores)
 *.jks
@@ -102,6 +131,10 @@ Thumbs.db
 ehthumbs.db
 [Dd]esktop.ini
 $RECYCLE.BIN/
+*.lnk
+*~
+*.swp
+*.swo
 
 # Ruby bundler
 .bundle/
@@ -117,7 +150,10 @@ $RECYCLE.BIN/
 # Web & Vercel
 .vercel
 dist/
+dist-ssr/
 web/dist/
+.vite/
+out/
 
 # Build caches & scratch
 *.tsbuildinfo

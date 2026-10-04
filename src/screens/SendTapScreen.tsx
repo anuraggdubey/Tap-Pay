@@ -38,6 +38,7 @@ import NfcWaitingCard from '../components/NfcWaitingCard';
 import {CrossIcon} from '../components/AppIcons';
 import {triggerHaptic} from '../utils/haptics';
 import {colors} from '../theme';
+import PressableScale from '../components/PressableScale';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'SendTap'>;
@@ -313,8 +314,8 @@ export default function SendTapScreen({navigation}: Props) {
       : '0.0004';
 
     return (
-      <NfcWaitingCard
-        accent="purple"
+        <NfcWaitingCard
+        accent="blue"
         phase={visualPhase}
         direction="send"
         amount={activeAmount || amount}
@@ -349,7 +350,7 @@ export default function SendTapScreen({navigation}: Props) {
           style={styles.closeBtn}
           onPress={() => navigation.goBack()}
           activeOpacity={0.8}>
-          <CrossIcon size={16} color="#FFFFFF" />
+          <CrossIcon size={16} color={colors.text} />
         </TouchableOpacity>
 
         <View style={styles.payHeaderCenter}>
@@ -382,29 +383,30 @@ export default function SendTapScreen({navigation}: Props) {
         {KEYS.map(row => (
           <View key={row.join('-')} style={styles.keypadRow}>
             {row.map(key => (
-              <TouchableOpacity
+              <PressableScale
                 key={key}
                 style={styles.key}
+                contentStyle={styles.keyInner}
                 onPress={() => onKeyPress(key)}
-                activeOpacity={0.55}>
+                scaleTo={0.92}>
                 <Text style={styles.keyText}>{key}</Text>
-              </TouchableOpacity>
+              </PressableScale>
             ))}
           </View>
         ))}
       </View>
 
-      <TouchableOpacity
+      <PressableScale
         style={[styles.payButton, !canPay && styles.payButtonDisabled]}
+        contentStyle={styles.payButtonInner}
         onPress={handleArm}
-        disabled={!canPay}
-        activeOpacity={0.85}>
+        disabled={!canPay}>
         {loading ? (
-          <ActivityIndicator color="#000000" />
+          <ActivityIndicator color="#FFFFFF" />
         ) : (
           <Text style={styles.payButtonText}>Pay</Text>
         )}
-      </TouchableOpacity>
+      </PressableScale>
 
       {balanceCheckData && (
         <InsufficientBalanceModal
@@ -431,7 +433,7 @@ export default function SendTapScreen({navigation}: Props) {
 const styles = StyleSheet.create({
   payRoot: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: colors.background,
     paddingHorizontal: 20,
   },
   payHeader: {
@@ -444,7 +446,9 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#1C1C1E',
+    backgroundColor: colors.surfaceSolid,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(15, 40, 80, 0.08)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -458,12 +462,12 @@ const styles = StyleSheet.create({
   payHeaderTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.text,
   },
   payHeaderBalance: {
     marginTop: 3,
     fontSize: 13,
-    color: '#8E8E93',
+    color: colors.textMuted,
     fontWeight: '500',
   },
   amountStage: {
@@ -475,7 +479,7 @@ const styles = StyleSheet.create({
   bigAmount: {
     fontSize: 64,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.text,
     letterSpacing: -2,
     maxWidth: '100%',
   },
@@ -488,11 +492,11 @@ const styles = StyleSheet.create({
   currencyText: {
     fontSize: 16,
     fontWeight: '700',
-    color: colors.successSoft,
+    color: colors.accent,
   },
   gasHint: {
     fontSize: 12,
-    color: '#636366',
+    color: colors.textSubtle,
     fontWeight: '500',
   },
   keypad: {
@@ -504,6 +508,8 @@ const styles = StyleSheet.create({
   },
   key: {
     width: '33.33%',
+  },
+  keyInner: {
     height: 64,
     alignItems: 'center',
     justifyContent: 'center',
@@ -511,15 +517,18 @@ const styles = StyleSheet.create({
   keyText: {
     fontSize: 28,
     fontWeight: '500',
-    color: '#FFFFFF',
+    color: colors.text,
   },
   payButton: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.accent,
     borderRadius: 28,
+    marginTop: 8,
+    overflow: 'hidden',
+  },
+  payButtonInner: {
     minHeight: 56,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 8,
   },
   payButtonDisabled: {
     opacity: 0.35,
@@ -527,7 +536,7 @@ const styles = StyleSheet.create({
   payButtonText: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#000000',
+    color: '#FFFFFF',
   },
   cancelLink: {
     marginTop: 20,
@@ -537,6 +546,6 @@ const styles = StyleSheet.create({
   cancelLinkText: {
     fontSize: 15,
     fontWeight: '600',
-    color: 'rgba(255,255,255,0.65)',
+    color: colors.textMuted,
   },
 });

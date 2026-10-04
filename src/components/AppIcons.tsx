@@ -16,8 +16,8 @@ interface IconProps {
 }
 
 // 1. Home Icon — Minimalist clean house silhouette
-export function HomeIcon({size = 22, color = '#FFFFFF', focused = false, style}: IconProps) {
-  const c = focused ? '#FFFFFF' : color;
+export function HomeIcon({size = 22, color = '#8E8E93', focused = false, style}: IconProps) {
+  const c = focused ? '#0A84FF' : color;
   const s = size;
   return (
     <View style={[{width: s, height: s, alignItems: 'center', justifyContent: 'center'}, style]}>
@@ -50,7 +50,7 @@ export function HomeIcon({size = 22, color = '#FFFFFF', focused = false, style}:
           style={{
             width: s * 0.22,
             height: s * 0.24,
-            backgroundColor: focused ? '#181820' : c,
+            backgroundColor: focused ? '#FFFFFF' : c,
             borderTopLeftRadius: 2,
             borderTopRightRadius: 2,
           }}
@@ -61,8 +61,8 @@ export function HomeIcon({size = 22, color = '#FFFFFF', focused = false, style}:
 }
 
 // 2. Pay / Contactless Tap Icon — Interlocking dual payment arcs
-export function PayIcon({size = 22, color = '#FFFFFF', focused = false, style}: IconProps) {
-  const c = focused ? '#FFFFFF' : color;
+export function PayIcon({size = 22, color = '#8E8E93', focused = false, style}: IconProps) {
+  const c = focused ? '#0A84FF' : color;
   const s = size;
   return (
     <View style={[{width: s, height: s, alignItems: 'center', justifyContent: 'center'}, style]}>
@@ -105,8 +105,8 @@ export function PayIcon({size = 22, color = '#FFFFFF', focused = false, style}: 
 }
 
 // 3. History Icon — Precision clock / ledger glyph
-export function HistoryIcon({size = 22, color = '#FFFFFF', focused = false, style}: IconProps) {
-  const c = focused ? '#FFFFFF' : color;
+export function HistoryIcon({size = 22, color = '#8E8E93', focused = false, style}: IconProps) {
+  const c = focused ? '#0A84FF' : color;
   const s = size;
   return (
     <View style={[{width: s, height: s, alignItems: 'center', justifyContent: 'center'}, style]}>
@@ -154,8 +154,8 @@ export function HistoryIcon({size = 22, color = '#FFFFFF', focused = false, styl
 }
 
 // 4. Settings Icon — Minimalist dual-slider silhouette
-export function SettingsIcon({size = 22, color = '#FFFFFF', focused = false, style}: IconProps) {
-  const c = focused ? '#FFFFFF' : color;
+export function SettingsIcon({size = 22, color = '#8E8E93', focused = false, style}: IconProps) {
+  const c = focused ? '#0A84FF' : color;
   const s = size;
   return (
     <View style={[{width: s, height: s, justifyContent: 'center', paddingHorizontal: 2}, style]}>
@@ -168,7 +168,7 @@ export function SettingsIcon({size = 22, color = '#FFFFFF', focused = false, sty
             width: 6,
             height: 6,
             borderRadius: 3,
-            backgroundColor: focused ? '#181820' : '#FFFFFF',
+            backgroundColor: focused ? '#EEF3FA' : '#FFFFFF',
             borderWidth: 1.6,
             borderColor: c,
           }}
@@ -183,7 +183,7 @@ export function SettingsIcon({size = 22, color = '#FFFFFF', focused = false, sty
             width: 6,
             height: 6,
             borderRadius: 3,
-            backgroundColor: focused ? '#181820' : '#FFFFFF',
+            backgroundColor: focused ? '#EEF3FA' : '#FFFFFF',
             borderWidth: 1.6,
             borderColor: c,
           }}

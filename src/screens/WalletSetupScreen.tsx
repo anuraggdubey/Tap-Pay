@@ -220,7 +220,7 @@ export default function WalletSetupScreen({navigation}: Props) {
             disabled={loading || !privateKeyInput}
             activeOpacity={0.85}>
             {loading ? (
-              <ActivityIndicator color="#000000" />
+              <ActivityIndicator color="#FFFFFF" />
             ) : (
               <Text style={styles.primaryPillText}>Import & Secure</Text>
             )}
@@ -279,7 +279,7 @@ export default function WalletSetupScreen({navigation}: Props) {
             disabled={loading}
             activeOpacity={0.85}>
             {loading ? (
-              <ActivityIndicator color="#000000" />
+              <ActivityIndicator color="#FFFFFF" />
             ) : (
               <Text style={styles.primaryPillText}>Claim Username</Text>
             )}
@@ -353,7 +353,7 @@ export default function WalletSetupScreen({navigation}: Props) {
     <View style={[styles.screenWrapper, {paddingTop: insets.top + 40, paddingBottom: insets.bottom + 20}]}>
       <View style={styles.welcomeHeroContainer}>
         {/* Freestanding Unboxed Minimalist Brand Logo (Top Center) */}
-        <BrandLogo size={56} style={{marginBottom: 30}} />
+        <BrandLogo size={56} color="#0A84FF" style={{marginBottom: 30}} />
 
         {/* Massive Fuse-style typography */}
         <Text style={styles.welcomeSubtitle}>Welcome to</Text>
@@ -368,7 +368,7 @@ export default function WalletSetupScreen({navigation}: Props) {
           disabled={loading}
           activeOpacity={0.85}>
           {loading ? (
-            <ActivityIndicator color="#000000" />
+            <ActivityIndicator color="#0A84FF" />
           ) : (
             <Text style={styles.primaryPillText}>Create Account (Passkey)</Text>
           )}
@@ -397,7 +397,7 @@ export default function WalletSetupScreen({navigation}: Props) {
 const styles = StyleSheet.create({
   screenWrapper: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: '#EEF3FA',
     paddingHorizontal: 24,
     justifyContent: 'space-between',
   },
@@ -409,15 +409,16 @@ const styles = StyleSheet.create({
   welcomeSubtitle: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#8E8E93',
+    color: '#6B7280',
     letterSpacing: -0.3,
     marginBottom: 6,
   },
   welcomeTitle: {
     fontSize: 56,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    letterSpacing: -1.5,
+    fontWeight: '800',
+    color: '#0B1220',
+    letterSpacing: -1.8,
+    lineHeight: 60,
   },
   bottomCtaSection: {
     width: '100%',
@@ -426,7 +427,7 @@ const styles = StyleSheet.create({
   },
   primaryPillButton: {
     width: '100%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#0A84FF',
     paddingVertical: 18,
     borderRadius: 32,
     alignItems: 'center',
@@ -434,24 +435,24 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   primaryPillText: {
-    color: '#000000',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: -0.3,
   },
   secondaryPillButton: {
     width: '100%',
-    backgroundColor: '#1C1C1E',
+    backgroundColor: '#FFFFFF',
     paddingVertical: 18,
     borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#2C2C2E',
+    borderColor: 'rgba(10, 132, 255, 0.18)',
     marginBottom: 16,
   },
   secondaryPillText: {
-    color: '#FFFFFF',
+    color: '#0B1220',
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: -0.3,
@@ -460,7 +461,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   secondaryText: {
-    color: '#8E8E93',
+    color: '#6B7280',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -473,26 +474,26 @@ const styles = StyleSheet.create({
   },
   backText: {
     fontSize: 16,
-    color: '#8E8E93',
+    color: '#0A84FF',
     fontWeight: '600',
   },
   stepIndicator: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#636366',
+    color: '#9AA3B2',
     letterSpacing: 1,
     marginBottom: 8,
   },
   viewTitle: {
     fontSize: 32,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: '#0B1220',
     letterSpacing: -0.8,
     marginBottom: 8,
   },
   viewSubtitle: {
     fontSize: 14,
-    color: '#8E8E93',
+    color: '#6B7280',
     lineHeight: 20,
     marginBottom: 28,
   },

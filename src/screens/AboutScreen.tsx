@@ -49,7 +49,7 @@ export default function AboutScreen({navigation}: Props) {
       <View style={styles.card}>
         <View style={styles.featureRow}>
           <View style={styles.featureIconBox}>
-            <ContactlessWave size={18} color="#FFFFFF" />
+            <ContactlessWave size={18} color="#0A84FF" />
           </View>
           <View style={styles.featureMeta}>
             <Text style={styles.featureTitle}>Contactless Tap-to-Pay</Text>
@@ -63,7 +63,7 @@ export default function AboutScreen({navigation}: Props) {
 
         <View style={styles.featureRow}>
           <View style={styles.featureIconBox}>
-            <UserIcon size={18} color="#FFFFFF" />
+            <UserIcon size={18} color="#0A84FF" />
           </View>
           <View style={styles.featureMeta}>
             <Text style={styles.featureTitle}>Username Pay</Text>
@@ -77,7 +77,7 @@ export default function AboutScreen({navigation}: Props) {
 
         <View style={styles.featureRow}>
           <View style={styles.featureIconBox}>
-            <KeyIcon size={18} color="#FFFFFF" />
+            <KeyIcon size={18} color="#0A84FF" />
           </View>
           <View style={styles.featureMeta}>
             <Text style={styles.featureTitle}>Hardware Keystore</Text>
@@ -91,7 +91,7 @@ export default function AboutScreen({navigation}: Props) {
 
         <View style={styles.featureRow}>
           <View style={styles.featureIconBox}>
-            <GlobeIcon size={18} color="#FFFFFF" />
+            <GlobeIcon size={18} color="#0A84FF" />
           </View>
           <View style={styles.featureMeta}>
             <Text style={styles.featureTitle}>Monad Throughput</Text>
@@ -135,7 +135,7 @@ export default function AboutScreen({navigation}: Props) {
           }}>
           <View style={styles.linkLeft}>
             <View style={styles.featureIconBox}>
-              <GlobeIcon size={16} color="#FFFFFF" />
+              <GlobeIcon size={16} color="#0A84FF" />
             </View>
             <View>
               <Text style={styles.linkTitle}>Monad Blockchain</Text>
@@ -156,7 +156,7 @@ export default function AboutScreen({navigation}: Props) {
           }}>
           <View style={styles.linkLeft}>
             <View style={styles.featureIconBox}>
-              <InfoIcon size={16} color="#FFFFFF" />
+              <InfoIcon size={16} color="#0A84FF" />
             </View>
             <View>
               <Text style={styles.linkTitle}>Monad Documentation</Text>
@@ -183,7 +183,7 @@ export default function AboutScreen({navigation}: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#09090D',
+    backgroundColor: '#EEF3FA',
   },
   content: {
     padding: 18,
@@ -197,13 +197,16 @@ const styles = StyleSheet.create({
   logoBox: {
     width: 72,
     height: 72,
-    borderRadius: 18,
-    backgroundColor: '#1E1E2D',
-    borderWidth: 1,
-    borderColor: '#6E54FF',
+    borderRadius: 22,
+    backgroundColor: '#0A84FF',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 14,
+    shadowColor: '#0A84FF',
+    shadowOffset: {width: 0, height: 8},
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 4,
   },
   logoMonogram: {
     fontSize: 34,
@@ -212,47 +215,52 @@ const styles = StyleSheet.create({
   },
   appName: {
     fontSize: 26,
-    fontWeight: '900',
-    color: '#FFFFFF',
+    fontWeight: '800',
+    color: '#0B1220',
     letterSpacing: -0.5,
     marginBottom: 4,
   },
   appVersion: {
     fontSize: 13,
-    color: '#8E8E93',
+    color: '#6B7280',
     fontWeight: '500',
     marginBottom: 14,
   },
   tagline: {
-    backgroundColor: '#15151E',
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#242433',
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(10, 132, 255, 0.16)',
   },
   taglineText: {
     fontSize: 13,
-    color: '#D0D0E8',
+    color: '#0B1220',
     fontWeight: '600',
     textAlign: 'center',
   },
   sectionHeader: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#71717A',
-    letterSpacing: 1,
+    color: '#9AA3B2',
+    letterSpacing: 0.8,
     marginTop: 12,
     marginBottom: 8,
     marginLeft: 4,
   },
   card: {
-    backgroundColor: '#15151E',
-    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
     padding: 16,
-    borderWidth: 1,
-    borderColor: '#242433',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(15, 40, 80, 0.08)',
     marginBottom: 10,
+    shadowColor: '#0A84FF',
+    shadowOffset: {width: 0, height: 6},
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    elevation: 2,
   },
   featureRow: {
     flexDirection: 'row',
@@ -263,8 +271,8 @@ const styles = StyleSheet.create({
   featureIconBox: {
     width: 36,
     height: 36,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 12,
+    backgroundColor: 'rgba(10, 132, 255, 0.12)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -274,32 +282,32 @@ const styles = StyleSheet.create({
   featureTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#0B1220',
     marginBottom: 2,
   },
   featureDesc: {
     fontSize: 12,
-    color: '#8888AA',
+    color: '#6B7280',
     lineHeight: 16,
   },
   featureDivider: {
-    height: 1,
-    backgroundColor: '#1E1E30',
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(60, 60, 67, 0.12)',
     marginVertical: 10,
   },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1E1E30',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(60, 60, 67, 0.12)',
   },
   infoKey: {
-    color: '#8888AA',
+    color: '#6B7280',
     fontSize: 14,
   },
   infoVal: {
-    color: '#FFFFFF',
+    color: '#0B1220',
     fontSize: 14,
     fontWeight: '500',
   },
@@ -317,16 +325,16 @@ const styles = StyleSheet.create({
   linkTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#0B1220',
     marginBottom: 2,
   },
   linkSubtitle: {
     fontSize: 12,
-    color: '#836EF9',
+    color: '#0A84FF',
   },
   chevron: {
     fontSize: 18,
-    color: '#836EF9',
+    color: '#0A84FF',
     fontWeight: '600',
   },
   footer: {
@@ -335,11 +343,11 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 13,
-    color: '#555566',
+    color: '#6B7280',
     marginBottom: 4,
   },
   footerSubtext: {
     fontSize: 12,
-    color: '#444455',
+    color: '#9AA3B2',
   },
 });

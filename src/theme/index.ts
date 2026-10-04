@@ -1,24 +1,47 @@
 /**
- * Shared TapPay design tokens for consistent UI across all screens.
+ * Shared TapPay design tokens — light Apple glass, blue accent.
  */
 
 import {Platform, StyleSheet} from 'react-native';
 
 export const colors = {
-  background: '#09090D',
-  surface: '#14141E',
-  surfaceElevated: '#1C1C26',
-  border: '#242433',
-  borderStrong: '#2D2D3E',
-  text: '#FFFFFF',
-  textMuted: '#8E8E93',
-  textSubtle: '#71717A',
-  accent: '#6E54FF',
-  accentSoft: '#836EF9',
-  success: '#10B981',
-  successSoft: '#30D158',
-  danger: '#EF4444',
+  background: '#EEF3FA',
+  backgroundSoft: '#F7FAFF',
+  surface: 'rgba(255, 255, 255, 0.72)',
+  surfaceElevated: 'rgba(255, 255, 255, 0.92)',
+  surfaceSolid: '#FFFFFF',
+  surfaceSolidElevated: '#F2F6FC',
+  surfaceBlue: 'rgba(10, 132, 255, 0.08)',
+  border: 'rgba(10, 132, 255, 0.12)',
+  borderSubtle: 'rgba(15, 40, 80, 0.06)',
+  borderStrong: 'rgba(10, 132, 255, 0.22)',
+  text: '#0B1220',
+  textMuted: '#6B7280',
+  textSubtle: '#9AA3B2',
+  textOnAccent: '#FFFFFF',
+  accent: '#0A84FF',
+  accentSoft: '#64D2FF',
+  accentDeep: '#0066DB',
+  accentWash: 'rgba(10, 132, 255, 0.12)',
+  accentPurple: '#6E54FF',
+  accentPurpleSoft: '#836EF9',
+  success: '#34C759',
+  successSoft: '#34C759',
+  danger: '#FF3B30',
+  warning: '#FF9F0A',
   black: '#000000',
+  separator: 'rgba(60, 60, 67, 0.12)',
+};
+
+export const glass = {
+  fill: 'rgba(255, 255, 255, 0.72)',
+  fillElevated: 'rgba(255, 255, 255, 0.88)',
+  fillHeavy: 'rgba(255, 255, 255, 0.94)',
+  fillBlue: 'rgba(10, 132, 255, 0.08)',
+  border: 'rgba(255, 255, 255, 0.85)',
+  borderSubtle: 'rgba(15, 40, 80, 0.08)',
+  borderBright: 'rgba(10, 132, 255, 0.18)',
+  edge: 'rgba(255, 255, 255, 0.95)',
 };
 
 export const spacing = {
@@ -30,24 +53,163 @@ export const spacing = {
 };
 
 export const radii = {
-  sm: 10,
-  md: 12,
-  lg: 16,
-  pill: 36,
+  sm: 12,
+  md: 16,
+  lg: 20,
+  xl: 26,
+  card: 28,
+  pill: 40,
+};
+
+/**
+ * Premium white card surface — one uniform fill + Apple-style hairline edges.
+ * Use on the OUTER container only; never nest another white/gray plate inside.
+ * Must be declared after `radii` (uses radii.lg).
+ */
+export const premiumCard = {
+  backgroundColor: colors.surfaceSolid,
+  borderRadius: radii.lg,
+  borderTopWidth: StyleSheet.hairlineWidth,
+  borderLeftWidth: StyleSheet.hairlineWidth,
+  borderRightWidth: StyleSheet.hairlineWidth,
+  borderBottomWidth: StyleSheet.hairlineWidth,
+  /** Subtle darker upper hairline */
+  borderTopColor: 'rgba(15, 22, 40, 0.14)',
+  /** Soft side edge */
+  borderLeftColor: 'rgba(15, 40, 80, 0.07)',
+  borderRightColor: 'rgba(15, 40, 80, 0.07)',
+  /** Lighter bottom edge */
+  borderBottomColor: 'rgba(255, 255, 255, 0.95)',
+  overflow: 'hidden' as const,
+  ...Platform.select({
+    ios: {
+      shadowColor: '#0B1F3A',
+      shadowOffset: {width: 0, height: 8},
+      shadowOpacity: 0.08,
+      shadowRadius: 18,
+    },
+    android: {
+      elevation: 3,
+    },
+    default: {},
+  }),
+};
+
+/** Apple-style motion */
+export const motion = {
+  pressMs: 110,
+  chipMs: 160,
+  enterMs: 280,
+  sheetMs: 320,
+  pressScale: 0.97,
+  enterScale: 0.96,
+  easeOut: {x1: 0.23, y1: 1, x2: 0.32, y2: 1} as const,
+  easeSheet: {x1: 0.32, y1: 0.72, x2: 0, y2: 1} as const,
+};
+
+export const typography = {
+  display: {
+    fontSize: 34,
+    fontWeight: '700' as const,
+    letterSpacing: -0.8,
+    lineHeight: 40,
+  },
+  title1: {
+    fontSize: 28,
+    fontWeight: '700' as const,
+    letterSpacing: -0.6,
+    lineHeight: 34,
+  },
+  title2: {
+    fontSize: 22,
+    fontWeight: '700' as const,
+    letterSpacing: -0.4,
+    lineHeight: 28,
+  },
+  title3: {
+    fontSize: 20,
+    fontWeight: '600' as const,
+    letterSpacing: -0.3,
+    lineHeight: 25,
+  },
+  headline: {
+    fontSize: 17,
+    fontWeight: '600' as const,
+    letterSpacing: -0.2,
+    lineHeight: 22,
+  },
+  body: {
+    fontSize: 15,
+    fontWeight: '400' as const,
+    letterSpacing: 0,
+    lineHeight: 20,
+  },
+  callout: {
+    fontSize: 14,
+    fontWeight: '400' as const,
+    letterSpacing: 0,
+    lineHeight: 19,
+  },
+  footnote: {
+    fontSize: 13,
+    fontWeight: '400' as const,
+    letterSpacing: 0,
+    lineHeight: 18,
+  },
+  caption: {
+    fontSize: 12,
+    fontWeight: '500' as const,
+    letterSpacing: 0.1,
+    lineHeight: 16,
+  },
+  caption2: {
+    fontSize: 11,
+    fontWeight: '600' as const,
+    letterSpacing: 0.4,
+    lineHeight: 13,
+  },
 };
 
 export const shadows = Platform.select({
   ios: {
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 8},
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
+    soft: {
+      shadowColor: '#0A84FF',
+      shadowOffset: {width: 0, height: 6},
+      shadowOpacity: 0.1,
+      shadowRadius: 16,
+    },
+    medium: {
+      shadowColor: '#0B1F3A',
+      shadowOffset: {width: 0, height: 10},
+      shadowOpacity: 0.12,
+      shadowRadius: 24,
+    },
+    heavy: {
+      shadowColor: '#0B1F3A',
+      shadowOffset: {width: 0, height: 14},
+      shadowOpacity: 0.16,
+      shadowRadius: 28,
+    },
+    card: {
+      shadowColor: '#0066DB',
+      shadowOffset: {width: 0, height: 12},
+      shadowOpacity: 0.28,
+      shadowRadius: 24,
+    },
   },
   android: {
-    elevation: 8,
+    soft: {elevation: 2},
+    medium: {elevation: 6},
+    heavy: {elevation: 10},
+    card: {elevation: 8},
   },
-  default: {},
-});
+  default: {
+    soft: {},
+    medium: {},
+    heavy: {},
+    card: {},
+  },
+})!;
 
 export const buttons = StyleSheet.create({
   primary: {
@@ -59,12 +221,14 @@ export const buttons = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   primaryLight: {
-    backgroundColor: colors.text,
+    backgroundColor: colors.surfaceSolid,
     minHeight: 52,
     borderRadius: radii.lg,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: glass.borderSubtle,
   },
   success: {
     backgroundColor: colors.success,
@@ -75,14 +239,14 @@ export const buttons = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   secondary: {
-    backgroundColor: colors.surface,
+    backgroundColor: glass.fill,
     minHeight: 52,
     borderRadius: radii.md,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: glass.borderSubtle,
   },
   ghostDanger: {
     minHeight: 44,
@@ -91,21 +255,21 @@ export const buttons = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.md,
     borderWidth: 1,
-    borderColor: '#331D1D',
-    backgroundColor: '#1C1212',
+    borderColor: 'rgba(255, 59, 48, 0.22)',
+    backgroundColor: 'rgba(255, 59, 48, 0.08)',
   },
   disabled: {
-    opacity: 0.55,
+    opacity: 0.45,
   },
   primaryText: {
     fontSize: 16,
-    fontWeight: '700',
-    color: colors.text,
+    fontWeight: '600',
+    color: colors.textOnAccent,
   },
   primaryLightText: {
     fontSize: 16,
     fontWeight: '700',
-    color: colors.black,
+    color: colors.text,
   },
   secondaryText: {
     fontSize: 15,
@@ -134,15 +298,15 @@ export const screen = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: colors.textSubtle,
-    letterSpacing: 1,
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
     marginBottom: spacing.sm,
   },
   title: {
     fontSize: 24,
-    fontWeight: '800',
+    fontWeight: '700',
     color: colors.text,
-    letterSpacing: -0.3,
+    letterSpacing: -0.4,
     marginBottom: spacing.xs,
   },
   subtitle: {
@@ -156,14 +320,34 @@ export const screen = StyleSheet.create({
     marginTop: spacing.lg,
     paddingHorizontal: 14,
     paddingVertical: 6,
-    backgroundColor: colors.surface,
+    backgroundColor: glass.fillBlue,
     borderRadius: radii.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: glass.borderBright,
   },
   badgeText: {
     fontSize: 12,
     fontWeight: '700',
     letterSpacing: 0.4,
+    color: colors.accent,
+  },
+  glassCard: {
+    backgroundColor: colors.surfaceSolid,
+    borderRadius: radii.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: glass.borderSubtle,
+    overflow: 'hidden',
+    ...shadows.soft,
+  },
+  pageTitle: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: -0.7,
+  },
+  pageSubtitle: {
+    fontSize: 14,
+    color: colors.textMuted,
+    marginTop: 4,
   },
 });

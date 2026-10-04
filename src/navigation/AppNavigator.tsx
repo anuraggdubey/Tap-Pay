@@ -8,9 +8,7 @@ import React from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
-  Platform,
 } from 'react-native';
 import {NavigationContainer, DefaultTheme} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
@@ -34,6 +32,8 @@ import NetworkScreen from '../screens/NetworkScreen';
 import {useWallet} from '../context/WalletContext';
 import {HomeIcon, PayIcon, HistoryIcon, SettingsIcon} from '../components/AppIcons';
 import {triggerHaptic} from '../utils/haptics';
+import PressableScale from '../components/PressableScale';
+import {colors, glass, shadows} from '../theme';
 
 export type RootStackParamList = {
   WalletSetup: undefined;
@@ -72,11 +72,11 @@ const TapPayTheme = {
   ...DefaultTheme,
   colors: {
     ...DefaultTheme.colors,
-    background: '#09090D',
-    card: '#14141C',
-    text: '#FFFFFF',
-    border: '#1F1F2C',
-    primary: '#FFFFFF',
+    background: colors.background,
+    card: colors.surfaceSolid,
+    text: colors.text,
+    border: glass.borderSubtle,
+    primary: colors.text,
   },
 };
 
@@ -119,18 +119,15 @@ function FloatingTabBar({state, descriptors, navigation}: BottomTabBarProps) {
           };
 
           return (
-            <TouchableOpacity
+            <PressableScale
               key={route.key}
-              accessibilityRole="button"
-              accessibilityState={isFocused ? {selected: true} : {}}
+              accessibilityState={{selected: isFocused}}
               accessibilityLabel={options.tabBarAccessibilityLabel}
               testID={`tab-${route.name.toLowerCase()}`}
               onPress={onPress}
-              activeOpacity={0.7}
-              style={[
-                styles.tabItem,
-                isFocused && styles.tabItemFocused,
-              ]}>
+              style={[styles.tabItem, isFocused && styles.tabItemFocused]}
+              contentStyle={styles.tabItemContent}
+              scaleTo={0.94}>
               <View style={styles.iconWrapper}>
                 {route.name === 'Home' && <HomeIcon size={20} focused={isFocused} />}
                 {route.name === 'Pay' && <PayIcon size={20} focused={isFocused} />}
@@ -144,7 +141,7 @@ function FloatingTabBar({state, descriptors, navigation}: BottomTabBarProps) {
                 ]}>
                 {label as string}
               </Text>
-            </TouchableOpacity>
+            </PressableScale>
           );
         })}
       </View>
@@ -195,10 +192,16 @@ export default function AppNavigator() {
       <Stack.Navigator
         initialRouteName={isInitialized ? 'MainTabs' : 'WalletSetup'}
         screenOptions={{
-          headerStyle: {backgroundColor: '#0F0F16'},
-          headerTintColor: '#FFFFFF',
-          headerTitleStyle: {fontWeight: '700', fontSize: 17},
-          contentStyle: {backgroundColor: '#09090D'},
+          headerStyle: {backgroundColor: colors.background},
+          headerTintColor: colors.accent,
+          headerTitleStyle: {
+            fontWeight: '600',
+            fontSize: 17,
+            letterSpacing: -0.2,
+            color: colors.text,
+          },
+          headerShadowVisible: false,
+          contentStyle: {backgroundColor: colors.background},
           animation: 'slide_from_right',
         }}>
         <Stack.Screen
@@ -263,36 +266,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(20, 20, 28, 0.94)',
-    paddingHorizontal: 8,
-    paddingVertical: 7,
+    backgroundColor: 'rgba(255, 255, 255, 0.94)',
+    paddingHorizontal: 6,
+    paddingVertical: 6,
     borderRadius: 36,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(10, 132, 255, 0.14)',
     width: '92%',
     maxWidth: 420,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: {width: 0, height: 10},
-        shadowOpacity: 0.45,
-        shadowRadius: 18,
-      },
-      android: {
-        elevation: 14,
-      },
-    }),
+    ...shadows.heavy,
   },
   tabItem: {
     flex: 1,
+    borderRadius: 28,
+  },
+  tabItemContent: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 6,
+    paddingVertical: 8,
     paddingHorizontal: 4,
-    borderRadius: 24,
   },
   tabItemFocused: {
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: colors.accentWash,
   },
   iconWrapper: {
     width: 24,
@@ -304,12 +299,12 @@ const styles = StyleSheet.create({
   tabLabel: {
     fontSize: 11,
     fontWeight: '600',
-    letterSpacing: -0.2,
+    letterSpacing: -0.1,
   },
   tabLabelFocused: {
-    color: '#FFFFFF',
+    color: colors.accent,
   },
   tabLabelMuted: {
-    color: '#8E8E93',
+    color: colors.textMuted,
   },
 });

@@ -5,17 +5,18 @@
  * and absolutely ZERO emojis or colored tag boxes.
  */
 
-import React from 'react';
+import React, {useState} from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
   ScrollView,
   Alert,
+  Platform,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import Clipboard from '@react-native-clipboard/clipboard';
 
 import {useWallet} from '../context/WalletContext';
 import {RootStackParamList} from '../navigation/AppNavigator';
@@ -29,7 +30,12 @@ import {
   GlobeIcon,
   InfoIcon,
   PowerIcon,
+  SettingsIcon,
 } from '../components/AppIcons';
+import PressableScale from '../components/PressableScale';
+import FadeInView from '../components/FadeInView';
+import LivePulseDot from '../components/LivePulseDot';
+import {colors, glass} from '../theme';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList>;
@@ -51,9 +57,9 @@ function SettingsRow({
   isDestructive = false,
 }: SettingsRowProps) {
   return (
-    <TouchableOpacity
+    <PressableScale
       style={styles.rowItem}
-      activeOpacity={0.65}
+      contentStyle={styles.rowItemInner}
       onPress={() => {
         triggerHaptic.selection();
         onPress();
@@ -82,13 +88,22 @@ function SettingsRow({
           ›
         </Text>
       </View>
-    </TouchableOpacity>
+    </PressableScale>
   );
 }
 
 export default function SettingsScreen({navigation}: Props) {
   const insets = useSafeAreaInsets();
   const {address, username, resetWallet} = useWallet();
+  const [addressCopied, setAddressCopied] = useState(false);
+
+  const copyAddress = () => {
+    if (!address) return;
+    triggerHaptic.selection();
+    Clipboard.setString(address);
+    setAddressCopied(true);
+    setTimeout(() => setAddressCopied(false), 1800);
+  };
 
   const handleResetWallet = () => {
     triggerHaptic.notificationError();
@@ -118,81 +133,138 @@ export default function SettingsScreen({navigation}: Props) {
         style={styles.container}
         contentContainerStyle={[
           styles.content,
-          {paddingTop: insets.top + 12, paddingBottom: 120},
+          {paddingTop: insets.top + 10},
         ]}
         showsVerticalScrollIndicator={false}>
-        {/* Large Clean Title */}
-        <Text style={styles.pageTitle}>Settings</Text>
-
-        {/* Network Status Card (Image 2 Top Card) */}
-        <View style={styles.statusCard}>
-          <View style={styles.statusCardLeft}>
-            <View style={styles.statusLiveDot} />
+        <FadeInView delay={0} translateY={6}>
+          <View style={styles.titleRow}>
             <View>
-              <Text style={styles.statusTitle}>{MONAD_CONFIG.chainName}</Text>
-              <Text style={styles.statusSubtitle}>
-                Chain ID {MONAD_CONFIG.chainId} • ~1s Finality
-              </Text>
+              <Text style={styles.pageEyebrow}>TAPPAY</Text>
+              <Text style={styles.pageTitle}>Settings</Text>
+            </View>
+            <View style={styles.settingsMark}>
+              <SettingsIcon size={20} color={colors.accent} />
             </View>
           </View>
-          <View style={styles.activePill}>
-            <Text style={styles.activePillText}>ACTIVE</Text>
+        </FadeInView>
+
+        <FadeInView delay={30} translateY={8}>
+          <View style={styles.walletCard}>
+            <PressableScale
+              style={styles.walletCardTop}
+              contentStyle={styles.walletCardTopInner}
+              onPress={() => navigation.navigate('AccountInfo')}>
+              <View style={styles.walletAvatar}>
+                <Text style={styles.walletAvatarText}>
+                  {(username || 'T').charAt(0).toUpperCase()}
+                </Text>
+              </View>
+              <View style={styles.walletIdentity}>
+                <Text style={styles.walletName} numberOfLines={1}>
+                  {username ? `@${username}` : 'TapPay Wallet'}
+                </Text>
+                <Text style={styles.walletCaption} numberOfLines={1}>
+                  Your wallet and identity
+                </Text>
+              </View>
+              <Text style={styles.walletChevron}>›</Text>
+            </PressableScale>
+
+            <View style={styles.walletCardDivider} />
+            <View style={styles.walletAddressRow}>
+              <View style={styles.walletAddressCopy}>
+                <Text style={styles.walletAddressLabel}>WALLET ADDRESS</Text>
+                <Text style={styles.walletAddressValue} numberOfLines={1}>
+                  {address ? truncateAddress(address, 8, 6) : 'Not connected'}
+                </Text>
+              </View>
+              <PressableScale
+                style={styles.copyAddressButton}
+                contentStyle={styles.copyAddressButtonInner}
+                onPress={copyAddress}
+                disabled={!address}
+                accessibilityLabel="Copy wallet address">
+                <Text style={styles.copyAddressButtonText}>
+                  {addressCopied ? 'Copied' : 'Copy'}
+                </Text>
+              </PressableScale>
+            </View>
           </View>
-        </View>
+        </FadeInView>
 
-        {/* Inset Group 1: ACCOUNT */}
-        <Text style={styles.groupHeading}>ACCOUNT</Text>
-        <View style={styles.groupCard}>
-          <SettingsRow
-            renderIcon={() => <UserIcon size={16} color="#FFFFFF" />}
-            title="Profile & Identity"
-            value={username ? `@${username}` : 'Claim handle'}
-            onPress={() => navigation.navigate('AccountInfo')}
-          />
-          <View style={styles.divider} />
-          <SettingsRow
-            renderIcon={() => <WalletCardIcon size={16} color="#FFFFFF" />}
-            title="Wallet Address"
-            value={address ? truncateAddress(address, 5, 4) : 'Not linked'}
-            onPress={() => navigation.navigate('AccountInfo')}
-          />
-          <View style={styles.divider} />
-          <SettingsRow
-            renderIcon={() => <KeyIcon size={16} color="#FFFFFF" />}
-            title="Secret Key"
-            value="Encrypted"
-            onPress={() => navigation.navigate('AccountInfo')}
-          />
-        </View>
+        <FadeInView delay={60} translateY={8}>
+          <View style={styles.statusCard}>
+            <View style={styles.statusCardLeft}>
+              <LivePulseDot active size={8} />
+              <View>
+                <Text style={styles.statusTitle}>{MONAD_CONFIG.chainName}</Text>
+                <Text style={styles.statusSubtitle}>
+                  Chain ID {MONAD_CONFIG.chainId} • ~1s Finality
+                </Text>
+              </View>
+            </View>
+            <View style={styles.activePill}>
+              <Text style={styles.activePillText}>ACTIVE</Text>
+            </View>
+          </View>
+        </FadeInView>
 
-        {/* Inset Group 2: NETWORK & SYSTEM */}
-        <Text style={styles.groupHeading}>NETWORK & SYSTEM</Text>
-        <View style={styles.groupCard}>
-          <SettingsRow
-            renderIcon={() => <GlobeIcon size={16} color="#FFFFFF" />}
-            title="Network Details"
-            value="RPC Live"
-            onPress={() => navigation.navigate('NetworkInfo')}
-          />
-          <View style={styles.divider} />
-          <SettingsRow
-            renderIcon={() => <InfoIcon size={16} color="#FFFFFF" />}
-            title="About TapPay"
-            value="v0.0.1"
-            onPress={() => navigation.navigate('AboutTapPay')}
-          />
-        </View>
+        <FadeInView delay={80} translateY={8}>
+          <Text style={styles.groupHeading}>ACCOUNT</Text>
+          <View style={styles.groupCard}>
+            <SettingsRow
+              renderIcon={() => <UserIcon size={16} color={colors.accent} />}
+              title="Profile & Identity"
+              value={username ? `@${username}` : 'Claim handle'}
+              onPress={() => navigation.navigate('AccountInfo')}
+            />
+            <View style={styles.divider} />
+            <SettingsRow
+              renderIcon={() => <WalletCardIcon size={16} color={colors.accent} />}
+              title="Wallet Address"
+              value={address ? truncateAddress(address, 5, 4) : 'Not linked'}
+              onPress={() => navigation.navigate('AccountInfo')}
+            />
+            <View style={styles.divider} />
+            <SettingsRow
+              renderIcon={() => <KeyIcon size={16} color={colors.accent} />}
+              title="Secret Key"
+              value="Encrypted"
+              onPress={() => navigation.navigate('AccountInfo')}
+            />
+          </View>
+        </FadeInView>
 
-        {/* Inset Group 3: SECURITY */}
-        <Text style={styles.groupHeading}>SECURITY</Text>
-        <View style={styles.groupCard}>
-          <SettingsRow
-            renderIcon={() => <PowerIcon size={16} color="#FF453A" />}
-            title="Reset Wallet"
-            onPress={handleResetWallet}
-            isDestructive={true}
-          />
-        </View>
+        <FadeInView delay={120} translateY={8}>
+          <Text style={styles.groupHeading}>NETWORK & SYSTEM</Text>
+          <View style={styles.groupCard}>
+            <SettingsRow
+              renderIcon={() => <GlobeIcon size={16} color={colors.accent} />}
+              title="Network Details"
+              value="RPC Live"
+              onPress={() => navigation.navigate('NetworkInfo')}
+            />
+            <View style={styles.divider} />
+            <SettingsRow
+              renderIcon={() => <InfoIcon size={16} color={colors.accent} />}
+              title="About TapPay"
+              value="v0.0.1"
+              onPress={() => navigation.navigate('AboutTapPay')}
+            />
+          </View>
+        </FadeInView>
+
+        <FadeInView delay={160} translateY={8}>
+          <Text style={styles.groupHeading}>SECURITY</Text>
+          <View style={styles.groupCard}>
+            <SettingsRow
+              renderIcon={() => <PowerIcon size={16} color="#FF453A" />}
+              title="Reset Wallet"
+              onPress={handleResetWallet}
+              isDestructive={true}
+            />
+          </View>
+        </FadeInView>
       </ScrollView>
     </View>
   );
@@ -201,29 +273,154 @@ export default function SettingsScreen({navigation}: Props) {
 const styles = StyleSheet.create({
   screenWrapper: {
     flex: 1,
-    backgroundColor: '#09090D',
+    backgroundColor: '#FFFFFF',
   },
   container: {
     flex: 1,
   },
   content: {
-    paddingHorizontal: 18,
+    paddingHorizontal: 20,
+    paddingBottom: 120,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 17,
+  },
+  pageEyebrow: {
+    color: colors.accent,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    marginBottom: 2,
+  },
+  settingsMark: {
+    width: 42,
+    height: 42,
+    borderRadius: 15,
+    backgroundColor: '#F3F7FC',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   pageTitle: {
     fontSize: 32,
-    fontWeight: '800',
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: -0.8,
+  },
+  walletCard: {
+    backgroundColor: colors.accent,
+    borderRadius: 23,
+    marginBottom: 18,
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#0A4C9A',
+        shadowOffset: {width: 0, height: 8},
+        shadowOpacity: 0.16,
+        shadowRadius: 16,
+      },
+      android: {elevation: 4},
+      default: {},
+    }),
+  },
+  walletCardTop: {
+    minHeight: 78,
+  },
+  walletCardTopInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 17,
+    paddingVertical: 15,
+    gap: 12,
+  },
+  walletAvatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  walletAvatarText: {
     color: '#FFFFFF',
-    letterSpacing: -0.6,
-    marginBottom: 16,
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  walletIdentity: {
+    flex: 1,
+  },
+  walletName: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  walletCaption: {
+    color: 'rgba(255,255,255,0.78)',
+    fontSize: 12,
+    marginTop: 3,
+  },
+  walletChevron: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 25,
+    fontWeight: '300',
+  },
+  walletCardDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(255,255,255,0.27)',
+    marginHorizontal: 17,
+  },
+  walletAddressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 18,
+    paddingVertical: 13,
+    gap: 12,
+  },
+  walletAddressCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  walletAddressLabel: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 0.9,
+    marginBottom: 3,
+  },
+  walletAddressValue: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
+  copyAddressButton: {
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  copyAddressButtonInner: {
+    paddingHorizontal: 13,
+    paddingVertical: 8,
+  },
+  copyAddressButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
   },
   statusCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#14141E',
-    borderWidth: 1,
-    borderColor: '#222232',
-    borderRadius: 16,
+    backgroundColor: glass.fillElevated,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: glass.borderBright,
+    borderRadius: 20,
     padding: 16,
     marginBottom: 26,
   },
@@ -232,105 +429,101 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  statusLiveDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#30D158',
-  },
   statusTitle: {
     fontSize: 15,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontWeight: '600',
+    color: colors.text,
   },
   statusSubtitle: {
     fontSize: 12,
-    color: '#8E8E93',
+    color: colors.textMuted,
     marginTop: 2,
   },
   activePill: {
-    backgroundColor: 'rgba(48, 209, 88, 0.14)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    backgroundColor: colors.accentWash,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
   },
   activePillText: {
-    color: '#30D158',
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.6,
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.accent,
+    letterSpacing: 0.4,
   },
   groupHeading: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
-    color: '#636366',
-    letterSpacing: 0.8,
+    color: colors.textSubtle,
+    letterSpacing: 0.6,
     marginBottom: 8,
-    marginLeft: 12,
+    marginLeft: 4,
   },
   groupCard: {
-    backgroundColor: '#14141E',
-    borderWidth: 1,
-    borderColor: '#222232',
-    borderRadius: 16,
+    backgroundColor: glass.fillElevated,
+    borderRadius: 20,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: glass.borderSubtle,
+    marginBottom: 22,
     overflow: 'hidden',
-    marginBottom: 24,
   },
   rowItem: {
+    minHeight: 52,
+  },
+  rowItemInner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    minHeight: 52,
   },
   rowLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
+    gap: 12,
     flex: 1,
   },
   iconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    backgroundColor: colors.accentWash,
     alignItems: 'center',
     justifyContent: 'center',
   },
   iconContainerDestructive: {
-    backgroundColor: 'rgba(255, 69, 58, 0.15)',
+    backgroundColor: 'rgba(255, 59, 48, 0.12)',
   },
   rowTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    letterSpacing: -0.2,
+    fontSize: 16,
+    fontWeight: '500',
+    color: colors.text,
   },
   rowTitleDestructive: {
-    color: '#FF453A',
+    color: colors.danger,
   },
   rowRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   rowValue: {
     fontSize: 14,
-    color: '#8E8E93',
-    fontWeight: '500',
+    color: colors.textMuted,
+    fontWeight: '400',
   },
   rowChevron: {
-    fontSize: 20,
-    color: '#545458',
-    fontWeight: '300',
+    fontSize: 18,
+    color: colors.accent,
+    fontWeight: '400',
   },
   rowChevronDestructive: {
-    color: '#FF453A',
-    opacity: 0.7,
+    color: colors.danger,
   },
   divider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: '#222232',
-    marginLeft: 62,
+    backgroundColor: colors.separator,
+    marginLeft: 56,
   },
 });

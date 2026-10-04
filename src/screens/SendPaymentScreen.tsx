@@ -310,7 +310,7 @@ export default function SendPaymentScreen({navigation}: Props) {
             style={styles.closeBtn}
             onPress={clearResolved}
             activeOpacity={0.8}>
-            <CrossIcon size={16} color="#FFFFFF" />
+            <CrossIcon size={16} color={colors.text} />
           </TouchableOpacity>
 
           <View style={styles.payHeaderCenter}>
@@ -369,7 +369,7 @@ export default function SendPaymentScreen({navigation}: Props) {
           disabled={!canPay}
           activeOpacity={0.85}>
           {sending ? (
-            <ActivityIndicator color="#000000" />
+            <ActivityIndicator color="#FFFFFF" />
           ) : (
             <Text style={styles.payButtonText}>Pay</Text>
           )}
@@ -448,7 +448,7 @@ export default function SendPaymentScreen({navigation}: Props) {
             <TextInput
               style={styles.recipientInput}
               placeholder="Enter username"
-              placeholderTextColor="#4A4A66"
+              placeholderTextColor="#9AA3B2"
               value={usernameInput}
               onChangeText={(text) => {
                 setUsernameInput(text);
@@ -464,7 +464,7 @@ export default function SendPaymentScreen({navigation}: Props) {
               disabled={searching}
               activeOpacity={0.7}>
               {searching ? (
-                <ActivityIndicator color="#836EF9" size="small" />
+                <ActivityIndicator color={colors.accent} size="small" />
               ) : (
                 <Text style={styles.searchBtnText}>Search</Text>
               )}
@@ -478,7 +478,7 @@ export default function SendPaymentScreen({navigation}: Props) {
             <TextInput
               style={styles.recipientInput}
               placeholder="Enter wallet address"
-              placeholderTextColor="#4A4A66"
+              placeholderTextColor="#9AA3B2"
               value={addressInput}
               onChangeText={(text) => {
                 setAddressInput(text);
@@ -504,88 +504,92 @@ export default function SendPaymentScreen({navigation}: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: colors.background,
   },
   scrollView: {
     flex: 1,
   },
   content: {
     padding: 20,
-    paddingBottom: 40,
+    paddingBottom: 120,
   },
   header: {
     marginBottom: 20,
   },
-  pageTitle: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: -0.6,
-  },
   pageSubtitle: {
-    fontSize: 13,
-    color: '#8E8E93',
-    marginTop: 2,
+    fontSize: 14,
+    color: colors.textMuted,
+    marginTop: 4,
   },
   modeToggle: {
     flexDirection: 'row',
-    backgroundColor: '#14141E',
-    borderRadius: 14,
+    backgroundColor: colors.surfaceSolidElevated,
+    borderRadius: 16,
     padding: 3,
     marginBottom: 24,
-    borderWidth: 1,
-    borderColor: '#222232',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(15, 40, 80, 0.08)',
   },
   modeTab: {
     flex: 1,
     paddingVertical: 10,
-    borderRadius: 11,
+    borderRadius: 13,
     alignItems: 'center',
   },
   modeTabActive: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surfaceSolid,
+    shadowColor: '#0A84FF',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 2,
   },
   modeTabText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#8E8E93',
+    color: colors.textMuted,
   },
   modeTabTextActive: {
-    color: '#000000',
+    color: colors.accent,
     fontWeight: '700',
   },
   sectionLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#71717A',
-    letterSpacing: 1,
+    color: colors.textSubtle,
+    letterSpacing: 0.8,
     marginBottom: 10,
     marginLeft: 2,
   },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#14141E',
+    backgroundColor: colors.surfaceSolid,
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#222232',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(10, 132, 255, 0.16)',
     marginBottom: 16,
+    shadowColor: '#0B1F3A',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 2,
   },
   inputPrefix: {
     paddingHorizontal: 16,
     paddingVertical: 14,
-    borderRightWidth: 1,
-    borderRightColor: '#222232',
+    borderRightWidth: StyleSheet.hairlineWidth,
+    borderRightColor: 'rgba(15, 40, 80, 0.08)',
   },
   inputPrefixText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.accent,
   },
   recipientInput: {
     flex: 1,
     fontSize: 15,
-    color: '#FFFFFF',
+    color: colors.text,
     paddingHorizontal: 14,
     paddingVertical: 14,
   },
@@ -593,10 +597,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 9,
     marginRight: 8,
-    backgroundColor: '#1F1F2C',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#2D2D3E',
+    backgroundColor: colors.accent,
+    borderRadius: 12,
   },
   searchBtnText: {
     fontSize: 13,
@@ -605,7 +607,7 @@ const styles = StyleSheet.create({
   },
   payRoot: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: colors.background,
     paddingHorizontal: 20,
   },
   payHeader: {
@@ -618,7 +620,9 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#1C1C1E',
+    backgroundColor: colors.surfaceSolid,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(15, 40, 80, 0.08)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -632,12 +636,12 @@ const styles = StyleSheet.create({
   payHeaderTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.text,
   },
   payHeaderBalance: {
     marginTop: 3,
     fontSize: 13,
-    color: '#8E8E93',
+    color: colors.textMuted,
     fontWeight: '500',
   },
   amountStage: {
@@ -649,7 +653,7 @@ const styles = StyleSheet.create({
   bigAmount: {
     fontSize: 64,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.text,
     letterSpacing: -2,
     maxWidth: '100%',
   },
@@ -662,38 +666,38 @@ const styles = StyleSheet.create({
   currencyText: {
     fontSize: 16,
     fontWeight: '700',
-    color: colors.successSoft,
+    color: colors.accent,
   },
   gasHint: {
     fontSize: 12,
-    color: '#636366',
+    color: colors.textSubtle,
     fontWeight: '500',
   },
   addrHint: {
     marginTop: 10,
     fontSize: 12,
-    color: '#636366',
+    color: colors.textMuted,
     fontFamily: 'monospace',
   },
   tokenPill: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#33334A',
-    backgroundColor: '#14141E',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(15, 40, 80, 0.1)',
+    backgroundColor: colors.surfaceSolid,
   },
   tokenPillActive: {
-    borderColor: '#7C5CFC',
-    backgroundColor: 'rgba(124, 92, 252, 0.15)',
+    borderColor: colors.accent,
+    backgroundColor: colors.accentWash,
   },
   tokenPillText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#8888AA',
+    color: colors.textMuted,
   },
   tokenPillTextActive: {
-    color: '#7C5CFC',
+    color: colors.accent,
   },
   keypad: {
     paddingBottom: 8,
@@ -711,10 +715,10 @@ const styles = StyleSheet.create({
   keyText: {
     fontSize: 28,
     fontWeight: '500',
-    color: '#FFFFFF',
+    color: colors.text,
   },
   payButton: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.accent,
     borderRadius: 28,
     minHeight: 56,
     alignItems: 'center',
@@ -727,6 +731,6 @@ const styles = StyleSheet.create({
   payButtonText: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#000000',
+    color: '#FFFFFF',
   },
 });

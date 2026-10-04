@@ -23,7 +23,7 @@ type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'NetworkInfo'>;
 };
 
-export default function NetworkScreen({navigation}: Props) {
+export default function NetworkScreen({_navigation}: Props) {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Network Status Header */}
@@ -157,7 +157,7 @@ export default function NetworkScreen({navigation}: Props) {
           }}>
           <View style={styles.linkLeft}>
             <View style={styles.linkIconNeutral}>
-              <ExplorerIcon size={16} color="#FFFFFF" />
+              <ExplorerIcon size={16} color="#0A84FF" />
             </View>
             <View>
               <Text style={styles.linkTitle}>{MONAD_CONFIG.blockExplorer.name}</Text>
@@ -195,7 +195,7 @@ export default function NetworkScreen({navigation}: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#09090D',
+    backgroundColor: '#EEF3FA',
   },
   content: {
     padding: 18,
@@ -209,10 +209,10 @@ const styles = StyleSheet.create({
   statusIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(48, 209, 88, 0.12)',
+    backgroundColor: 'rgba(52, 199, 89, 0.14)',
     paddingHorizontal: 12,
     paddingVertical: 5,
-    borderRadius: 8,
+    borderRadius: 10,
     gap: 8,
     marginBottom: 10,
   },
@@ -220,61 +220,66 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#30D158',
+    backgroundColor: '#34C759',
   },
   statusText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#30D158',
+    color: '#34C759',
   },
   networkName: {
     fontSize: 22,
-    fontWeight: '800',
-    color: '#FFFFFF',
+    fontWeight: '700',
+    color: '#0B1220',
     letterSpacing: -0.3,
   },
   sectionHeader: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#71717A',
-    letterSpacing: 1,
+    color: '#9AA3B2',
+    letterSpacing: 0.8,
     marginTop: 12,
     marginBottom: 8,
     marginLeft: 4,
   },
   card: {
-    backgroundColor: '#14141E',
-    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
     padding: 16,
-    borderWidth: 1,
-    borderColor: '#222232',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(15, 40, 80, 0.08)',
     marginBottom: 10,
+    shadowColor: '#0A84FF',
+    shadowOffset: {width: 0, height: 6},
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    elevation: 2,
   },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1E1E2C',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(60, 60, 67, 0.12)',
   },
   infoKey: {
-    color: '#8E8E93',
+    color: '#6B7280',
     fontSize: 14,
   },
   infoVal: {
-    color: '#FFFFFF',
+    color: '#0B1220',
     fontSize: 14,
     fontWeight: '600',
   },
   chainIdBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: 'rgba(10, 132, 255, 0.12)',
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 6,
+    borderRadius: 8,
   },
   chainIdText: {
-    color: '#FFFFFF',
+    color: '#0A84FF',
     fontSize: 12,
     fontWeight: '700',
     fontFamily: 'monospace',
@@ -297,22 +302,22 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#30D158',
+    backgroundColor: '#34C759',
   },
   rpcLabel: {
-    color: '#FFFFFF',
+    color: '#0B1220',
     fontSize: 14,
     fontWeight: '600',
   },
   rpcUrl: {
-    color: '#8E8E93',
+    color: '#6B7280',
     fontSize: 12,
     fontFamily: 'monospace',
     marginTop: 2,
   },
   rpcDivider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: '#1E1E2C',
+    backgroundColor: 'rgba(60, 60, 67, 0.12)',
     marginVertical: 10,
   },
   linkRow: {
@@ -329,18 +334,18 @@ const styles = StyleSheet.create({
   linkIconNeutral: {
     width: 36,
     height: 36,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 12,
+    backgroundColor: 'rgba(10, 132, 255, 0.12)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   linkTitle: {
-    color: '#FFFFFF',
+    color: '#0B1220',
     fontSize: 14,
     fontWeight: '600',
   },
   linkSubtitle: {
-    color: '#8E8E93',
+    color: '#6B7280',
     fontSize: 12,
     marginTop: 2,
   },
@@ -356,17 +361,17 @@ const styles = StyleSheet.create({
   perfValue: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: '#0A84FF',
   },
   perfLabel: {
     fontSize: 11,
-    color: '#8E8E93',
+    color: '#6B7280',
     marginTop: 4,
     fontWeight: '600',
   },
   perfDivider: {
     width: 1,
     height: 32,
-    backgroundColor: '#222232',
+    backgroundColor: 'rgba(60, 60, 67, 0.12)',
   },
 });

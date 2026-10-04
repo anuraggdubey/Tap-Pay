@@ -215,7 +215,7 @@ export default function AccountInfoScreen({navigation}: Props) {
             <TextInput
               style={styles.claimInput}
               placeholder="username"
-              placeholderTextColor="#4A4A66"
+              placeholderTextColor="#9AA3B2"
               value={claimInput}
               onChangeText={setClaimInput}
               autoCapitalize="none"
@@ -260,7 +260,7 @@ export default function AccountInfoScreen({navigation}: Props) {
       <View style={[styles.card, styles.secretKeyCard]}>
         <View style={styles.secretKeyHeader}>
           <View style={styles.lockIconBox}>
-            <KeyIcon size={16} color="#FFFFFF" />
+            <KeyIcon size={16} color="#FF3B30" />
           </View>
           <View style={styles.secretKeyMeta}>
             <Text style={styles.secretKeyTitle}>Private Key</Text>
@@ -308,7 +308,7 @@ export default function AccountInfoScreen({navigation}: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#09090D',
+    backgroundColor: '#EEF3FA',
   },
   content: {
     padding: 18,
@@ -322,10 +322,8 @@ const styles = StyleSheet.create({
   avatarLarge: {
     width: 68,
     height: 68,
-    borderRadius: 34,
-    backgroundColor: '#14141E',
-    borderWidth: 1.5,
-    borderColor: '#262638',
+    borderRadius: 24,
+    backgroundColor: '#0A84FF',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
@@ -337,31 +335,36 @@ const styles = StyleSheet.create({
   },
   profileUsername: {
     fontSize: 20,
-    fontWeight: '800',
-    color: '#FFFFFF',
+    fontWeight: '700',
+    color: '#0B1220',
     marginBottom: 4,
     letterSpacing: -0.3,
   },
   profileSubtitle: {
     fontSize: 13,
-    color: '#8E8E93',
+    color: '#6B7280',
   },
   sectionHeader: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#71717A',
-    letterSpacing: 1,
+    color: '#9AA3B2',
+    letterSpacing: 0.8,
     marginTop: 12,
     marginBottom: 8,
     marginLeft: 2,
   },
   card: {
-    backgroundColor: '#14141E',
-    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
     padding: 16,
-    borderWidth: 1,
-    borderColor: '#222232',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(15, 40, 80, 0.08)',
     marginBottom: 12,
+    shadowColor: '#0A84FF',
+    shadowOffset: {width: 0, height: 6},
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    elevation: 2,
   },
   infoRow: {
     flexDirection: 'row',
@@ -376,19 +379,19 @@ const styles = StyleSheet.create({
   infoIconBox: {
     width: 38,
     height: 38,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 12,
+    backgroundColor: 'rgba(10, 132, 255, 0.12)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   infoIconText: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: '#0A84FF',
   },
   infoLabel: {
     fontSize: 11,
-    color: '#71717A',
+    color: '#9AA3B2',
     marginBottom: 2,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -396,50 +399,49 @@ const styles = StyleSheet.create({
   infoValue: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#0B1220',
   },
-  // Claim username
   claimTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#0B1220',
     marginBottom: 4,
   },
   claimSubtitle: {
     fontSize: 12,
-    color: '#8E8E93',
+    color: '#6B7280',
     marginBottom: 14,
     lineHeight: 18,
   },
   claimInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0F0F16',
+    backgroundColor: '#F2F6FC',
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#222232',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(10, 132, 255, 0.16)',
     marginBottom: 12,
   },
   claimPrefix: {
     paddingHorizontal: 12,
     paddingVertical: 12,
-    borderRightWidth: 1,
-    borderRightColor: '#222232',
+    borderRightWidth: StyleSheet.hairlineWidth,
+    borderRightColor: 'rgba(15, 40, 80, 0.08)',
   },
   claimPrefixText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#0A84FF',
   },
   claimInput: {
     flex: 1,
     fontSize: 14,
-    color: '#FFFFFF',
+    color: '#0B1220',
     paddingHorizontal: 12,
     paddingVertical: 12,
   },
   claimButton: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#0A84FF',
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
@@ -447,46 +449,44 @@ const styles = StyleSheet.create({
   claimButtonText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#000000',
+    color: '#FFFFFF',
   },
-  // Address
   addressLabel: {
     fontSize: 11,
-    color: '#71717A',
+    color: '#9AA3B2',
     marginBottom: 8,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   addressBox: {
-    backgroundColor: '#0F0F16',
+    backgroundColor: '#F2F6FC',
     padding: 12,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#222232',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(15, 40, 80, 0.08)',
     marginBottom: 12,
   },
   addressMono: {
     fontSize: 12,
-    color: '#FFFFFF',
+    color: '#0B1220',
     fontFamily: 'monospace',
     lineHeight: 18,
   },
   copyButton: {
-    backgroundColor: '#161622',
-    borderColor: '#262638',
-    borderWidth: 1,
+    backgroundColor: 'rgba(10, 132, 255, 0.12)',
+    borderColor: 'rgba(10, 132, 255, 0.2)',
+    borderWidth: StyleSheet.hairlineWidth,
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: 'center',
   },
   copyButtonText: {
-    color: '#FFFFFF',
+    color: '#0A84FF',
     fontWeight: '700',
     fontSize: 13,
   },
-  // Secret key
   secretKeyCard: {
-    borderColor: '#222232',
+    borderColor: 'rgba(255, 59, 48, 0.18)',
   },
   secretKeyHeader: {
     flexDirection: 'row',
@@ -497,16 +497,16 @@ const styles = StyleSheet.create({
   lockIconBox: {
     width: 38,
     height: 38,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 59, 48, 0.12)',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#262638',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255, 59, 48, 0.2)',
   },
   lockIconText: {
     fontSize: 15,
-    color: '#FFFFFF',
+    color: '#FF3B30',
     fontWeight: '800',
   },
   secretKeyMeta: {
@@ -515,73 +515,73 @@ const styles = StyleSheet.create({
   secretKeyTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#0B1220',
     marginBottom: 2,
   },
   secretKeySubtitle: {
     fontSize: 12,
-    color: '#8E8E93',
+    color: '#6B7280',
   },
   unlockButton: {
-    backgroundColor: '#161622',
-    borderColor: '#262638',
-    borderWidth: 1,
+    backgroundColor: '#F2F6FC',
+    borderColor: 'rgba(15, 40, 80, 0.1)',
+    borderWidth: StyleSheet.hairlineWidth,
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: 'center',
   },
   unlockButtonActive: {
-    backgroundColor: '#1A1215',
-    borderColor: 'rgba(255, 69, 58, 0.3)',
+    backgroundColor: 'rgba(255, 59, 48, 0.08)',
+    borderColor: 'rgba(255, 59, 48, 0.28)',
   },
   unlockButtonText: {
-    color: '#FFFFFF',
+    color: '#0B1220',
     fontWeight: '700',
     fontSize: 13,
   },
   unlockButtonTextActive: {
-    color: '#FF453A',
+    color: '#FF3B30',
   },
   revealedKeyBox: {
     marginTop: 14,
   },
   warningBanner: {
-    backgroundColor: '#1A1215',
-    borderColor: 'rgba(255, 69, 58, 0.3)',
+    backgroundColor: 'rgba(255, 59, 48, 0.08)',
+    borderColor: 'rgba(255, 59, 48, 0.28)',
     borderWidth: 1,
     borderRadius: 12,
     padding: 12,
     marginBottom: 10,
   },
   warningBannerText: {
-    color: '#FF453A',
+    color: '#FF3B30',
     fontSize: 12,
     fontWeight: '600',
     lineHeight: 16,
   },
   secretKeyMono: {
     fontSize: 12,
-    color: '#FF8A80',
+    color: '#B42318',
     fontFamily: 'monospace',
     lineHeight: 18,
-    backgroundColor: '#151012',
+    backgroundColor: 'rgba(255, 59, 48, 0.06)',
     padding: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 69, 58, 0.2)',
+    borderColor: 'rgba(255, 59, 48, 0.2)',
     marginBottom: 10,
     overflow: 'hidden',
   },
   copyKeyButton: {
-    backgroundColor: 'rgba(255, 69, 58, 0.1)',
-    borderColor: 'rgba(255, 69, 58, 0.25)',
+    backgroundColor: 'rgba(255, 59, 48, 0.1)',
+    borderColor: 'rgba(255, 59, 48, 0.25)',
     borderWidth: 1,
     paddingVertical: 10,
     borderRadius: 12,
     alignItems: 'center',
   },
   copyKeyButtonText: {
-    color: '#FF453A',
+    color: '#FF3B30',
     fontWeight: '700',
     fontSize: 13,
   },

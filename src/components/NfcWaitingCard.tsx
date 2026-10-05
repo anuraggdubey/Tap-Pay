@@ -1,7 +1,6 @@
 /**
- * NfcWaitingCard — Full-screen NFC waiting UI matching the TapPay design.
- * Shows amount, NFC radar, status messages.
- * GPay-style animated checkmark on success.
+ * NfcWaitingCard — Full-screen NFC waiting UI (light Apple glass).
+ * Properly centered ContactlessWave + soft pulse rings.
  * Pure UI; no NFC / payment logic.
  */
 
@@ -10,18 +9,18 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   Animated,
   Easing,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {CrossIcon} from './AppIcons';
-import {colors} from '../theme';
+import {CrossIcon, ContactlessWave} from './AppIcons';
+import PressableScale from './PressableScale';
+import {colors, glass, radii, shadows} from '../theme';
 
 type NfcPhaseVisual = 'searching' | 'broadcasting' | 'success' | 'failed';
 
 type Props = {
-  accent?: 'purple' | 'green';
+  accent?: 'purple' | 'green' | 'blue';
   phase: NfcPhaseVisual;
   direction: 'send' | 'receive';
   amount?: string;
@@ -32,7 +31,6 @@ type Props = {
   footer?: React.ReactNode;
 };
 
-/* ──── Pulsing NFC Radar ──── */
 function NfcRadar({color, active}: {color: string; active: boolean}) {
   const anim1 = useRef(new Animated.Value(0)).current;
   const anim2 = useRef(new Animated.Value(0)).current;
@@ -74,21 +72,22 @@ function NfcRadar({color, active}: {color: string; active: boolean}) {
   }, [active, anim1, anim2, anim3]);
 
   const ring = (val: Animated.Value) => {
-    const scale = val.interpolate({inputRange: [0, 1], outputRange: [1, 2.4]});
-    const opacity = val.interpolate({inputRange: [0, 0.15, 0.7, 1], outputRange: [0, 0.3, 0.08, 0]});
+    const scale = val.interpolate({inputRange: [0, 1], outputRange: [1, 2.35]});
+    const opacity = val.interpolate({
+      inputRange: [0, 0.15, 0.7, 1],
+      outputRange: [0, 0.35, 0.1, 0],
+    });
     return (
       <Animated.View
         pointerEvents="none"
-        style={{
-          position: 'absolute',
-          width: 90,
-          height: 90,
-          borderRadius: 45,
-          borderWidth: 1.5,
-          borderColor: color,
-          transform: [{scale}],
-          opacity,
-        }}
+        style={[
+          radar.ring,
+          {
+            borderColor: color,
+            transform: [{scale}],
+            opacity,
+          },
+        ]}
       />
     );
   };
@@ -102,13 +101,9 @@ function NfcRadar({color, active}: {color: string; active: boolean}) {
           {ring(anim3)}
         </>
       )}
-      <View style={radar.circle}>
-        {/* Contactless NFC arcs */}
-        <View style={radar.arcsWrap}>
-          <View style={[radar.arcOuter, {borderColor: '#FFFFFF'}]} />
-          <View style={[radar.arcMid, {borderColor: '#FFFFFF'}]} />
-          <View style={[radar.arcInner, {borderColor: '#FFFFFF'}]} />
-          <View style={[radar.arcDot, {backgroundColor: '#FFFFFF'}]} />
+      <View style={[radar.circle, {borderColor: color + '33', backgroundColor: color + '14'}]}>
+        <View style={[radar.innerGlow, {backgroundColor: color}]}>
+          <ContactlessWave size={36} color="#FFFFFF" />
         </View>
       </View>
     </View>
@@ -117,86 +112,53 @@ function NfcRadar({color, active}: {color: string; active: boolean}) {
 
 const radar = StyleSheet.create({
   wrap: {
-    width: 220,
-    height: 220,
+    width: 240,
+    height: 240,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  ring: {
+    position: 'absolute',
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    borderWidth: 1.5,
   },
   circle: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    backgroundColor: '#2A2A34',
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.12)',
+    width: 104,
+    height: 104,
+    borderRadius: 52,
+    borderWidth: 1.5,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: glass.fillElevated,
+    ...shadows.soft,
   },
-  arcsWrap: {
-    width: 40,
-    height: 40,
+  innerGlow: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     justifyContent: 'center',
     alignItems: 'center',
-    position: 'relative',
-  },
-  arcOuter: {
-    position: 'absolute',
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    borderWidth: 2.5,
-    borderTopColor: 'transparent',
-    borderBottomColor: 'transparent',
-    borderLeftColor: 'transparent',
-    transform: [{rotate: '-45deg'}],
-  },
-  arcMid: {
-    position: 'absolute',
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 2.5,
-    borderTopColor: 'transparent',
-    borderBottomColor: 'transparent',
-    borderLeftColor: 'transparent',
-    transform: [{rotate: '-45deg'}],
-  },
-  arcInner: {
-    position: 'absolute',
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 2.5,
-    borderTopColor: 'transparent',
-    borderBottomColor: 'transparent',
-    borderLeftColor: 'transparent',
-    transform: [{rotate: '-45deg'}],
-  },
-  arcDot: {
-    position: 'absolute',
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    left: 12,
   },
 });
 
-/* ──── GPay-style Animated Checkmark ──── */
 function GPayCheck({color}: {color: string}) {
-  const scale = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(0.92)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.sequence([
+    Animated.parallel([
       Animated.timing(opacity, {
         toValue: 1,
-        duration: 150,
+        duration: 160,
+        easing: Easing.bezier(0.23, 1, 0.32, 1),
         useNativeDriver: true,
       }),
       Animated.spring(scale, {
         toValue: 1,
-        friction: 4,
-        tension: 80,
+        friction: 7,
+        tension: 120,
         useNativeDriver: true,
       }),
     ]).start();
@@ -212,7 +174,6 @@ function GPayCheck({color}: {color: string}) {
           transform: [{scale}],
         },
       ]}>
-      {/* Tick built from two bars */}
       <View style={checkStyles.tickContainer}>
         <View style={[checkStyles.tickShort, {backgroundColor: '#FFFFFF'}]} />
         <View style={[checkStyles.tickLong, {backgroundColor: '#FFFFFF'}]} />
@@ -228,6 +189,7 @@ const checkStyles = StyleSheet.create({
     borderRadius: 50,
     justifyContent: 'center',
     alignItems: 'center',
+    ...shadows.medium,
   },
   tickContainer: {
     width: 48,
@@ -254,9 +216,8 @@ const checkStyles = StyleSheet.create({
   },
 });
 
-/* ──── Main NfcWaitingCard ──── */
 export default function NfcWaitingCard({
-  accent = 'purple',
+  accent = 'blue',
   phase,
   direction,
   amount,
@@ -267,23 +228,26 @@ export default function NfcWaitingCard({
   footer,
 }: Props) {
   const insets = useSafeAreaInsets();
-  const accentColor = accent === 'green' ? colors.success : '#7C5CFF';
+  const accentColor =
+    accent === 'green'
+      ? colors.success
+      : accent === 'purple'
+        ? colors.accentPurple
+        : colors.accent;
   const isSend = direction === 'send';
   const isSuccess = phase === 'success';
   const isBroadcasting = phase === 'broadcasting';
   const isSearching = phase === 'searching';
 
-  // Header label
   const headerLabel = isSend ? 'Send Tap (NFC)' : 'Receive Tap (NFC)';
 
-  // Status text
   let statusTitle = '';
   let statusSub = '';
   if (isSearching) {
     statusTitle = 'Ready to Tap';
     statusSub = isSend
-      ? 'Hold phone within 4cm of receiver'
-      : 'Hold phone within 4cm of sender';
+      ? 'Hold phones back-to-back within 4cm'
+      : 'Hold phones back-to-back within 4cm';
   } else if (isBroadcasting) {
     statusTitle = isSend ? 'Sending payment…' : 'Receiving payment…';
     statusSub = 'Broadcasting to Monad Mainnet…';
@@ -299,30 +263,35 @@ export default function NfcWaitingCard({
 
   return (
     <View style={[s.root, {paddingTop: insets.top}]}>
-      {/* ── Header Row ── */}
+      <View style={s.bgOrbTop} />
+      <View style={s.bgOrbBottom} />
+
       <View style={s.header}>
-        <TouchableOpacity
-          style={s.closeBtn}
-          onPress={onClose}
-          activeOpacity={0.8}
-          hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-          <CrossIcon size={14} color="#FFFFFF" />
-        </TouchableOpacity>
+        <PressableScale style={s.closeBtn} contentStyle={s.closeBtnInner} onPress={onClose}>
+          <CrossIcon size={14} color={colors.text} />
+        </PressableScale>
 
         <Text style={s.headerTitle}>{headerLabel}</Text>
 
         <View
           style={[
             s.nfcBadge,
-            {backgroundColor: isSuccess ? 'rgba(16,185,129,0.22)' : 'rgba(16,185,129,0.16)'},
+            {
+              backgroundColor: isSuccess
+                ? 'rgba(52, 199, 89, 0.14)'
+                : colors.accentWash,
+            },
           ]}>
-          <Text style={s.nfcBadgeText}>
-            {isSuccess ? '✓ Done' : 'NFC Active'}
+          <Text
+            style={[
+              s.nfcBadgeText,
+              {color: isSuccess ? colors.success : colors.accent},
+            ]}>
+            {isSuccess ? 'Done' : 'NFC Active'}
           </Text>
         </View>
       </View>
 
-      {/* ── Amount Card ── */}
       {!!amount && !isSuccess && (
         <View style={s.amountCard}>
           <Text style={s.amountLabel}>TRANSFER AMOUNT</Text>
@@ -331,19 +300,16 @@ export default function NfcWaitingCard({
             <Text style={s.amountUnit}> MON</Text>
           </View>
           {timeLeft != null && timeLeft > 0 && (
-            <Text style={s.expiryText}>
-              Expires in {timeLeft}s
-            </Text>
+            <Text style={s.expiryText}>Expires in {timeLeft}s</Text>
           )}
         </View>
       )}
 
-      {/* ── Center Visual ── */}
       <View style={s.centerStage}>
         {isSuccess ? (
           <GPayCheck color={accentColor} />
         ) : (
-          <NfcRadar color={accentColor} active={isSearching} />
+          <NfcRadar color={accentColor} active={isSearching || isBroadcasting} />
         )}
 
         <Text style={s.statusTitle}>{statusTitle}</Text>
@@ -358,20 +324,18 @@ export default function NfcWaitingCard({
         )}
       </View>
 
-      {/* ── Success Details ── */}
       {isSuccess && (
         <View style={s.successDetails}>
           <View style={s.successRow}>
             <Text style={s.successLabel}>Amount</Text>
             <Text style={s.successValue}>
-              {isSend ? '-' : '+'}{amount} MON
+              {isSend ? '-' : '+'}
+              {amount} MON
             </Text>
           </View>
           {!!counterparty && (
             <View style={s.successRow}>
-              <Text style={s.successLabel}>
-                {isSend ? 'To' : 'From'}
-              </Text>
+              <Text style={s.successLabel}>{isSend ? 'To' : 'From'}</Text>
               <Text style={s.successValue} numberOfLines={1}>
                 {counterparty}
               </Text>
@@ -386,17 +350,13 @@ export default function NfcWaitingCard({
         </View>
       )}
 
-      {/* ── Footer (Gas Info / Cancel) ── */}
       <View style={[s.footer, {paddingBottom: insets.bottom + 16}]}>
         {!isSuccess && gasEstimate && (
           <View style={s.gasRow}>
             <Text style={s.gasText}>Gas: ~{gasEstimate} MON</Text>
-            <Text style={[s.gasText, {color: colors.success}]}>
-              1s Finality
-            </Text>
+            <Text style={[s.gasText, {color: colors.accent}]}>1s Finality</Text>
           </View>
         )}
-
         {footer}
       </View>
     </View>
@@ -406,11 +366,28 @@ export default function NfcWaitingCard({
 const s = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: colors.background,
     paddingHorizontal: 20,
+    overflow: 'hidden',
   },
-
-  /* Header */
+  bgOrbTop: {
+    position: 'absolute',
+    top: -80,
+    right: -60,
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: 'rgba(10, 132, 255, 0.12)',
+  },
+  bgOrbBottom: {
+    position: 'absolute',
+    bottom: 40,
+    left: -80,
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: 'rgba(100, 210, 255, 0.1)',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -421,44 +398,50 @@ const s = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: glass.fillElevated,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: glass.borderSubtle,
+    overflow: 'hidden',
+  },
+  closeBtnInner: {
+    width: 36,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontWeight: '600',
+    color: colors.text,
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 8,
+    letterSpacing: -0.2,
   },
   nfcBadge: {
     paddingHorizontal: 12,
-    paddingVertical: 5,
+    paddingVertical: 6,
     borderRadius: 14,
   },
   nfcBadgeText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#22C55E',
   },
-
-  /* Amount Card */
   amountCard: {
-    backgroundColor: '#151520',
-    borderRadius: 22,
+    backgroundColor: glass.fillElevated,
+    borderRadius: radii.xl,
     paddingVertical: 22,
     paddingHorizontal: 20,
     alignItems: 'center',
     marginTop: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: glass.borderBright,
+    ...shadows.soft,
   },
   amountLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: 'rgba(255,255,255,0.4)',
+    color: colors.textSubtle,
     letterSpacing: 1.2,
     marginBottom: 8,
   },
@@ -467,42 +450,42 @@ const s = StyleSheet.create({
     alignItems: 'baseline',
   },
   amountValue: {
-    fontSize: 38,
-    fontWeight: '800',
-    color: '#FFFFFF',
+    fontSize: 40,
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: -1,
   },
   amountUnit: {
     fontSize: 18,
     fontWeight: '600',
-    color: 'rgba(255,255,255,0.5)',
+    color: colors.accent,
   },
   expiryText: {
     marginTop: 10,
     fontSize: 12,
     fontWeight: '600',
-    color: 'rgba(255,255,255,0.35)',
+    color: colors.textMuted,
   },
-
-  /* Center Stage */
   centerStage: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   statusTitle: {
-    marginTop: 10,
-    fontSize: 18,
+    marginTop: 14,
+    fontSize: 20,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.text,
     textAlign: 'center',
+    letterSpacing: -0.4,
   },
   statusSub: {
     marginTop: 6,
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.45)',
+    fontSize: 14,
+    color: colors.textMuted,
     textAlign: 'center',
-    lineHeight: 18,
-    maxWidth: 260,
+    lineHeight: 20,
+    maxWidth: 280,
   },
   broadcastDots: {
     flexDirection: 'row',
@@ -514,17 +497,16 @@ const s = StyleSheet.create({
     height: 8,
     borderRadius: 4,
   },
-
-  /* Success Details */
   successDetails: {
-    backgroundColor: '#151520',
-    borderRadius: 18,
+    backgroundColor: glass.fillElevated,
+    borderRadius: radii.lg,
     paddingVertical: 16,
     paddingHorizontal: 18,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: glass.borderSubtle,
     gap: 14,
+    ...shadows.soft,
   },
   successRow: {
     flexDirection: 'row',
@@ -533,17 +515,15 @@ const s = StyleSheet.create({
   },
   successLabel: {
     fontSize: 13,
-    color: 'rgba(255,255,255,0.45)',
+    color: colors.textMuted,
     fontWeight: '500',
   },
   successValue: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.text,
     maxWidth: '65%',
   },
-
-  /* Footer */
   footer: {
     paddingTop: 8,
   },
@@ -551,15 +531,17 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: glass.fillElevated,
     borderRadius: 14,
     paddingVertical: 12,
     paddingHorizontal: 16,
     marginBottom: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: glass.borderSubtle,
   },
   gasText: {
     fontSize: 12,
     fontWeight: '600',
-    color: 'rgba(255,255,255,0.4)',
+    color: colors.textMuted,
   },
 });

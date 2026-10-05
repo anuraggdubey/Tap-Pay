@@ -20,7 +20,7 @@ function App() {
 
   return (
     <SafeAreaProvider>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="dark-content" backgroundColor="#EEF3FA" />
       <WalletProvider>
         <AppNavigator />
       </WalletProvider>

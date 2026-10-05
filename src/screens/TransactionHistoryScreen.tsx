@@ -1,6 +1,6 @@
 /**
- * TransactionHistoryScreen — Dedicated activity feed with clean filter pills
- * Cohesive with Apple Card / Opal dark aesthetic.
+ * TransactionHistoryScreen — light TapPay activity feed
+ * Presentation only; history data + navigation unchanged.
  */
 
 import React, {useState, useEffect, useCallback} from 'react';
@@ -9,8 +9,8 @@ import {
   Text,
   StyleSheet,
   FlatList,
-  TouchableOpacity,
   RefreshControl,
+  TextInput,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
@@ -24,6 +24,12 @@ import {
 } from '../services/history';
 import {triggerHaptic} from '../utils/haptics';
 import {truncateAddress, formatTimestamp} from '../utils/format';
+import {useWallet} from '../context/WalletContext';
+import LivePulseDot from '../components/LivePulseDot';
+import {RefreshIcon} from '../components/AppIcons';
+import PressableScale from '../components/PressableScale';
+import {SegmentedControl, SurfaceCard} from '../components/ui';
+import {colors, glass, radii, shadows} from '../theme';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type FilterTab = 'all' | 'sent' | 'received';
@@ -31,9 +37,11 @@ type FilterTab = 'all' | 'sent' | 'received';
 export default function TransactionHistoryScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp>();
+  const {address, username} = useWallet();
   const [history, setHistory] = useState<TransactionRecord[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<FilterTab>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const loadHistory = useCallback(() => {
     const all = getTransactionHistory();
@@ -55,10 +63,19 @@ export default function TransactionHistoryScreen() {
     }, 400);
   };
 
+  const normalizedQuery = searchQuery.trim().toLowerCase();
   const filteredHistory = history.filter(tx => {
-    if (filter === 'sent') return tx.direction === 'sent';
-    if (filter === 'received') return tx.direction === 'received';
-    return true;
+    if (filter === 'sent' && tx.direction !== 'sent') return false;
+    if (filter === 'received' && tx.direction !== 'received') return false;
+    if (!normalizedQuery) return true;
+    return [
+      tx.counterparty,
+      tx.counterpartyUsername || '',
+      tx.txHash,
+      tx.direction,
+      tx.status,
+      tx.amount,
+    ].some(value => value.toLowerCase().includes(normalizedQuery));
   });
 
   const sentCount = history.filter(tx => tx.direction === 'sent').length;
@@ -68,17 +85,22 @@ export default function TransactionHistoryScreen() {
     const isSent = item.direction === 'sent';
     const isConfirmed = item.status === 'confirmed';
     const isPending = item.status === 'pending';
+    const counterparty = item.counterpartyUsername
+      ? `@${item.counterpartyUsername}`
+      : truncateAddress(item.counterparty, 6, 4);
 
     return (
-      <TouchableOpacity
+      <PressableScale
         style={styles.txRow}
-        activeOpacity={0.7}
+        contentStyle={styles.txRowInner}
         onPress={() => {
           triggerHaptic.selection();
           navigation.navigate('TransactionStatus', {
             txHash: item.txHash,
             amount: item.amount,
             recipient: item.counterparty,
+            direction: item.direction,
+            counterpartyUsername: item.counterpartyUsername,
           });
         }}>
         <View style={styles.txLeft}>
@@ -87,14 +109,18 @@ export default function TransactionHistoryScreen() {
               styles.directionBadge,
               isSent ? styles.badgeSent : styles.badgeReceived,
             ]}>
-            <Text style={styles.directionGlyph}>{isSent ? '↑' : '↓'}</Text>
+            <Text
+              style={[
+                styles.directionGlyph,
+                {color: isSent ? colors.accent : colors.success},
+              ]}>
+              {isSent ? '↑' : '↓'}
+            </Text>
           </View>
 
           <View style={styles.txMeta}>
             <Text style={styles.txName}>
-              {item.counterpartyUsername
-                ? `@${item.counterpartyUsername}`
-                : truncateAddress(item.counterparty, 6, 4)}
+              {isSent ? `Sent to ${counterparty}` : `Received from ${counterparty}`}
             </Text>
             <View style={styles.txSubRow}>
               <Text style={styles.txTime}>{formatTimestamp(item.timestamp)}</Text>
@@ -103,10 +129,10 @@ export default function TransactionHistoryScreen() {
                   styles.statusDot,
                   {
                     backgroundColor: isConfirmed
-                      ? '#30D158'
+                      ? colors.success
                       : isPending
-                      ? '#FF9F0A'
-                      : '#FF453A',
+                      ? colors.warning
+                      : colors.danger,
                   },
                 ]}
               />
@@ -115,10 +141,10 @@ export default function TransactionHistoryScreen() {
                   styles.statusText,
                   {
                     color: isConfirmed
-                      ? '#30D158'
+                      ? colors.success
                       : isPending
-                      ? '#FF9F0A'
-                      : '#FF453A',
+                      ? colors.warning
+                      : colors.danger,
                   },
                 ]}>
                 {isConfirmed ? 'Confirmed' : isPending ? 'Pending' : 'Failed'}
@@ -135,73 +161,113 @@ export default function TransactionHistoryScreen() {
           {isSent ? '-' : '+'}
           {item.amount} MON
         </Text>
-      </TouchableOpacity>
+      </PressableScale>
     );
   };
 
   return (
-    <View style={[styles.container, {paddingTop: insets.top + 12}]}>
-      {/* Clean Header Title */}
+    <View style={[styles.container, {paddingTop: insets.top + 8}]}>
       <View style={styles.header}>
-        <Text style={styles.pageTitle}>Transactions</Text>
-        <Text style={styles.pageSubtitle}>Activity on Monad Mainnet</Text>
+        <View style={styles.identityRow}>
+          <View style={styles.identityMark}>
+            <Text style={styles.identityMarkText}>
+              (username || address?.slice(2, 3) || 'T').charAt(0).toUpperCase()
+            </Text>
+          </View>
+          <View style={styles.identityCopy}>
+            <Text style={styles.identityName} numberOfLines={1}>
+              {username ? `@${username}` : 'TapPay wallet'}
+            </Text>
+            <Text style={styles.identityAddress} numberOfLines={1}>
+              {address ? truncateAddress(address, 6, 5) : 'Monad Mainnet'}
+            </Text>
+          </View>
+          <View style={styles.networkPill}>
+            <LivePulseDot active size={7} />
+            <Text style={styles.networkText}>Monad</Text>
+          </View>
+        </View>
+        <View style={styles.titleRow}>
+          <View>
+            <Text style={styles.pageTitle}>Transactions</Text>
+            <Text style={styles.pageSubtitle}>Your recent activity</Text>
+          </View>
+          <Text style={styles.totalCount}>{history.length}</Text>
+        </View>
       </View>
 
-      {/* Filter Tabs */}
-      <View style={styles.filterRow}>
-        {(['all', 'sent', 'received'] as FilterTab[]).map(tab => {
-          const count =
-            tab === 'all'
-              ? history.length
-              : tab === 'sent'
-              ? sentCount
-              : receivedCount;
-          const isActive = filter === tab;
-          return (
-            <TouchableOpacity
-              key={tab}
-              style={[styles.filterTab, isActive && styles.filterTabActive]}
-              onPress={() => {
-                triggerHaptic.selection();
-                setFilter(tab);
-              }}
-              activeOpacity={0.7}>
-              <Text
-                style={[
-                  styles.filterTabText,
-                  isActive && styles.filterTabTextActive,
-                ]}>
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
-              </Text>
-              <Text
-                style={[
-                  styles.filterCount,
-                  isActive && styles.filterCountActive,
-                ]}>
-                {count}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+      <View style={styles.searchRow}>
+        <View style={styles.searchBox}>
+          <View style={styles.searchGlyph}>
+            <View style={styles.searchGlyphHandle} />
+          </View>
+          <TextInput
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search transactions"
+            placeholderTextColor={colors.textSubtle}
+            style={styles.searchInput}
+            returnKeyType="search"
+            autoCapitalize="none"
+            autoCorrect={false}
+            accessibilityLabel="Search transactions"
+          />
+          {searchQuery.length > 0 && (
+            <PressableScale
+              onPress={() => setSearchQuery('')}
+              accessibilityLabel="Clear search"
+              style={styles.clearSearchButton}>
+              <Text style={styles.clearSearchText}>×</Text>
+            </PressableScale>
+          )}
+        </View>
       </View>
 
-      {/* Transaction List */}
+      <SegmentedControl
+        style={styles.filterRow}
+        value={filter}
+        onChange={setFilter}
+        options={[
+          {key: 'all', label: 'All', count: history.length},
+          {key: 'sent', label: 'Sent', count: sentCount},
+          {key: 'received', label: 'Received', count: receivedCount},
+        ]}
+      />
+
+      <View style={styles.listHeading}>
+        <Text style={styles.listHeadingText}>
+          {filteredHistory.length === history.length ? 'LATEST ACTIVITY' : `${filteredHistory.length} RESULTS`}
+        </Text>
+        <PressableScale
+          style={styles.refreshButton}
+          contentStyle={styles.refreshButtonInner}
+          onPress={onRefresh}
+          accessibilityLabel="Refresh transaction history">
+          <RefreshIcon size={14} color={colors.accent} />
+          <Text style={styles.refreshButtonText}>Refresh</Text>
+        </PressableScale>
+      </View>
+
       {filteredHistory.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <View style={styles.emptyIconBox}>
+          <SurfaceCard style={styles.emptyIconBox}>
             <Text style={styles.emptyIconText}>—</Text>
-          </View>
+          </SurfaceCard>
           <Text style={styles.emptyTitle}>
-            {filter === 'all'
+            {normalizedQuery
+              ? 'No Matching Transactions'
+              : filter === 'all'
               ? 'No Transactions Yet'
               : filter === 'sent'
               ? 'No Sent Transactions'
               : 'No Received Transactions'}
           </Text>
           <Text style={styles.emptyHint}>
-            {filter === 'all'
-              ? 'Your payment activity will appear here'
-              : `Transactions you have ${filter} will appear here`}
+            {normalizedQuery
+              ? 'Try a different name, address, or transaction hash'
+              : filter === 'all'
+                ? 'Your payment activity will appear here'
+                : `Transactions you have ${filter} will appear here`}
           </Text>
         </View>
       ) : (
@@ -209,14 +275,14 @@ export default function TransactionHistoryScreen() {
           data={filteredHistory}
           renderItem={renderItem}
           keyExtractor={item => item.id}
-          contentContainerStyle={[styles.list, {paddingBottom: 120}]}
+          contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor="#FFFFFF"
-              colors={['#FFFFFF']}
+              tintColor={colors.accent}
+              colors={[colors.accent]}
             />
           }
         />
@@ -228,78 +294,187 @@ export default function TransactionHistoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#09090D',
+    backgroundColor: '#FFFFFF',
   },
   header: {
     paddingHorizontal: 20,
-    marginBottom: 14,
+    marginBottom: 12,
+  },
+  identityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 22,
+  },
+  identityMark: {
+    width: 42,
+    height: 42,
+    borderRadius: 15,
+    backgroundColor: colors.accentWash,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 11,
+  },
+  identityMarkText: {
+    color: colors.accent,
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  identityCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  identityName: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  identityAddress: {
+    color: colors.textMuted,
+    fontSize: 12,
+    marginTop: 2,
+  },
+  networkPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#F5F8FC',
+    borderRadius: 16,
+    paddingHorizontal: 11,
+    paddingVertical: 8,
+    marginLeft: 8,
+  },
+  networkText: {
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   pageTitle: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: -0.6,
+    fontSize: 30,
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: -0.8,
   },
   pageSubtitle: {
     fontSize: 13,
-    color: '#8E8E93',
-    marginTop: 2,
+    color: colors.textMuted,
+    marginTop: 3,
   },
-  filterRow: {
-    flexDirection: 'row',
+  totalCount: {
+    color: colors.accent,
+    fontSize: 14,
+    fontWeight: '700',
+    backgroundColor: colors.accentWash,
+    minWidth: 34,
+    height: 34,
+    borderRadius: 17,
+    overflow: 'hidden',
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    paddingHorizontal: 8,
+  },
+  searchRow: {
     paddingHorizontal: 20,
-    marginBottom: 14,
-    gap: 8,
+    marginBottom: 12,
   },
-  filterTab: {
+  searchBox: {
+    minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#F5F7FA',
+    borderRadius: 15,
     paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#14141E',
-    borderWidth: 1,
-    borderColor: '#222232',
-    gap: 6,
   },
-  filterTabActive: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#FFFFFF',
+  searchGlyph: {
+    width: 15,
+    height: 15,
+    borderRadius: 8,
+    borderWidth: 1.8,
+    borderColor: colors.textMuted,
+    marginRight: 11,
+    position: 'relative',
   },
-  filterTabText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#8E8E93',
+  searchGlyphHandle: {
+    position: 'absolute',
+    width: 7,
+    height: 1.8,
+    backgroundColor: colors.textMuted,
+    right: -5,
+    bottom: -2,
+    borderRadius: 1,
+    transform: [{rotate: '45deg'}],
   },
-  filterTabTextActive: {
-    color: '#000000',
+  searchInput: {
+    flex: 1,
+    color: colors.text,
+    fontSize: 15,
+    paddingVertical: 10,
   },
-  filterCount: {
+  clearSearchButton: {
+    width: 30,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  clearSearchText: {
+    color: colors.textMuted,
+    fontSize: 24,
+    lineHeight: 26,
+  },
+  listHeading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    marginBottom: 8,
+  },
+  listHeadingText: {
+    color: colors.textSubtle,
     fontSize: 11,
     fontWeight: '700',
-    color: '#71717A',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 10,
+    letterSpacing: 0.8,
   },
-  filterCountActive: {
-    color: '#000000',
-    backgroundColor: 'rgba(0, 0, 0, 0.12)',
+  refreshButton: {
+    borderRadius: 11,
+    backgroundColor: colors.accentWash,
+  },
+  refreshButtonInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    minHeight: 34,
+    paddingHorizontal: 10,
+  },
+  refreshButtonText: {
+    color: colors.accent,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  filterRow: {
+    marginHorizontal: 20,
+    marginBottom: 14,
   },
   list: {
     paddingHorizontal: 20,
+    paddingBottom: 120,
   },
   txRow: {
+    backgroundColor: colors.surfaceSolid,
+    borderRadius: radii.lg,
+    marginBottom: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: glass.borderSubtle,
+    ...shadows.soft,
+  },
+  txRowInner: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#14141E',
-    borderRadius: 16,
     padding: 15,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#222232',
   },
   txLeft: {
     flexDirection: 'row',
@@ -308,30 +483,29 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   directionBadge: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 40,
+    height: 40,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
   },
   badgeSent: {
-    backgroundColor: 'rgba(255, 69, 58, 0.15)',
+    backgroundColor: colors.accentWash,
   },
   badgeReceived: {
-    backgroundColor: 'rgba(48, 209, 88, 0.15)',
+    backgroundColor: 'rgba(52, 199, 89, 0.14)',
   },
   directionGlyph: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
   },
   txMeta: {
     flex: 1,
   },
   txName: {
     fontSize: 15,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontWeight: '600',
+    color: colors.text,
     marginBottom: 3,
   },
   txSubRow: {
@@ -341,7 +515,7 @@ const styles = StyleSheet.create({
   },
   txTime: {
     fontSize: 12,
-    color: '#8E8E93',
+    color: colors.textMuted,
   },
   statusDot: {
     width: 5,
@@ -357,10 +531,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   amountSent: {
-    color: '#FFFFFF',
+    color: colors.text,
   },
   amountReceived: {
-    color: '#30D158',
+    color: colors.success,
   },
   emptyContainer: {
     flex: 1,
@@ -372,27 +546,24 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 16,
-    backgroundColor: '#14141E',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#222232',
   },
   emptyIconText: {
     fontSize: 22,
-    color: '#71717A',
+    color: colors.textSubtle,
     fontWeight: '300',
   },
   emptyTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.text,
     marginBottom: 6,
   },
   emptyHint: {
     fontSize: 13,
-    color: '#8E8E93',
+    color: colors.textMuted,
     textAlign: 'center',
     lineHeight: 18,
   },

@@ -4,9 +4,13 @@
 
 import React, {useState, useCallback, useEffect, useMemo} from 'react';
 import {
+  AccessibilityInfo,
+  Animated,
+  Easing,
+  Modal,
+  Pressable,
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
   ScrollView,
   RefreshControl,
@@ -23,13 +27,15 @@ import {truncateAddress, formatTimestamp} from '../utils/format';
 import {triggerHaptic} from '../utils/haptics';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import BrandLogo from '../components/BrandLogo';
-import {ContactlessWave} from '../components/AppIcons';
+import {ContactlessWave, SettingsIcon, UserIcon} from '../components/AppIcons';
 import {getTransactionHistory, initHistory, TransactionRecord} from '../services/history';
 import {initNfc, isNfcEnabled, isNfcSupported} from '../services/nfcReader';
+import PressableScale from '../components/PressableScale';
+import FadeInView from '../components/FadeInView';
+import LivePulseDot from '../components/LivePulseDot';
+import {colors, glass, shadows, premiumCard} from '../theme';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-
-const MON_USD_ESTIMATE = 0.238;
 
 function getTxBadge(tx: TransactionRecord): {label: string; variant: 'tap' | 'direct' | 'received'} {
   if (tx.direction === 'received') {
@@ -61,9 +67,197 @@ function getTxTitle(tx: TransactionRecord): string {
       : `Received from ${truncateAddress(tx.counterparty, 6, 4)}`;
   }
   if (tx.counterpartyUsername) {
-    return `@${tx.counterpartyUsername}`;
+    return `Sent to @${tx.counterpartyUsername}`;
   }
-  return truncateAddress(tx.counterparty, 8, 4);
+  return `Sent to ${truncateAddress(tx.counterparty, 8, 4)}`;
+}
+
+type ProfileDestination = 'AccountInfo' | 'Settings';
+
+function ProfileDropdown({
+  username,
+  address,
+  profileLetter,
+  copied,
+  onCopyAddress,
+  onNavigate,
+  onDismiss,
+}: {
+  username?: string | null;
+  address?: string | null;
+  profileLetter: string;
+  copied: boolean;
+  onCopyAddress: () => void;
+  onNavigate: (destination: ProfileDestination) => void;
+  onDismiss: () => void;
+}) {
+  const insets = useSafeAreaInsets();
+  const panelY = React.useRef(new Animated.Value(-420)).current;
+  const scrimOpacity = React.useRef(new Animated.Value(0)).current;
+  const closing = React.useRef(false);
+
+  useEffect(() => {
+    let mounted = true;
+    AccessibilityInfo.isReduceMotionEnabled().then(reduced => {
+      if (!mounted) return;
+      if (reduced) {
+        panelY.setValue(0);
+        scrimOpacity.setValue(1);
+        return;
+      }
+      requestAnimationFrame(() => {
+        Animated.parallel([
+          Animated.timing(panelY, {
+            toValue: 0,
+            duration: 220,
+            easing: Easing.bezier(0.32, 0.72, 0, 1),
+            useNativeDriver: true,
+          }),
+          Animated.timing(scrimOpacity, {
+            toValue: 1,
+            duration: 180,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          }),
+        ]).start();
+      });
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [panelY, scrimOpacity]);
+
+  const dismiss = (afterDismiss?: () => void) => {
+    if (closing.current) return;
+    closing.current = true;
+    AccessibilityInfo.isReduceMotionEnabled().then(reduced => {
+      if (reduced) {
+        onDismiss();
+        afterDismiss?.();
+        return;
+      }
+      Animated.parallel([
+        Animated.timing(panelY, {
+          toValue: -420,
+          duration: 170,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(scrimOpacity, {
+          toValue: 0,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+      ]).start(({finished}) => {
+        if (finished) {
+          onDismiss();
+          afterDismiss?.();
+        }
+      });
+    });
+  };
+
+  const openDestination = (destination: ProfileDestination) => {
+    triggerHaptic.selection();
+    dismiss(() => onNavigate(destination));
+  };
+
+  return (
+    <Modal
+      transparent
+      visible
+      animationType="none"
+      statusBarTranslucent
+      onRequestClose={() => dismiss()}>
+      <View style={styles.profileModalRoot}>
+        <Animated.View
+          pointerEvents="none"
+          style={[styles.profileScrim, {opacity: scrimOpacity}]}
+        />
+        <Pressable
+          style={styles.profileBackdropPressable}
+          onPress={() => dismiss()}
+          accessibilityRole="button"
+          accessibilityLabel="Close profile menu"
+        />
+        <Animated.View
+          style={[
+            styles.profilePanel,
+            {
+              paddingTop: insets.top + 12,
+              transform: [{translateY: panelY}],
+            },
+          ]}>
+          <View style={styles.profilePanelHeader}>
+            <Text style={styles.profilePanelEyebrow}>TAPPAY ACCOUNT</Text>
+            <PressableScale
+              style={styles.profilePanelClose}
+              onPress={() => dismiss()}
+              accessibilityLabel="Close profile menu">
+              <Text style={styles.profilePanelCloseText}>×</Text>
+            </PressableScale>
+          </View>
+
+          <View style={styles.profileIdentityRow}>
+            <View style={styles.profileMenuAvatar}>
+              <Text style={styles.profileMenuAvatarText}>{profileLetter}</Text>
+            </View>
+            <View style={styles.profileMenuIdentity}>
+              <Text style={styles.profileMenuName} numberOfLines={1}>
+                {username ? `@${username}` : 'TapPay User'}
+              </Text>
+              <View style={styles.profileMenuStatus}>
+                <LivePulseDot active size={6} />
+                <Text style={styles.profileMenuStatusText}>Monad Testnet</Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.profileAddressCard}>
+            <View style={styles.profileAddressText}>
+              <Text style={styles.profileAddressLabel}>WALLET ADDRESS</Text>
+              <Text style={styles.profileAddressValue} numberOfLines={1}>
+                {address ? truncateAddress(address, 8, 6) : 'Not connected'}
+              </Text>
+            </View>
+            <PressableScale
+              style={styles.profileCopyButton}
+              onPress={onCopyAddress}
+              disabled={!address}
+              accessibilityLabel="Copy wallet address">
+              <Text style={styles.profileCopyText}>
+                {copied ? 'Copied' : 'Copy'}
+              </Text>
+            </PressableScale>
+          </View>
+
+          <View style={styles.profileMenuLinks}>
+            <PressableScale
+              style={styles.profileMenuLink}
+              contentStyle={styles.profileMenuLinkInner}
+              onPress={() => openDestination('AccountInfo')}>
+              <View style={styles.profileMenuIcon}>
+                <UserIcon size={17} color={colors.accent} />
+              </View>
+              <Text style={styles.profileMenuLinkText}>Profile & Identity</Text>
+              <Text style={styles.profileMenuChevron}>›</Text>
+            </PressableScale>
+            <View style={styles.profileMenuDivider} />
+            <PressableScale
+              style={styles.profileMenuLink}
+              contentStyle={styles.profileMenuLinkInner}
+              onPress={() => openDestination('Settings')}>
+              <View style={styles.profileMenuIcon}>
+                <SettingsIcon size={17} color={colors.accent} />
+              </View>
+              <Text style={styles.profileMenuLinkText}>Settings</Text>
+              <Text style={styles.profileMenuChevron}>›</Text>
+            </PressableScale>
+          </View>
+        </Animated.View>
+      </View>
+    </Modal>
+  );
 }
 
 export default function HomeScreen() {
@@ -73,8 +267,11 @@ export default function HomeScreen() {
 
   const [refreshing, setRefreshing] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [balanceHidden, setBalanceHidden] = useState(false);
-  const [activeToken, setActiveToken] = useState<'AUSD' | 'MON'>('AUSD');
+  const [showingCardBack, setShowingCardBack] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
+  const cardFaceProgress = React.useRef(new Animated.Value(0)).current;
   const [recentTx, setRecentTx] = useState<TransactionRecord[]>([]);
   const [nfcReady, setNfcReady] = useState(false);
 
@@ -116,6 +313,23 @@ export default function HomeScreen() {
   }, [loadRecent]);
 
   useEffect(() => {
+    let mounted = true;
+    AccessibilityInfo.isReduceMotionEnabled().then(enabled => {
+      if (mounted) {
+        setReducedMotion(enabled);
+      }
+    });
+    const subscription = AccessibilityInfo.addEventListener(
+      'reduceMotionChanged',
+      setReducedMotion,
+    );
+    return () => {
+      mounted = false;
+      subscription.remove();
+    };
+  }, []);
+
+  useEffect(() => {
     (async () => {
       await initNfc();
       const supported = await isNfcSupported();
@@ -146,92 +360,145 @@ export default function HomeScreen() {
     ? `${address.slice(0, 4)} •••• •••• ${address.slice(-4)}`.toUpperCase()
     : '0X00 •••• •••• 0000';
 
+  const setCardSide = (showBack: boolean) => {
+    triggerHaptic.selection();
+    setShowingCardBack(showBack);
+    const toValue = showBack ? 1 : 0;
+    if (reducedMotion) {
+      cardFaceProgress.setValue(toValue);
+      return;
+    }
+    Animated.timing(cardFaceProgress, {
+      toValue,
+      duration: 180,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const frontFaceOpacity = cardFaceProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 0],
+  });
+  const backFaceOpacity = cardFaceProgress;
+
   return (
     <View style={styles.screenWrapper}>
       <ScrollView
         style={styles.container}
         contentContainerStyle={[
           styles.content,
-          {paddingTop: insets.top + 10, paddingBottom: 120},
+          {paddingTop: insets.top + 10},
         ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#FFFFFF"
-            colors={['#FFFFFF']}
+            tintColor={colors.accent}
+            colors={[colors.accent]}
           />
         }>
         {/* Header */}
-        <View style={styles.topBar}>
-          <View style={styles.brandBlock}>
-            <BrandLogo size={34} color="#FFFFFF" />
-            <View style={styles.brandTextBlock}>
-              <Text style={styles.brandTitle}>TapPay</Text>
-              <Text style={styles.brandTagline}>TAP • PAY • GO</Text>
+        <FadeInView delay={0} translateY={6}>
+          <View style={styles.topBar}>
+            <View style={styles.brandBlock}>
+              <BrandLogo size={34} color={colors.accent} />
+              <View style={styles.brandTextBlock}>
+                <Text style={styles.brandTitle}>TapPay</Text>
+                <Text style={styles.brandTagline}>TAP • PAY • GO</Text>
+              </View>
+            </View>
+
+            <View style={styles.headerRight}>
+              <PressableScale
+                style={styles.networkPill}
+                onPress={() => navigation.navigate('NetworkInfo')}>
+                <View style={styles.networkPillInner}>
+                  <LivePulseDot active size={6} />
+                  <Text style={styles.networkText}>Monad</Text>
+                  <Text style={styles.chevronSmall}>⌄</Text>
+                </View>
+              </PressableScale>
+
+              <PressableScale
+                style={styles.profileCircle}
+                contentStyle={styles.profileCircleInner}
+                accessibilityLabel="Open profile menu"
+                onPress={() => {
+                  triggerHaptic.selection();
+                  setProfileMenuOpen(true);
+                }}>
+                <Text style={styles.profileLetter}>{profileLetter}</Text>
+              </PressableScale>
             </View>
           </View>
+        </FadeInView>
 
-          <View style={styles.headerRight}>
-            <TouchableOpacity
-              style={styles.networkPill}
-              activeOpacity={0.8}
-              onPress={() => navigation.navigate('NetworkInfo')}>
-              <View style={styles.liveDot} />
-              <Text style={styles.networkText}>Monad</Text>
-              <Text style={styles.chevronSmall}>⌄</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.profileCircle}
-              activeOpacity={0.8}
-              onPress={() => navigation.navigate('AccountInfo')}>
-              <Text style={styles.profileLetter}>{profileLetter}</Text>
-            </TouchableOpacity>
+        {/* Home hero */}
+        <FadeInView delay={20} translateY={8}>
+          <View style={styles.heroRow}>
+            <View style={styles.heroCopy}>
+              <Text style={styles.heroTitle}>Your Money.</Text>
+              <Text style={styles.heroTitleAccent}>Without Limits.</Text>
+              <Text style={styles.heroDescription}>
+                Pay in-store with NFC or online on Monad.
+              </Text>
+            </View>
+            <View style={styles.heroNfcBadge}>
+              <ContactlessWave size={28} color={colors.accent} />
+            </View>
           </View>
-        </View>
+        </FadeInView>
 
-        {/* Hero headline */}
-        <View style={styles.heroRow}>
-          <View style={styles.heroTextBlock}>
-            <Text style={styles.heroLineWhite}>Your Money.</Text>
-            <Text style={styles.heroLineAccent}>Without Limits.</Text>
-            <Text style={styles.heroSubtitle}>
-              Pay in-store with NFC or online on Monad.
-            </Text>
-          </View>
-          <View style={styles.heroWaveWrap}>
-            <ContactlessWave size={34} color="#0A84FF" />
-          </View>
-        </View>
+        {/* Virtual card — Apple Wallet style */}
+        <FadeInView delay={40} translateY={12}>
+          <View style={styles.cardContainer}>
+            <View style={styles.cardFaceStack}>
+            <Animated.View
+              style={[styles.cardBody, {opacity: frontFaceOpacity}]}
+              pointerEvents={showingCardBack ? 'none' : 'auto'}
+              accessibilityElementsHidden={showingCardBack}
+              importantForAccessibility={showingCardBack ? 'no-hide-descendants' : 'auto'}>
+              <View style={styles.cardOrbLarge} />
+              <View style={styles.cardOrbSmall} />
+              <View style={styles.cardGlassEdge} />
 
-        {/* Virtual card */}
-        <View style={styles.cardContainer}>
-          <View style={styles.cardBody}>
               <View style={styles.cardTopRow}>
                 <View style={styles.cardBrand}>
                   <BrandLogo size={22} color="#FFFFFF" />
                   <Text style={styles.cardBrandText}>TapPay</Text>
                 </View>
-                <View style={styles.cardTopRight}>
-                  <ContactlessWave size={20} color="#8E8E93" />
-                  <View style={styles.monadBadge}>
-                    <Text style={styles.monadBadgeText}>M</Text>
-                  </View>
+                <PressableScale
+                  style={styles.cardFlipHint}
+                  contentStyle={styles.cardFlipHintInner}
+                  accessibilityLabel="Tap to see balance"
+                  onPress={() => setCardSide(true)}>
+                  <Text style={styles.cardFlipHintText}>Tap to see balance</Text>
+                  <Text style={styles.cardFlipHintChevron}>›</Text>
+                </PressableScale>
+              </View>
+
+              <View style={styles.cardChipRow}>
+                <View style={styles.cardChip}>
+                  <View style={styles.cardChipInner} />
+                  <View style={styles.cardChipH} />
+                  <View style={styles.cardChipV} />
+                </View>
+                <View style={styles.cardNetworkPill}>
+                  <Text style={styles.cardNetworkText}>MONAD</Text>
                 </View>
               </View>
 
               <View style={styles.cardMidRow}>
                 <Text style={styles.cardNumberText}>{formattedCardNumber}</Text>
-                <TouchableOpacity
+                <PressableScale
                   style={[styles.copyChip, copied && styles.copiedChip]}
-                  onPress={copyAddress}
-                  activeOpacity={0.7}>
+                  onPress={copyAddress}>
                   <Text style={styles.copyChipText}>
                     {copied ? 'Copied' : 'Copy'}
                   </Text>
-                </TouchableOpacity>
+                </PressableScale>
               </View>
 
               <View style={styles.cardBottomRow}>
@@ -242,157 +509,158 @@ export default function HomeScreen() {
                   </Text>
                 </View>
                 <View style={styles.cardTypeBadge}>
-                  <Text style={styles.cardTypeText}>MONAD • NFC</Text>
+                  <Text style={styles.cardTypeText}>NFC PAY</Text>
                 </View>
               </View>
+            </Animated.View>
+
+            <Animated.View
+              style={[styles.cardBackBody, {opacity: backFaceOpacity}]}
+              pointerEvents={showingCardBack ? 'auto' : 'none'}
+              accessibilityElementsHidden={!showingCardBack}
+              importantForAccessibility={showingCardBack ? 'auto' : 'no-hide-descendants'}>
+              <View style={styles.cardBackOrbLarge} />
+              <View style={styles.cardBackOrbSmall} />
+              <View style={styles.cardBackTopRow}>
+                <View style={styles.cardBrand}>
+                  <BrandLogo size={20} color="#FFFFFF" />
+                  <Text style={styles.cardBrandText}>TapPay</Text>
+                </View>
+                <PressableScale
+                  style={styles.cardFlipHint}
+                  contentStyle={styles.cardFlipHintInner}
+                  accessibilityLabel="Return to card"
+                  onPress={() => setCardSide(false)}>
+                  <Text style={styles.cardFlipHintText}>Back to card</Text>
+                  <Text style={styles.cardFlipHintChevron}>‹</Text>
+                </PressableScale>
+              </View>
+
+              <View style={styles.cardBackBalances}>
+                <View style={styles.cardBackBalanceHeading}>
+                  <Text style={styles.cardBackEyebrow}>YOUR BALANCES</Text>
+                  <PressableScale
+                    onPress={() => {
+                      triggerHaptic.selection();
+                      setBalanceHidden(prev => !prev);
+                    }}
+                    accessibilityLabel={balanceHidden ? 'Show balances' : 'Hide balances'}
+                    hitSlop={10}
+                    contentStyle={styles.cardBalanceVisibility}>
+                    <Text style={styles.cardBalanceVisibilityIcon}>
+                      {balanceHidden ? '◎' : '◉'}
+                    </Text>
+                    <Text style={styles.cardBalanceVisibilityText}>
+                      {balanceHidden ? 'Show' : 'Hide'}
+                    </Text>
+                  </PressableScale>
+                </View>
+                <View style={styles.cardBackBalanceRow}>
+                  <View>
+                    <Text style={styles.cardBackTokenLabel}>AUSD</Text>
+                    <Text style={styles.cardBackTokenCaption}>Stablecoin</Text>
+                  </View>
+                  <Text style={styles.cardBackAmount} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
+                    {balanceHidden ? '••••••' : displayAusd}
+                    <Text style={styles.cardBackUnit}> AUSD</Text>
+                  </Text>
+                </View>
+                <View style={styles.cardBackDivider} />
+                <View style={styles.cardBackBalanceRow}>
+                  <View>
+                    <Text style={styles.cardBackTokenLabel}>MON</Text>
+                    <Text style={styles.cardBackTokenCaption}>Monad</Text>
+                  </View>
+                  <Text style={styles.cardBackAmount} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
+                    {balanceHidden ? '••••••' : balanceMon}
+                    <Text style={styles.cardBackUnit}> MON</Text>
+                  </Text>
+                </View>
+              </View>
+            </Animated.View>
+            </View>
           </View>
-        </View>
+        </FadeInView>
 
-        {/* Primary actions */}
-        <View style={styles.actionRow}>
-          <TouchableOpacity
-            style={styles.sendTapButton}
-            activeOpacity={0.85}
-            onPress={() => {
-              triggerHaptic.impactMedium();
-              navigation.navigate('SendTap');
-            }}>
-            <View style={styles.sendTapContent}>
-              <View style={styles.sendTapLeft}>
-                <View style={styles.sendTapIconWrap}>
-                  <ContactlessWave size={18} color="#FFFFFF" />
-                </View>
-                <View>
-                  <Text style={styles.sendTapTitle}>Send Tap (NFC)</Text>
-                  <Text style={styles.sendTapSubtitle}>Tap to pay nearby</Text>
-                </View>
+        {/* NFC status */}
+        <FadeInView delay={80} translateY={8}>
+          <View style={styles.terminalRow}>
+            <View style={styles.terminalLeft}>
+              <LivePulseDot active={terminalStatus.ready} size={7} />
+              <View>
+                <Text style={styles.terminalTitle}>{terminalStatus.label}</Text>
+                <Text style={styles.terminalCaption}>{terminalStatus.caption}</Text>
               </View>
-              <Text style={styles.sendTapChevron}>›</Text>
             </View>
-          </TouchableOpacity>
+            <ContactlessWave
+              size={22}
+              color={terminalStatus.ready ? colors.success : colors.textMuted}
+            />
+          </View>
+        </FadeInView>
 
-          <TouchableOpacity
-            style={styles.receiveTapButton}
-            activeOpacity={0.85}
-            onPress={() => {
-              triggerHaptic.impactMedium();
-              navigation.navigate('ReceiveTap');
-            }}>
-            <View style={styles.receiveIconWrap}>
-              <View style={styles.scannerCornerTL} />
-              <View style={styles.scannerCornerTR} />
-              <View style={styles.scannerCornerBL} />
-              <View style={styles.scannerCornerBR} />
-            </View>
-            <View>
+        {/* Primary actions — equal Apple Pay-style tiles */}
+        <FadeInView delay={120} translateY={10}>
+          <View style={styles.actionRow}>
+            <PressableScale
+              style={styles.sendTapButton}
+              contentStyle={styles.sendTapContent}
+              onPress={() => {
+                triggerHaptic.impactMedium();
+                navigation.navigate('SendTap');
+              }}>
+              <View style={styles.sendTapIconWrap}>
+                <ContactlessWave size={18} color="#FFFFFF" />
+              </View>
+              <Text style={styles.sendTapTitle}>Send Tap</Text>
+              <Text style={styles.sendTapSubtitle}>NFC pay</Text>
+            </PressableScale>
+
+            <PressableScale
+              style={styles.receiveTapButton}
+              contentStyle={styles.receiveTapContent}
+              onPress={() => {
+                triggerHaptic.impactMedium();
+                navigation.navigate('ReceiveTap');
+              }}>
+              <View style={styles.receiveIconWrap}>
+                <ContactlessWave size={18} color={colors.accent} />
+              </View>
               <Text style={styles.receiveTapTitle}>Receive Tap</Text>
-              <Text style={styles.receiveTapSubtitle}>Get paid instantly</Text>
-            </View>
-          </TouchableOpacity>
-        </View>
-
-        <TouchableOpacity
-          style={styles.directPayBanner}
-          activeOpacity={0.85}
-          onPress={() => {
-            triggerHaptic.impactMedium();
-            navigation.navigate('SendPayment');
-          }}>
-          <View style={styles.directPayLeft}>
-            <View style={styles.directPayCircle}>
-              <Text style={styles.directPayGlyph}>@</Text>
-            </View>
-            <View>
-              <Text style={styles.directPayTitle}>Direct Transfer</Text>
-              <Text style={styles.directPaySubtitle}>
-                Instantly pay to @username or wallet address
-              </Text>
-            </View>
-          </View>
-          <Text style={styles.chevronArrow}>›</Text>
-        </TouchableOpacity>
-
-        {/* Balance + terminal */}
-        <View style={styles.metricGrid}>
-          <View style={styles.metricTile}>
-            <View style={styles.metricTileHeader}>
-              <View style={styles.tokenSelector}>
-                <TouchableOpacity
-                  style={[styles.tokenOption, activeToken === 'AUSD' && styles.tokenOptionActive]}
-                  onPress={() => { triggerHaptic.selection(); setActiveToken('AUSD'); }}
-                  activeOpacity={0.7}>
-                  <Text style={[styles.tokenOptionText, activeToken === 'AUSD' && styles.tokenOptionTextActive]}>AUSD</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.tokenOption, activeToken === 'MON' && styles.tokenOptionActive]}
-                  onPress={() => { triggerHaptic.selection(); setActiveToken('MON'); }}
-                  activeOpacity={0.7}>
-                  <Text style={[styles.tokenOptionText, activeToken === 'MON' && styles.tokenOptionTextActive]}>MON</Text>
-                </TouchableOpacity>
-              </View>
-              <TouchableOpacity
-                onPress={() => { triggerHaptic.selection(); setBalanceHidden(prev => !prev); }}
-                activeOpacity={0.7}
-                hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-                <Text style={styles.eyeIcon}>{balanceHidden ? '◎' : '◉'}</Text>
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.metricValue}>
-              {activeToken === 'AUSD' 
-                ? (balanceHidden ? '••••• AUSD' : `${displayAusd} AUSD`)
-                : (balanceHidden ? '••••• MON' : `${balanceMon} MON`)}
-            </Text>
-            <Text style={styles.metricUsd}>
-              {activeToken === 'AUSD'
-                ? (balanceHidden ? '•••• MON' : `${balanceMon} MON`)
-                : (balanceHidden ? '•••• AUSD' : `${displayAusd} AUSD`)}
-            </Text>
-
-            <View style={styles.balanceFooter}>
-              <Text style={styles.metricGain}>+2.4% today</Text>
-              <View style={styles.sparkline}>
-                {[6, 10, 8, 14, 11, 16, 13].map((h, i) => (
-                  <View key={i} style={[styles.sparkBar, {height: h}]} />
-                ))}
-              </View>
-            </View>
+              <Text style={styles.receiveTapSubtitle}>Get paid</Text>
+            </PressableScale>
           </View>
 
-          <View style={styles.metricTile}>
-            <View style={styles.terminalHeader}>
-              <View style={styles.terminalDotWrap}>
-                <View
-                  style={[
-                    styles.terminalDot,
-                    terminalStatus.ready ? styles.terminalDotOn : styles.terminalDotOff,
-                  ]}
-                />
+          <PressableScale
+            style={styles.directPayBanner}
+            contentStyle={styles.directPayBannerInner}
+            onPress={() => {
+              triggerHaptic.impactMedium();
+              navigation.navigate('SendPayment');
+            }}>
+            <View style={styles.directPayLeft}>
+              <View style={styles.directPayCircle}>
+                <Text style={styles.directPayGlyph}>@</Text>
               </View>
-              <Text style={styles.metricLabel}>Terminal Status</Text>
+              <View style={styles.directPayTextCol}>
+                <Text style={styles.directPayTitle}>Direct Transfer</Text>
+                <Text style={styles.directPaySubtitle} numberOfLines={1}>
+                  Pay @username or address
+                </Text>
+              </View>
             </View>
-
-            <Text style={styles.terminalTitle}>{terminalStatus.label}</Text>
-            <Text style={styles.terminalCaption}>{terminalStatus.caption}</Text>
-
-            <View style={styles.terminalIconWrap}>
-              <ContactlessWave
-                size={30}
-                color={terminalStatus.ready ? '#30D158' : '#8E8E93'}
-              />
-            </View>
-          </View>
-        </View>
+            <Text style={styles.chevronArrow}>›</Text>
+          </PressableScale>
+        </FadeInView>
 
         {/* Transactions */}
+        <FadeInView delay={160} translateY={10}>
         <View style={styles.transactionsSection}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionTitle}>Latest Transactions</Text>
-            <TouchableOpacity
-              onPress={() => navigation.navigate('History')}
-              activeOpacity={0.7}>
+            <PressableScale onPress={() => navigation.navigate('History')}>
               <Text style={styles.viewAllText}>See All ›</Text>
-            </TouchableOpacity>
+            </PressableScale>
           </View>
 
           <View style={styles.transactionCard}>
@@ -459,26 +727,37 @@ export default function HomeScreen() {
             )}
           </View>
         </View>
+        </FadeInView>
       </ScrollView>
+      {profileMenuOpen && (
+        <ProfileDropdown
+          username={username}
+          address={address}
+          profileLetter={profileLetter}
+          copied={copied}
+          onCopyAddress={copyAddress}
+          onDismiss={() => setProfileMenuOpen(false)}
+          onNavigate={destination => {
+            if (destination === 'AccountInfo') {
+              navigation.navigate('AccountInfo');
+            } else {
+              navigation.navigate('Settings');
+            }
+          }}
+        />
+      )}
     </View>
   );
 }
 
-const glass = {
-  fill: 'rgba(255, 255, 255, 0.08)',
-  fillElevated: 'rgba(255, 255, 255, 0.11)',
-  border: 'rgba(255, 255, 255, 0.14)',
-  borderSubtle: 'rgba(255, 255, 255, 0.08)',
-};
-
 const ios = {
-  bg: '#000000',
-  label: '#FFFFFF',
-  secondaryLabel: '#8E8E93',
-  tertiaryLabel: '#636366',
-  blue: '#0A84FF',
-  green: '#30D158',
-  separator: 'rgba(84, 84, 88, 0.65)',
+  bg: colors.background,
+  label: colors.text,
+  secondaryLabel: colors.textMuted,
+  tertiaryLabel: colors.textSubtle,
+  blue: colors.accent,
+  green: colors.success,
+  separator: colors.separator,
 };
 
 const styles = StyleSheet.create({
@@ -491,12 +770,56 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 16,
+    paddingBottom: 120,
   },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 22,
+  },
+  heroRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 22,
+  },
+  heroCopy: {
+    flex: 1,
+    paddingRight: 10,
+  },
+  heroTitle: {
+    color: ios.label,
+    fontSize: 32,
+    lineHeight: 38,
+    fontWeight: '800',
+    letterSpacing: -1.1,
+  },
+  heroTitleAccent: {
+    color: colors.accent,
+    fontSize: 32,
+    lineHeight: 38,
+    fontWeight: '800',
+    letterSpacing: -1.1,
+  },
+  heroDescription: {
+    color: ios.secondaryLabel,
+    fontSize: 16,
+    lineHeight: 22,
+    fontWeight: '400',
+    marginTop: 10,
+  },
+  heroNfcBadge: {
+    width: 54,
+    height: 54,
+    marginTop: 1,
+    borderRadius: 16,
+    backgroundColor: glass.fillElevated,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: glass.borderBright,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadows.soft,
   },
   brandBlock: {
     flexDirection: 'row',
@@ -514,8 +837,8 @@ const styles = StyleSheet.create({
   },
   brandTagline: {
     fontSize: 9,
-    fontWeight: '600',
-    color: ios.tertiaryLabel,
+    fontWeight: '700',
+    color: colors.accent,
     letterSpacing: 1.2,
   },
   headerRight: {
@@ -524,21 +847,18 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   networkPill: {
+    backgroundColor: glass.fillElevated,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: glass.borderBright,
+    borderRadius: 20,
+    ...shadows.soft,
+  },
+  networkPillInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: glass.fill,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: glass.border,
     paddingHorizontal: 10,
     paddingVertical: 7,
-    borderRadius: 20,
     gap: 6,
-  },
-  liveDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-    backgroundColor: ios.green,
   },
   networkText: {
     color: ios.label,
@@ -554,87 +874,379 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: glass.fill,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: glass.border,
+    backgroundColor: colors.accent,
+    overflow: 'hidden',
+    ...shadows.soft,
+  },
+  profileCircleInner: {
+    width: 36,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
   },
   profileLetter: {
-    color: ios.label,
+    color: '#FFFFFF',
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '700',
   },
-  heroRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  heroTextBlock: {
+  profileModalRoot: {
     flex: 1,
-    paddingRight: 12,
   },
-  heroLineWhite: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: ios.label,
-    letterSpacing: -0.6,
-    lineHeight: 34,
+  profileScrim: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: 'rgba(9, 18, 32, 0.28)',
   },
-  heroLineAccent: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: ios.label,
-    letterSpacing: -0.6,
-    lineHeight: 34,
-    marginBottom: 8,
+  profileBackdropPressable: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
   },
-  heroSubtitle: {
-    fontSize: 15,
-    color: ios.secondaryLabel,
-    lineHeight: 20,
-    fontWeight: '400',
-    maxWidth: 260,
-  },
-  heroWaveWrap: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: glass.fill,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: glass.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 4,
-  },
-  cardContainer: {
-    marginBottom: 16,
-  },
-  cardBody: {
-    backgroundColor: glass.fillElevated,
-    borderRadius: 22,
-    padding: 20,
-    height: 198,
-    justifyContent: 'space-between',
-    overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: glass.border,
+  profilePanel: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingBottom: 18,
+    borderBottomLeftRadius: 26,
+    borderBottomRightRadius: 26,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(15, 40, 80, 0.1)',
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
-        shadowOffset: {width: 0, height: 4},
-        shadowOpacity: 0.2,
-        shadowRadius: 12,
+        shadowColor: '#0B1F3A',
+        shadowOffset: {width: 0, height: 10},
+        shadowOpacity: 0.12,
+        shadowRadius: 20,
       },
-      android: {elevation: 2},
+      android: {elevation: 8},
       default: {},
     }),
+  },
+  profilePanelHeader: {
+    minHeight: 36,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  profilePanelEyebrow: {
+    color: colors.textSubtle,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  profilePanelClose: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#F3F6FA',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profilePanelCloseText: {
+    color: colors.textMuted,
+    fontSize: 25,
+    lineHeight: 28,
+    fontWeight: '300',
+  },
+  profileIdentityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  profileMenuAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 18,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  profileMenuAvatarText: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  profileMenuIdentity: {
+    flex: 1,
+  },
+  profileMenuName: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  profileMenuStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    marginTop: 4,
+  },
+  profileMenuStatusText: {
+    color: colors.textMuted,
+    fontSize: 12,
+  },
+  profileAddressCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F5F7FA',
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 10,
+    marginBottom: 12,
+  },
+  profileAddressText: {
+    flex: 1,
+    minWidth: 0,
+  },
+  profileAddressLabel: {
+    color: colors.textSubtle,
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    marginBottom: 3,
+  },
+  profileAddressValue: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 0.15,
+  },
+  profileCopyButton: {
+    backgroundColor: colors.accentWash,
+    borderRadius: 11,
+    paddingHorizontal: 13,
+    paddingVertical: 8,
+  },
+  profileCopyText: {
+    color: colors.accent,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  profileMenuLinks: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 17,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(15, 40, 80, 0.08)',
+    overflow: 'hidden',
+  },
+  profileMenuLink: {
+    minHeight: 55,
+  },
+  profileMenuLinkInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    gap: 11,
+  },
+  profileMenuIcon: {
+    width: 31,
+    height: 31,
+    borderRadius: 11,
+    backgroundColor: colors.accentWash,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profileMenuLinkText: {
+    flex: 1,
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  profileMenuChevron: {
+    color: colors.textSubtle,
+    fontSize: 22,
+    lineHeight: 24,
+  },
+  profileMenuDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.separator,
+    marginLeft: 54,
+  },
+  cardContainer: {
+    marginBottom: 14,
+  },
+  cardFaceStack: {
+    position: 'relative',
+  },
+  cardBody: {
+    backgroundColor: colors.accent,
+    borderRadius: 28,
+    padding: 20,
+    minHeight: 210,
+    justifyContent: 'space-between',
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
+    ...shadows.card,
+  },
+  cardBackBody: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#0875E8',
+    borderRadius: 28,
+    padding: 20,
+    minHeight: 210,
+    justifyContent: 'space-between',
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
+    ...shadows.card,
+  },
+  cardBackOrbLarge: {
+    position: 'absolute',
+    top: -76,
+    right: -42,
+    width: 230,
+    height: 230,
+    borderRadius: 115,
+    backgroundColor: 'rgba(255,255,255,0.13)',
+  },
+  cardBackOrbSmall: {
+    position: 'absolute',
+    bottom: -76,
+    left: -38,
+    width: 190,
+    height: 190,
+    borderRadius: 95,
+    backgroundColor: 'rgba(0, 72, 165, 0.34)',
+  },
+  cardOrbLarge: {
+    position: 'absolute',
+    top: -50,
+    right: -30,
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+  },
+  cardOrbSmall: {
+    position: 'absolute',
+    bottom: -40,
+    left: -20,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(0, 102, 219, 0.45)',
+  },
+  cardGlassEdge: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.45)',
   },
   cardTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    zIndex: 1,
+  },
+  cardFlipHint: {
+    maxWidth: 150,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 18,
+  },
+  cardFlipHintInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  cardFlipHintText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.1,
+  },
+  cardFlipHintChevron: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    lineHeight: 16,
+    fontWeight: '500',
+  },
+  cardBackTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    zIndex: 1,
+  },
+  cardBackBalances: {
+    zIndex: 1,
+  },
+  cardBackBalanceHeading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 7,
+  },
+  cardBackEyebrow: {
+    color: 'rgba(255,255,255,0.72)',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  cardBalanceVisibility: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+  },
+  cardBalanceVisibilityIcon: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 13,
+  },
+  cardBalanceVisibilityText: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  cardBackBalanceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 34,
+  },
+  cardBackTokenLabel: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  cardBackTokenCaption: {
+    color: 'rgba(255,255,255,0.65)',
+    fontSize: 10,
+    marginTop: 1,
+  },
+  cardBackAmount: {
+    color: '#FFFFFF',
+    fontSize: 19,
+    fontWeight: '700',
+    letterSpacing: -0.3,
+  },
+  cardBackUnit: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  cardBackDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(255,255,255,0.23)',
+    marginVertical: 4,
   },
   cardBrand: {
     flexDirection: 'row',
@@ -643,222 +1255,216 @@ const styles = StyleSheet.create({
   },
   cardBrandText: {
     fontSize: 17,
-    fontWeight: '600',
-    color: ios.label,
+    fontWeight: '700',
+    color: '#FFFFFF',
     letterSpacing: -0.3,
   },
-  cardTopRight: {
+  cardChipRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    justifyContent: 'space-between',
+    zIndex: 1,
+    marginTop: 4,
   },
-  monadBadge: {
-    width: 28,
+  cardChip: {
+    width: 36,
     height: 28,
-    borderRadius: 14,
-    backgroundColor: glass.fill,
-    alignItems: 'center',
+    borderRadius: 6,
+    borderWidth: 1.2,
+    borderColor: 'rgba(255,255,255,0.55)',
+    backgroundColor: 'rgba(255,255,255,0.18)',
     justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: glass.borderSubtle,
+    alignItems: 'center',
+    overflow: 'hidden',
   },
-  monadBadgeText: {
-    color: ios.label,
-    fontSize: 12,
-    fontWeight: '600',
+  cardChipInner: {
+    width: '70%',
+    height: '42%',
+    borderWidth: 0.8,
+    borderColor: 'rgba(255,255,255,0.45)',
+    borderRadius: 2,
+  },
+  cardChipH: {
+    position: 'absolute',
+    width: '100%',
+    height: 0.8,
+    backgroundColor: 'rgba(255,255,255,0.4)',
+  },
+  cardChipV: {
+    position: 'absolute',
+    width: 0.8,
+    height: '100%',
+    backgroundColor: 'rgba(255,255,255,0.4)',
+  },
+  cardNetworkPill: {
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  cardNetworkText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.8,
   },
   cardMidRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    zIndex: 1,
+    marginTop: 8,
   },
   cardNumberText: {
     fontSize: 15,
-    fontWeight: '500',
-    color: ios.label,
-    letterSpacing: 1.4,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    letterSpacing: 1.6,
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
   copyChip: {
-    backgroundColor: glass.fill,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     paddingHorizontal: 12,
     paddingVertical: 5,
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: glass.borderSubtle,
+    borderColor: 'rgba(255,255,255,0.35)',
   },
   copiedChip: {
-    backgroundColor: 'rgba(48, 209, 88, 0.18)',
-    borderColor: 'rgba(48, 209, 88, 0.3)',
+    backgroundColor: 'rgba(52, 199, 89, 0.35)',
+    borderColor: 'rgba(255,255,255,0.4)',
   },
   copyChipText: {
-    color: ios.label,
+    color: '#FFFFFF',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   cardBottomRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
+    zIndex: 1,
   },
   cardHolderLabel: {
     fontSize: 10,
-    fontWeight: '500',
-    color: ios.secondaryLabel,
-    letterSpacing: 0.8,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.7)',
+    letterSpacing: 0.9,
     marginBottom: 3,
   },
   cardHolderName: {
     fontSize: 15,
-    fontWeight: '600',
-    color: ios.label,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   cardTypeBadge: {
-    backgroundColor: glass.fill,
+    backgroundColor: 'rgba(255,255,255,0.18)',
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: glass.borderSubtle,
+    borderColor: 'rgba(255,255,255,0.3)',
   },
   cardTypeText: {
     fontSize: 10,
-    fontWeight: '600',
-    color: ios.secondaryLabel,
-    letterSpacing: 0.4,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
   actionRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 12,
     marginBottom: 12,
   },
   sendTapButton: {
-    flex: 1.15,
-    borderRadius: 16,
+    flex: 1,
+    borderRadius: 22,
     backgroundColor: ios.blue,
-    minHeight: 74,
-    justifyContent: 'center',
+    minHeight: 112,
+    overflow: 'hidden',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(255,255,255,0.45)',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(0, 60, 140, 0.25)',
+    ...shadows.soft,
   },
   sendTapContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  sendTapLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
     flex: 1,
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    minHeight: 112,
   },
   sendTapIconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.22)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   sendTapTitle: {
-    color: ios.label,
-    fontSize: 15,
-    fontWeight: '600',
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+    marginTop: 14,
   },
   sendTapSubtitle: {
-    color: 'rgba(255, 255, 255, 0.75)',
-    fontSize: 12,
-    fontWeight: '400',
+    color: 'rgba(255, 255, 255, 0.78)',
+    fontSize: 13,
+    fontWeight: '500',
     marginTop: 2,
   },
-  sendTapChevron: {
-    color: ios.label,
-    fontSize: 20,
-    fontWeight: '400',
-    marginLeft: 4,
-  },
   receiveTapButton: {
-    flex: 0.85,
-    backgroundColor: glass.fill,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: glass.border,
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    minHeight: 74,
-    justifyContent: 'center',
-    gap: 8,
+    flex: 1,
+    minHeight: 112,
+    ...premiumCard,
+    borderRadius: 22,
+  },
+  receiveTapContent: {
+    flex: 1,
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    minHeight: 112,
   },
   receiveIconWrap: {
-    width: 22,
-    height: 22,
-    position: 'relative',
-  },
-  scannerCornerTL: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: 8,
-    height: 8,
-    borderTopWidth: 2,
-    borderLeftWidth: 2,
-    borderColor: '#FFFFFF',
-    borderTopLeftRadius: 2,
-  },
-  scannerCornerTR: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    width: 8,
-    height: 8,
-    borderTopWidth: 2,
-    borderRightWidth: 2,
-    borderColor: '#FFFFFF',
-    borderTopRightRadius: 2,
-  },
-  scannerCornerBL: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    width: 8,
-    height: 8,
-    borderBottomWidth: 2,
-    borderLeftWidth: 2,
-    borderColor: '#FFFFFF',
-    borderBottomLeftRadius: 2,
-  },
-  scannerCornerBR: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 8,
-    height: 8,
-    borderBottomWidth: 2,
-    borderRightWidth: 2,
-    borderColor: '#FFFFFF',
-    borderBottomRightRadius: 2,
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: colors.accentWash,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   receiveTapTitle: {
     color: ios.label,
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+    marginTop: 14,
   },
   receiveTapSubtitle: {
     color: ios.secondaryLabel,
-    fontSize: 12,
-    fontWeight: '400',
+    fontSize: 13,
+    fontWeight: '500',
     marginTop: 2,
   },
   directPayBanner: {
+    marginBottom: 18,
+    ...premiumCard,
+    borderRadius: 18,
+  },
+  directPayBannerInner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: glass.fill,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: glass.border,
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
   },
   directPayLeft: {
     flexDirection: 'row',
@@ -869,146 +1475,65 @@ const styles = StyleSheet.create({
   directPayCircle: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: glass.fillElevated,
+    borderRadius: 13,
+    backgroundColor: colors.accentWash,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: glass.borderSubtle,
   },
   directPayGlyph: {
-    color: ios.label,
-    fontSize: 18,
-    fontWeight: '600',
+    color: colors.accent,
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  directPayTextCol: {
+    flex: 1,
+    paddingRight: 8,
   },
   directPayTitle: {
     fontSize: 15,
-    fontWeight: '600',
-    color: ios.label,
-  },
-  directPaySubtitle: {
-    fontSize: 12,
-    color: ios.secondaryLabel,
-    marginTop: 2,
-    maxWidth: 240,
-  },
-  chevronArrow: {
-    fontSize: 20,
-    color: ios.tertiaryLabel,
-    fontWeight: '400',
-    marginLeft: 8,
-  },
-  metricGrid: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 22,
-  },
-  metricTile: {
-    flex: 1,
-    backgroundColor: glass.fill,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: glass.border,
-    borderRadius: 16,
-    padding: 14,
-    minHeight: 148,
-    overflow: 'hidden',
-  },
-  metricTileHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  metricLabel: {
-    fontSize: 13,
-    color: ios.secondaryLabel,
-    fontWeight: '500',
-  },
-  eyeIcon: {
-    color: ios.secondaryLabel,
-    fontSize: 14,
-  },
-  metricValue: {
-    fontSize: 22,
     fontWeight: '700',
     color: ios.label,
-    letterSpacing: -0.4,
+    letterSpacing: -0.2,
   },
-  metricUsd: {
+  directPaySubtitle: {
     fontSize: 13,
     color: ios.secondaryLabel,
     marginTop: 2,
     fontWeight: '400',
   },
-  balanceFooter: {
+  chevronArrow: {
+    fontSize: 22,
+    color: ios.tertiaryLabel,
+    fontWeight: '400',
+    marginLeft: 4,
+  },
+  terminalRow: {
+    ...premiumCard,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 18,
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 12,
   },
-  metricGain: {
-    fontSize: 12,
-    color: ios.green,
-    fontWeight: '500',
-  },
-  sparkline: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 3,
-    height: 18,
-  },
-  sparkBar: {
-    width: 4,
-    borderRadius: 2,
-    backgroundColor: 'rgba(10, 132, 255, 0.65)',
-  },
-  terminalHeader: {
+  terminalLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 6,
-  },
-  terminalDotWrap: {
-    width: 10,
-    height: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  terminalDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-  },
-  terminalDotOn: {
-    backgroundColor: ios.green,
-  },
-  terminalDotOff: {
-    backgroundColor: ios.secondaryLabel,
+    gap: 10,
+    flex: 1,
   },
   terminalTitle: {
-    fontSize: 17,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
     color: ios.label,
-    marginTop: 2,
+    letterSpacing: -0.2,
   },
   terminalCaption: {
     fontSize: 12,
     color: ios.secondaryLabel,
-    marginTop: 2,
+    marginTop: 1,
     fontWeight: '400',
-  },
-  terminalIconWrap: {
-    position: 'absolute',
-    right: 10,
-    bottom: 10,
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: glass.fill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: glass.borderSubtle,
   },
   transactionsSection: {
     marginBottom: 10,
@@ -1028,16 +1553,13 @@ const styles = StyleSheet.create({
   viewAllText: {
     fontSize: 15,
     color: ios.blue,
-    fontWeight: '400',
+    fontWeight: '600',
   },
   transactionCard: {
-    backgroundColor: glass.fill,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: glass.border,
-    borderRadius: 16,
     paddingHorizontal: 14,
     paddingVertical: 4,
-    overflow: 'hidden',
+    ...premiumCard,
+    borderRadius: 20,
   },
   emptyFeed: {
     paddingVertical: 28,
@@ -1053,29 +1575,6 @@ const styles = StyleSheet.create({
     color: ios.secondaryLabel,
     marginTop: 4,
     textAlign: 'center',
-  },
-  tokenSelector: {
-    flexDirection: 'row',
-    backgroundColor: '#1C1C1E',
-    borderRadius: 16,
-    padding: 2,
-    alignItems: 'center',
-  },
-  tokenOption: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 14,
-  },
-  tokenOptionActive: {
-    backgroundColor: '#3A3A3C',
-  },
-  tokenOptionText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#8E8E93',
-  },
-  tokenOptionTextActive: {
-    color: '#FFFFFF',
   },
   txDivider: {
     height: StyleSheet.hairlineWidth,
@@ -1101,7 +1600,7 @@ const styles = StyleSheet.create({
   txIconBubble: {
     width: 38,
     height: 38,
-    borderRadius: 19,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1111,7 +1610,7 @@ const styles = StyleSheet.create({
   },
   txCounterparty: {
     fontSize: 15,
-    fontWeight: '500',
+    fontWeight: '600',
     color: ios.label,
   },
   txTime: {
@@ -1125,7 +1624,7 @@ const styles = StyleSheet.create({
   },
   txAmount: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   txAmountSent: {
     color: ios.label,
@@ -1136,24 +1635,24 @@ const styles = StyleSheet.create({
   txBadge: {
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 6,
+    borderRadius: 8,
   },
   txBadgeTap: {
-    backgroundColor: 'rgba(48, 209, 88, 0.14)',
+    backgroundColor: colors.accentWash,
   },
   txBadgeDirect: {
-    backgroundColor: glass.fillElevated,
+    backgroundColor: colors.surfaceSolidElevated,
   },
   txBadgeReceived: {
-    backgroundColor: 'rgba(48, 209, 88, 0.16)',
+    backgroundColor: 'rgba(52, 199, 89, 0.14)',
   },
   txBadgeText: {
     fontSize: 10,
-    fontWeight: '500',
+    fontWeight: '600',
     letterSpacing: 0.1,
   },
   txBadgeTextTap: {
-    color: ios.green,
+    color: colors.accent,
   },
   txBadgeTextDirect: {
     color: ios.secondaryLabel,

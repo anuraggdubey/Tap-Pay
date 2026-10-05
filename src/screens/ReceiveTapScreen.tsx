@@ -31,6 +31,7 @@ import NfcNotAvailableModal from '../components/NfcNotAvailableModal';
 import NfcWaitingCard from '../components/NfcWaitingCard';
 import {triggerHaptic} from '../utils/haptics';
 import {formatMon, truncateAddress} from '../utils/format';
+import {colors} from '../theme';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'ReceiveTap'>;
@@ -168,7 +169,7 @@ export default function ReceiveTapScreen({navigation}: Props) {
   return (
     <View style={styles.root}>
       <NfcWaitingCard
-        accent="green"
+        accent="blue"
         phase={isReceiving ? 'searching' : 'broadcasting'}
         direction="receive"
         onClose={() => navigation.goBack()}
@@ -200,8 +201,9 @@ const styles = StyleSheet.create({
   walletHint: {
     marginTop: 18,
     fontSize: 13,
-    color: 'rgba(255,255,255,0.55)',
+    color: colors.textMuted,
     fontFamily: 'monospace',
     fontWeight: '600',
+    textAlign: 'center',
   },
 });

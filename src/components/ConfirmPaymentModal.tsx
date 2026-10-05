@@ -1,19 +1,21 @@
 /**
- * ConfirmPaymentModal — Apple Pay-style payment confirmation sheet
- * Displays recipient, amount, estimated gas, and total cost before broadcast.
+ * ConfirmPaymentModal — Apple Pay-style confirmation sheet (light glass).
  */
 
-import React from 'react';
+import React, {useEffect, useRef} from 'react';
 import {
   View,
   Text,
   Modal,
-  TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  Animated,
+  Easing,
 } from 'react-native';
 import {formatMon, truncateAddress} from '../utils/format';
 import {MONAD_CONFIG} from '../config/monad';
+import PressableScale from './PressableScale';
+import {colors, glass, motion, shadows} from '../theme';
 
 interface Props {
   visible: boolean;
@@ -27,6 +29,13 @@ interface Props {
   tokenSymbol?: string;
   displayAmount?: string;
 }
+
+const EASE_SHEET = Easing.bezier(
+  motion.easeSheet.x1,
+  motion.easeSheet.y1,
+  motion.easeSheet.x2,
+  motion.easeSheet.y2,
+);
 
 export default function ConfirmPaymentModal({
   visible,
@@ -43,17 +52,47 @@ export default function ConfirmPaymentModal({
   const isMon = tokenSymbol === 'MON';
   const totalCostWei = amountWei + gasCostWei;
   const amountStr = isMon ? formatMon(amountWei) : `${displayAmount} ${tokenSymbol}`;
-  const totalStr = isMon ? formatMon(totalCostWei) : `${displayAmount} ${tokenSymbol} + ${formatMon(gasCostWei)}`;
+  const totalStr = isMon
+    ? formatMon(totalCostWei)
+    : `${displayAmount} ${tokenSymbol} + ${formatMon(gasCostWei)}`;
+
+  const translateY = useRef(new Animated.Value(40)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!visible) {
+      translateY.setValue(40);
+      opacity.setValue(0);
+      return;
+    }
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: motion.sheetMs,
+        easing: EASE_SHEET,
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: motion.sheetMs,
+        easing: EASE_SHEET,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [visible, translateY, opacity]);
 
   return (
     <Modal
       visible={visible}
       transparent
-      animationType="slide"
+      animationType="none"
       onRequestClose={onCancel}>
       <View style={styles.overlay}>
-        <View style={styles.sheetContainer}>
-          {/* Top Grabber Indicator */}
+        <Animated.View
+          style={[
+            styles.sheetContainer,
+            {opacity, transform: [{translateY}]},
+          ]}>
           <View style={styles.grabber} />
 
           <Text style={styles.title}>Confirm Payment</Text>
@@ -61,12 +100,10 @@ export default function ConfirmPaymentModal({
             {MONAD_CONFIG.chainName} • Chain {MONAD_CONFIG.chainId} • ~1s Finality
           </Text>
 
-          {/* Amount Display */}
           <View style={styles.amountBox}>
             <Text style={styles.amountNumber}>{amountStr}</Text>
           </View>
 
-          {/* Details Card */}
           <View style={styles.card}>
             <View style={styles.row}>
               <Text style={styles.label}>To</Text>
@@ -93,9 +130,9 @@ export default function ConfirmPaymentModal({
             </View>
           </View>
 
-          {/* Action Buttons */}
-          <TouchableOpacity
+          <PressableScale
             style={[styles.confirmButton, loading && styles.disabledButton]}
+            contentStyle={styles.confirmButtonInner}
             onPress={onConfirm}
             disabled={loading}>
             {loading ? (
@@ -103,15 +140,16 @@ export default function ConfirmPaymentModal({
             ) : (
               <Text style={styles.confirmText}>Confirm & Pay</Text>
             )}
-          </TouchableOpacity>
+          </PressableScale>
 
-          <TouchableOpacity
+          <PressableScale
             style={styles.cancelButton}
+            contentStyle={styles.cancelButtonInner}
             onPress={onCancel}
             disabled={loading}>
             <Text style={styles.cancelText}>Cancel</Text>
-          </TouchableOpacity>
-        </View>
+          </PressableScale>
+        </Animated.View>
       </View>
     </Modal>
   );
@@ -120,59 +158,60 @@ export default function ConfirmPaymentModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: 'rgba(11, 18, 32, 0.35)',
     justifyContent: 'flex-end',
   },
   sheetContainer: {
-    backgroundColor: '#15151E',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    backgroundColor: glass.fillHeavy,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 36,
-    borderTopWidth: 1,
-    borderTopColor: '#252533',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderColor: glass.borderBright,
+    ...shadows.heavy,
   },
   grabber: {
     width: 36,
-    height: 4,
-    backgroundColor: '#38384E',
-    borderRadius: 2,
+    height: 5,
+    backgroundColor: 'rgba(60, 60, 67, 0.22)',
+    borderRadius: 3,
     alignSelf: 'center',
     marginBottom: 16,
   },
   title: {
     fontSize: 20,
-    fontWeight: '800',
-    color: '#FFFFFF',
+    fontWeight: '700',
+    color: colors.text,
     textAlign: 'center',
     marginBottom: 4,
-    letterSpacing: -0.3,
+    letterSpacing: -0.4,
   },
   networkBadge: {
-    fontSize: 12,
-    color: '#8E8E93',
+    fontSize: 13,
+    color: colors.textMuted,
     textAlign: 'center',
     marginBottom: 18,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   amountBox: {
     alignItems: 'center',
     marginBottom: 18,
   },
   amountNumber: {
-    fontSize: 38,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: -0.5,
+    fontSize: 40,
+    fontWeight: '700',
+    color: colors.accent,
+    letterSpacing: -1,
   },
   card: {
-    backgroundColor: '#1C1C26',
-    borderRadius: 14,
+    backgroundColor: colors.surfaceSolidElevated,
+    borderRadius: 18,
     padding: 16,
     marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#262638',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: glass.borderSubtle,
   },
   row: {
     flexDirection: 'row',
@@ -181,17 +220,17 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   divider: {
-    height: 1,
-    backgroundColor: '#262638',
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.separator,
     marginVertical: 10,
   },
   label: {
     fontSize: 13,
-    color: '#8E8E93',
+    color: colors.textMuted,
   },
   value: {
     fontSize: 13,
-    color: '#D0D0E8',
+    color: colors.text,
     fontWeight: '600',
   },
   recipientContainer: {
@@ -199,47 +238,55 @@ const styles = StyleSheet.create({
   },
   username: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#6E54FF',
+    fontWeight: '600',
+    color: colors.accent,
   },
   address: {
     fontSize: 12,
-    color: '#8E8E93',
+    color: colors.textMuted,
     fontFamily: 'monospace',
   },
   totalLabel: {
     fontSize: 15,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontWeight: '600',
+    color: colors.text,
   },
   totalValue: {
     fontSize: 15,
-    fontWeight: '800',
-    color: '#10B981',
+    fontWeight: '700',
+    color: colors.accent,
   },
   confirmButton: {
-    backgroundColor: '#6E54FF',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
+    backgroundColor: colors.accent,
+    borderRadius: 16,
     marginBottom: 10,
+    overflow: 'hidden',
+  },
+  confirmButtonInner: {
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 52,
   },
   disabledButton: {
-    opacity: 0.6,
+    opacity: 0.55,
   },
   confirmText: {
     fontSize: 16,
-    fontWeight: '800',
-    color: '#FFFFFF',
+    fontWeight: '700',
+    color: colors.textOnAccent,
     letterSpacing: -0.2,
   },
   cancelButton: {
+    borderRadius: 12,
+  },
+  cancelButtonInner: {
     paddingVertical: 12,
     alignItems: 'center',
   },
   cancelText: {
-    fontSize: 14,
-    color: '#8E8E93',
+    fontSize: 15,
+    color: colors.textMuted,
     fontWeight: '600',
   },
 });

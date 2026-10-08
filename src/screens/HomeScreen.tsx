@@ -399,55 +399,20 @@ export default function HomeScreen() {
             colors={[colors.accent]}
           />
         }>
-        {/* Header */}
+        {/* Header — profile only */}
         <FadeInView delay={0} translateY={6}>
           <View style={styles.topBar}>
-            <View style={styles.brandBlock}>
-              <BrandLogo size={34} color={colors.accent} />
-              <View style={styles.brandTextBlock}>
-                <Text style={styles.brandTitle}>TapPay</Text>
-                <Text style={styles.brandTagline}>TAP • PAY • GO</Text>
-              </View>
-            </View>
-
-            <View style={styles.headerRight}>
-              <PressableScale
-                style={styles.networkPill}
-                onPress={() => navigation.navigate('NetworkInfo')}>
-                <View style={styles.networkPillInner}>
-                  <LivePulseDot active size={6} />
-                  <Text style={styles.networkText}>Monad</Text>
-                  <Text style={styles.chevronSmall}>⌄</Text>
-                </View>
-              </PressableScale>
-
-              <PressableScale
-                style={styles.profileCircle}
-                contentStyle={styles.profileCircleInner}
-                accessibilityLabel="Open profile menu"
-                onPress={() => {
-                  triggerHaptic.selection();
-                  setProfileMenuOpen(true);
-                }}>
-                <Text style={styles.profileLetter}>{profileLetter}</Text>
-              </PressableScale>
-            </View>
-          </View>
-        </FadeInView>
-
-        {/* Home hero */}
-        <FadeInView delay={20} translateY={8}>
-          <View style={styles.heroRow}>
-            <View style={styles.heroCopy}>
-              <Text style={styles.heroTitle}>Your Money.</Text>
-              <Text style={styles.heroTitleAccent}>Without Limits.</Text>
-              <Text style={styles.heroDescription}>
-                Pay in-store with NFC or online on Monad.
-              </Text>
-            </View>
-            <View style={styles.heroNfcBadge}>
-              <ContactlessWave size={28} color={colors.accent} />
-            </View>
+            <View style={styles.topBarSpacer} />
+            <PressableScale
+              style={styles.profileCircle}
+              contentStyle={styles.profileCircleInner}
+              accessibilityLabel="Open profile menu"
+              onPress={() => {
+                triggerHaptic.selection();
+                setProfileMenuOpen(true);
+              }}>
+              <Text style={styles.profileLetter}>{profileLetter}</Text>
+            </PressableScale>
           </View>
         </FadeInView>
 
@@ -775,71 +740,11 @@ const styles = StyleSheet.create({
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 22,
+    justifyContent: 'flex-end',
+    marginBottom: 14,
   },
-  heroRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    marginBottom: 22,
-  },
-  heroCopy: {
+  topBarSpacer: {
     flex: 1,
-    paddingRight: 10,
-  },
-  heroTitle: {
-    color: ios.label,
-    fontSize: 32,
-    lineHeight: 38,
-    fontWeight: '800',
-    letterSpacing: -1.1,
-  },
-  heroTitleAccent: {
-    color: colors.accent,
-    fontSize: 32,
-    lineHeight: 38,
-    fontWeight: '800',
-    letterSpacing: -1.1,
-  },
-  heroDescription: {
-    color: ios.secondaryLabel,
-    fontSize: 16,
-    lineHeight: 22,
-    fontWeight: '400',
-    marginTop: 10,
-  },
-  heroNfcBadge: {
-    width: 54,
-    height: 54,
-    marginTop: 1,
-    borderRadius: 16,
-    backgroundColor: glass.fillElevated,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: glass.borderBright,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...shadows.soft,
-  },
-  brandBlock: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  brandTextBlock: {
-    gap: 1,
-  },
-  brandTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: ios.label,
-    letterSpacing: -0.4,
-  },
-  brandTagline: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: colors.accent,
-    letterSpacing: 1.2,
   },
   headerRight: {
     flexDirection: 'row',

@@ -10,14 +10,10 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Linking,
-  TouchableOpacity,
 } from 'react-native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import {MONAD_CONFIG} from '../config/monad';
-import {triggerHaptic} from '../utils/haptics';
-import {FaucetIcon, ExplorerIcon, ExternalLinkIcon} from '../components/AppIcons';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'NetworkInfo'>;
@@ -96,76 +92,6 @@ export default function NetworkScreen({_navigation}: Props) {
             </View>
           </View>
         </View>
-      </View>
-
-      {/* Contract Addresses */}
-      <Text style={styles.sectionHeader}>CONTRACTS</Text>
-      <View style={styles.card}>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoKey}>Username Registry</Text>
-          <Text style={[styles.infoVal, styles.monoSmall]}>
-            {MONAD_CONFIG.contracts.usernameRegistry || 'Not deployed'}
-          </Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoKey}>TapPay Ledger</Text>
-          <Text style={[styles.infoVal, styles.monoSmall]}>
-            {MONAD_CONFIG.contracts.tapPayLedger || 'Not deployed'}
-          </Text>
-        </View>
-        <View style={[styles.infoRow, {borderBottomWidth: 0}]}>
-          <Text style={styles.infoKey}>Multi-Token Ledger</Text>
-          <Text style={[styles.infoVal, styles.monoSmall]}>
-            {MONAD_CONFIG.contracts.multiTokenLedger || 'Not deployed'}
-          </Text>
-        </View>
-      </View>
-
-      {/* Quick Links (Clean Monochromatic — No highlighted colored avatars) */}
-      <Text style={styles.sectionHeader}>NETWORK RESOURCES</Text>
-      <View style={styles.card}>
-        {MONAD_CONFIG.faucetUrl?.trim() ? (
-          <>
-            <TouchableOpacity
-              style={styles.linkRow}
-              activeOpacity={0.7}
-              onPress={() => {
-                triggerHaptic.selection();
-                Linking.openURL(MONAD_CONFIG.faucetUrl);
-              }}>
-              <View style={styles.linkLeft}>
-                <View style={styles.linkIconNeutral}>
-                  <FaucetIcon size={16} color="#FFFFFF" />
-                </View>
-                <View>
-                  <Text style={styles.linkTitle}>Monad Faucet</Text>
-                  <Text style={styles.linkSubtitle}>Request MON tokens</Text>
-                </View>
-              </View>
-              <ExternalLinkIcon size={16} color="#8E8E93" />
-            </TouchableOpacity>
-            <View style={styles.rpcDivider} />
-          </>
-        ) : null}
-
-        <TouchableOpacity
-          style={styles.linkRow}
-          activeOpacity={0.7}
-          onPress={() => {
-            triggerHaptic.selection();
-            Linking.openURL(MONAD_CONFIG.blockExplorer.url);
-          }}>
-          <View style={styles.linkLeft}>
-            <View style={styles.linkIconNeutral}>
-              <ExplorerIcon size={16} color="#0A84FF" />
-            </View>
-            <View>
-              <Text style={styles.linkTitle}>{MONAD_CONFIG.blockExplorer.name}</Text>
-              <Text style={styles.linkSubtitle}>View transactions & blocks</Text>
-            </View>
-          </View>
-          <ExternalLinkIcon size={16} color="#8E8E93" />
-        </TouchableOpacity>
       </View>
 
       {/* Performance Info */}

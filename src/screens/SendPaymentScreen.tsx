@@ -17,6 +17,7 @@ import {
   Platform,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useRoute} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {ethers} from 'ethers';
 import {useWallet} from '../context/WalletContext';
@@ -51,8 +52,13 @@ const KEYS = [
   ['.', '0', '⌫'],
 ] as const;
 
+/** Clearance so primary CTA sits above the floating tab capsule */
+const FLOATING_TAB_CLEARANCE = 100;
+
 export default function SendPaymentScreen({navigation}: Props) {
   const insets = useSafeAreaInsets();
+  const route = useRoute();
+  const isPayTab = route.name === 'Pay';
   const {address, balance, refreshBalance} = useWallet();
   const [mode, setMode] = useState<PayMode>('username');
 
@@ -77,8 +83,14 @@ export default function SendPaymentScreen({navigation}: Props) {
   const [balanceCheckData, setBalanceCheckData] = useState<BalanceCheckResult | null>(null);
 
   useEffect(() => {
-    navigation.setOptions({headerShown: !resolvedAddress});
-  }, [navigation, resolvedAddress]);
+    // Tab route is named "Pay" — never show the native "Pay" header there.
+    // Stack "SendPayment" keeps a back header until amount entry.
+    if (isPayTab) {
+      navigation.setOptions({headerShown: false});
+    } else {
+      navigation.setOptions({headerShown: !resolvedAddress});
+    }
+  }, [navigation, resolvedAddress, isPayTab]);
 
   const switchMode = (newMode: PayMode) => {
     triggerHaptic.selection();
@@ -299,11 +311,13 @@ export default function SendPaymentScreen({navigation}: Props) {
 
   // Cash App-style amount entry (same pattern as NFC SendTap)
   if (resolvedAddress) {
+    const amountBottomPad =
+      insets.bottom + 12 + (isPayTab ? FLOATING_TAB_CLEARANCE : 24);
     return (
       <View
         style={[
           styles.payRoot,
-          {paddingTop: insets.top + 8, paddingBottom: insets.bottom + 12},
+          {paddingTop: insets.top + 8, paddingBottom: amountBottomPad},
         ]}>
         <View style={styles.payHeader}>
           <TouchableOpacity
@@ -410,7 +424,10 @@ export default function SendPaymentScreen({navigation}: Props) {
         style={styles.scrollView}
         contentContainerStyle={[
           styles.content,
-          {paddingTop: insets.top + 12, paddingBottom: 120},
+          {
+            paddingTop: isPayTab ? insets.top + 8 : 8,
+            paddingBottom: 120,
+          },
         ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled">
@@ -514,7 +531,13 @@ const styles = StyleSheet.create({
     paddingBottom: 120,
   },
   header: {
-    marginBottom: 20,
+    marginBottom: 14,
+  },
+  pageTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: -0.4,
   },
   pageSubtitle: {
     fontSize: 14,

@@ -8,12 +8,9 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Linking,
-  TouchableOpacity,
 } from 'react-native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../navigation/AppNavigator';
-import {triggerHaptic} from '../utils/haptics';
 import BrandLogo from '../components/BrandLogo';
 
 import {
@@ -21,8 +18,6 @@ import {
   UserIcon,
   KeyIcon,
   GlobeIcon,
-  InfoIcon,
-  ExternalLinkIcon,
 } from '../components/AppIcons';
 
 type Props = {
@@ -121,50 +116,6 @@ export default function AboutScreen({navigation}: Props) {
           <Text style={styles.infoKey}>Data Policy</Text>
           <Text style={styles.infoVal}>Keys never leave device</Text>
         </View>
-      </View>
-
-      {/* Built On */}
-      <Text style={styles.sectionHeader}>BUILT ON</Text>
-      <View style={styles.card}>
-        <TouchableOpacity
-          style={styles.linkRow}
-          activeOpacity={0.7}
-          onPress={() => {
-            triggerHaptic.impactMedium();
-            Linking.openURL('https://monad.xyz');
-          }}>
-          <View style={styles.linkLeft}>
-            <View style={styles.featureIconBox}>
-              <GlobeIcon size={16} color="#0A84FF" />
-            </View>
-            <View>
-              <Text style={styles.linkTitle}>Monad Blockchain</Text>
-              <Text style={styles.linkSubtitle}>monad.xyz</Text>
-            </View>
-          </View>
-          <ExternalLinkIcon size={16} color="#8E8E93" />
-        </TouchableOpacity>
-
-        <View style={styles.featureDivider} />
-
-        <TouchableOpacity
-          style={styles.linkRow}
-          activeOpacity={0.7}
-          onPress={() => {
-            triggerHaptic.impactMedium();
-            Linking.openURL('https://docs.monad.xyz');
-          }}>
-          <View style={styles.linkLeft}>
-            <View style={styles.featureIconBox}>
-              <InfoIcon size={16} color="#0A84FF" />
-            </View>
-            <View>
-              <Text style={styles.linkTitle}>Monad Documentation</Text>
-              <Text style={styles.linkSubtitle}>docs.monad.xyz</Text>
-            </View>
-          </View>
-          <ExternalLinkIcon size={16} color="#8E8E93" />
-        </TouchableOpacity>
       </View>
 
       {/* Footer */}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { ChevronDown, Menu, X } from 'lucide-react';
 
 interface NavbarProps {
@@ -7,13 +7,26 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ onJoinWaitlist }) => {
+  const location = useLocation();
+  const isSubpage = ['/docs', '/waitlist', '/download'].includes(location.pathname);
+  const isDocsPage = location.pathname === '/docs';
+
   const [isDarkNav, setIsDarkNav] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 15);
+
+      if (isSubpage) {
+        setIsDarkNav(false);
+        return;
+      }
 
       const sec = document.getElementById('security');
       if (sec) {
@@ -29,14 +42,15 @@ export const Navbar: React.FC<NavbarProps> = ({ onJoinWaitlist }) => {
     window.addEventListener('scroll', handleScroll, { passive: true });
     handleScroll();
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [isSubpage]);
 
+  const navSolid = isScrolled || isSubpage;
   const splitClass = `nav-download-split nav-download-split-desktop ${isDarkNav ? 'is-dark' : ''}`;
 
   return (
     <>
       <header
-        className={`site-navbar-header ${isScrolled ? 'is-scrolled' : ''} ${isDarkNav ? 'is-dark' : ''}`}
+        className={`site-navbar-header ${navSolid ? 'is-scrolled' : ''} ${isDarkNav ? 'is-dark' : ''}`}
         style={{
           position: 'fixed',
           top: 0,
@@ -109,7 +123,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onJoinWaitlist }) => {
               <span>Download</span>
               <ChevronDown size={14} opacity={0.6} />
             </Link>
-            <Link to="/docs" className="phantom-nav-item">
+            <Link
+              to="/docs"
+              className="phantom-nav-item"
+              style={isDocsPage ? { background: 'rgba(26, 26, 26, 0.08)' } : undefined}
+              aria-current={isDocsPage ? 'page' : undefined}
+            >
               <span>Docs</span>
               <ChevronDown size={14} opacity={0.6} />
             </Link>

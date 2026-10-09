@@ -54,12 +54,13 @@ export const Footer: React.FC<FooterProps> = ({ onJoinWaitlist }) => {
   return (
     <footer className="site-footer-editorial">
       <div className="phantom-container">
-        <div className="footer-editorial-grid scroll-reveal">
+        <div className="footer-editorial-grid">
           <div className="footer-editorial-col">
             <h3 className="footer-editorial-col-title">Product</h3>
             <nav className="footer-editorial-links" aria-label="Product">
               <Link to="/docs" className="footer-editorial-link">Documentation</Link>
               <Link to="/#how-it-works" className="footer-editorial-link">Features</Link>
+              <Link to="/#watch-demo" className="footer-editorial-link">Product film</Link>
               <Link to="/#demo" className="footer-editorial-link">NFC Simulator</Link>
               <Link to="/download" className="footer-editorial-link">Download</Link>
               <Link to="/waitlist" className="footer-editorial-link">Waitlist</Link>
@@ -70,7 +71,7 @@ export const Footer: React.FC<FooterProps> = ({ onJoinWaitlist }) => {
             </nav>
           </div>
 
-          <div className="footer-editorial-col">
+          <div className="footer-editorial-col footer-editorial-col--mobile-hide">
             <h3 className="footer-editorial-col-title">Developers &amp; Docs</h3>
             <nav className="footer-editorial-links" aria-label="Developers">
               <Link to="/docs" className="footer-editorial-link">TapPay Docs</Link>
@@ -103,7 +104,7 @@ export const Footer: React.FC<FooterProps> = ({ onJoinWaitlist }) => {
             </p>
           </div>
 
-          <div className="footer-editorial-col">
+          <div className="footer-editorial-col footer-editorial-col--mobile-hide">
             <h3 className="footer-editorial-col-title">Network</h3>
             <p className="footer-editorial-meta">Monad Mainnet · Chain 143</p>
             <p className="footer-editorial-locales">
@@ -114,7 +115,7 @@ export const Footer: React.FC<FooterProps> = ({ onJoinWaitlist }) => {
             </a>
           </div>
 
-          <div className="footer-editorial-col">
+          <div className="footer-editorial-col footer-editorial-col--mobile-hide">
             <h3 className="footer-editorial-col-title">Trust &amp; Security</h3>
             <nav className="footer-editorial-links" aria-label="Security">
               <Link to="/#security" className="footer-editorial-link">Non-custodial keys</Link>

@@ -4,50 +4,10 @@
   color: var(--text-dark);
 }
 
-.docs-topbar {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  background: rgba(246, 244, 240, 0.92);
-  backdrop-filter: blur(16px);
-  border-bottom: 1px solid rgba(26, 26, 26, 0.08);
-}
-
-.docs-topbar-inner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 0;
-  gap: 16px;
-}
-
-.docs-logo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-weight: 800;
-  font-size: 20px;
-  letter-spacing: -0.02em;
-  color: var(--text-dark);
-  text-decoration: none;
-}
-
-.docs-topbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.docs-topbar-link {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-dark-muted);
-  text-decoration: none;
-}
-
-.docs-topbar-link:hover {
-  color: var(--text-dark);
+.docs-main {
+  position: relative;
+  z-index: 1;
+  padding-top: 96px;
 }
 
 .docs-hero {
@@ -102,7 +62,7 @@
 
 .docs-sidebar {
   position: sticky;
-  top: 88px;
+  top: 112px;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -132,7 +92,7 @@
 
 .docs-section {
   margin-bottom: 48px;
-  scroll-margin-top: 96px;
+  scroll-margin-top: 120px;
 }
 
 .docs-section h2 {
@@ -332,6 +292,7 @@
   .docs-layout {
     grid-template-columns: 1fr;
     gap: 0;
+    padding-bottom: 28px;
   }
 
   .docs-sidebar {
@@ -340,5 +301,29 @@
 
   .docs-mobile-nav {
     display: flex;
+  }
+
+  .docs-hero {
+    padding-top: 28px;
+  }
+
+  .docs-section {
+    margin-bottom: 36px;
+  }
+
+  .docs-section:last-of-type {
+    margin-bottom: 20px;
+  }
+
+  .docs-page .site-footer-editorial {
+    padding-top: 24px;
+  }
+
+  .docs-page .footer-editorial-grid {
+    display: none;
+  }
+
+  .docs-page .footer-wordmark-block {
+    padding: 0 0 20px;
   }
 }

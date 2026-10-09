@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowUpRight, BookOpen, ExternalLink } from 'lucide-react';
+import { Navbar } from '../components/Navbar';
+import { DocsDemoVideo } from '../components/DemoVideoSection';
 import { Footer } from '../components/Footer';
 import '../styles/docs.css';
 
@@ -15,28 +17,10 @@ const SECTIONS = [
   { id: 'security', label: 'Security' },
   { id: 'network', label: 'Network' },
   { id: 'contracts', label: 'Contracts' },
-  { id: 'testing', label: 'Testing NFC' },
+  { id: 'testing', label: 'Get the app' },
   { id: 'troubleshooting', label: 'Troubleshooting' },
   { id: 'community', label: 'Updates & X' },
 ] as const;
-
-function LogoMark() {
-  return (
-    <svg width="26" height="30" viewBox="0 0 512 512" fill="none" aria-hidden>
-      <circle cx="200" cy="120" r="62" fill="currentColor" />
-      <circle cx="340" cy="215" r="44" fill="currentColor" opacity="0.6" />
-      <circle cx="200" cy="400" r="72" fill="currentColor" />
-      <path
-        d="M200 182 C200 215, 240 215, 340 215"
-        stroke="currentColor"
-        strokeWidth="52"
-        strokeLinecap="round"
-        fill="none"
-      />
-      <path d="M200 328 L200 182" stroke="currentColor" strokeWidth="52" strokeLinecap="round" fill="none" />
-    </svg>
-  );
-}
 
 export default function DocsPage() {
   const navigate = useNavigate();
@@ -67,21 +51,9 @@ export default function DocsPage() {
 
   return (
     <div className="docs-page">
-      <div className="docs-topbar">
-        <div className="phantom-container docs-topbar-inner">
-          <Link to="/" className="docs-logo">
-            <LogoMark />
-            TapPay
-          </Link>
-          <div className="docs-topbar-actions">
-            <Link to="/download" className="docs-topbar-link">Download</Link>
-            <Link to="/waitlist" className="docs-topbar-link">Waitlist</Link>
-            <Link to="/" className="docs-topbar-link">← Home</Link>
-          </div>
-        </div>
-      </div>
+      <Navbar onJoinWaitlist={joinWaitlist} />
 
-      <div className="phantom-container">
+      <div className="phantom-container docs-main">
         <header className="docs-hero">
           <div className="docs-hero-kicker">
             <BookOpen size={14} strokeWidth={2.25} />
@@ -98,8 +70,8 @@ export default function DocsPage() {
               View landing requirements
               <ArrowUpRight size={16} />
             </Link>
-            <Link to="/#demo" className="phantom-btn-pill" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'transparent', border: '1px solid rgba(26,26,26,0.12)' }}>
-              Try NFC simulator
+            <Link to="/#watch-demo" className="phantom-btn-pill" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'transparent', border: '1px solid rgba(26,26,26,0.12)' }}>
+              Watch product film
             </Link>
           </div>
         </header>
@@ -132,6 +104,7 @@ export default function DocsPage() {
                 phrases in normal use — accounts are created with passkeys (Face ID / fingerprint via Mera), and private
                 keys stay in Android secure storage.
               </p>
+              <DocsDemoVideo />
               <div className="docs-table-wrap">
                 <table className="docs-table">
                   <thead>
@@ -390,22 +363,26 @@ export default function DocsPage() {
                   </tbody>
                 </table>
               </div>
-              <p>
-                Full addresses and token lists live in the{' '}
-                <a href="https://github.com/anuraggdubey/Tap-Pay" target="_blank" rel="noopener noreferrer">
-                  GitHub README
-                </a>
-                .
-              </p>
+              <p>Tap any address in the table to open the full contract on Monadscan.</p>
             </section>
 
             <section id="testing" className="docs-section">
-              <h2>Testing NFC</h2>
+              <h2>Get the app</h2>
+              <p>
+                TapPay for Android is rolling out through our waitlist. When your invite goes out, you&apos;ll install the
+                APK from the official <Link to="/download">Download</Link> page — no developer setup required.
+              </p>
               <ul>
-                <li>Install the latest APK from <Link to="/download">Download</Link> or GitHub Actions artifacts.</li>
-                <li>Enable NFC on both phones; disable battery saver restrictions for TapPay if taps fail.</li>
-                <li>Metro hot reload updates JavaScript only — HCE changes require a new native build.</li>
-                <li>Use the <Link to="/#demo">landing NFC simulator</Link> to preview UX without two devices.</li>
+                <li>
+                  Not on the list yet? <Link to="/waitlist">Join the waitlist</Link> and we&apos;ll email you when
+                  installs open.
+                </li>
+                <li>After installing, turn on <strong>NFC</strong> on both phones and allow TapPay to use it.</li>
+                <li>If taps fail, disable battery saver limits for TapPay and keep phones steady, backs together.</li>
+                <li>
+                  No second phone handy? Use the <Link to="/#demo">NFC simulator</Link> on the home page to see how tap
+                  pay feels.
+                </li>
               </ul>
             </section>
 
@@ -449,11 +426,7 @@ export default function DocsPage() {
                 </a>
               </div>
               <p style={{ marginTop: 20 }}>
-                Source code and issue tracking:{' '}
-                <a href="https://github.com/anuraggdubey/Tap-Pay" target="_blank" rel="noopener noreferrer">
-                  github.com/anuraggdubey/Tap-Pay
-                </a>
-                . Monad protocol docs:{' '}
+                Questions about Monad itself? See{' '}
                 <a href="https://docs.monad.xyz" target="_blank" rel="noopener noreferrer">
                   docs.monad.xyz
                 </a>

@@ -203,6 +203,10 @@
 }
 
 @media (max-width: 600px) {
+  .footer-editorial-col--mobile-hide {
+    display: none;
+  }
+
   .site-footer-editorial {
     padding: 48px 0 32px;
   }
@@ -210,7 +214,7 @@
   .footer-editorial-grid {
     grid-template-columns: 1fr;
     gap: 32px;
-    padding-bottom: 36px;
+    padding-bottom: 24px;
   }
 
   .footer-wordmark-text {

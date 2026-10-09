@@ -21,6 +21,16 @@ import {
   Sliders,
   Share2,
 } from 'lucide-react';
+import {
+  TapPayMockHome,
+  TapPayMockPay,
+  TapPayMockNfcSession,
+  TapPayMockSuccess,
+  TapPayMockTabBar,
+  TapPayMockHistory,
+  TapPayMockSettings,
+  TapPayMockTxDetail,
+} from './tappay-mock/TapPayMockScreens';
 
 interface HeroProps {
   onJoinWaitlist: () => void;
@@ -88,7 +98,7 @@ export const Hero: React.FC<HeroProps> = ({ onJoinWaitlist }) => {
       setTypedAmount('0.0');
       // Fast cursor moves to "Send Tap (NFC)" button and taps it
       t1 = setTimeout(() => {
-        setTapCursorPos({ x: 32, y: 54, visible: true });
+        setTapCursorPos({ x: 28, y: 50, visible: true });
       }, 350);
 
       t2 = setTimeout(() => {
@@ -316,27 +326,29 @@ export const Hero: React.FC<HeroProps> = ({ onJoinWaitlist }) => {
             }}
             className="hero-phone-column"
           >
-            {/* Floating Live Badge 1 (Top Left) */}
-            <div className="hero-floating-card card-float-1">
-              <div className="float-card-icon green">
-                <Zap size={14} />
-              </div>
-              <div>
-                <div className="float-card-title">Atomic NFC Beam</div>
-                <div className="float-card-sub">0.82s sub-second ledger</div>
-              </div>
-            </div>
+            {!['history', 'tx_detail', 'settings'].includes(currentStep) && (
+              <>
+                <div className="hero-floating-card card-float-1">
+                  <div className="float-card-icon green">
+                    <Zap size={14} />
+                  </div>
+                  <div>
+                    <div className="float-card-title">Atomic NFC Beam</div>
+                    <div className="float-card-sub">0.82s sub-second ledger</div>
+                  </div>
+                </div>
 
-            {/* Floating Live Badge 2 (Bottom Right) */}
-            <div className="hero-floating-card card-float-2">
-              <div className="float-card-icon blue">
-                <ShieldCheck size={14} />
-              </div>
-              <div>
-                <div className="float-card-title">Hardware Keystore</div>
-                <div className="float-card-sub">StrongBox Enclave</div>
-              </div>
-            </div>
+                <div className="hero-floating-card card-float-2">
+                  <div className="float-card-icon blue">
+                    <ShieldCheck size={14} />
+                  </div>
+                  <div>
+                    <div className="float-card-title">Hardware Keystore</div>
+                    <div className="float-card-sub">StrongBox Enclave</div>
+                  </div>
+                </div>
+              </>
+            )}
 
             {/* Realistic Phone Chassis */}
             <div
@@ -349,10 +361,7 @@ export const Hero: React.FC<HeroProps> = ({ onJoinWaitlist }) => {
               <div className="realistic-phone-btn-pwr" />
 
               {/* Realistic Phone Screen */}
-              <div className="realistic-phone-screen">
-                {/* Ambient Glass Sheen Reflection */}
-                <div className="glass-sheen-sweep" />
-
+              <div className="realistic-phone-screen tp-mock-root">
                 {/* Camera Hole Punch */}
                 <div className="realistic-phone-camera" />
 
@@ -376,363 +385,59 @@ export const Hero: React.FC<HeroProps> = ({ onJoinWaitlist }) => {
                 <div className="sim-screen-container">
                   {/* SCREEN 1: HOME DASHBOARD */}
                   {currentStep === 'home' && (
-                    <div className="screen-fade-in sim-home-screen">
-                      <div className="sim-home-header">
-                        <div>
-                          <div className="sim-balance-sub">TOTAL BALANCE</div>
-                          <div className="sim-balance-main">
-                            {balance.toFixed(3)} <span className="sim-currency">MON</span>
-                          </div>
-                          <div className="sim-balance-fiat">≈ ${(balance * 2.86).toFixed(2)} USD</div>
-                        </div>
-                        <div className="sim-avatar">A</div>
-                      </div>
-
-                      {/* Monad Platinum Virtual Card */}
-                      <div className="sim-platinum-card">
-                        <div className="sim-card-top">
-                          <div className="sim-card-brand">
-                            <Radio size={14} color="#FFF" />
-                            <span>TapPay</span>
-                          </div>
-                          <div className="sim-nfc-symbol">
-                            <Radio size={16} color="#FFF" />
-                          </div>
-                        </div>
-                        <div className="sim-card-number">0X1A •••• •••• 1A4E</div>
-                        <div className="sim-card-bottom">
-                          <div>
-                            <div className="sim-card-label">CARDHOLDER</div>
-                            <div className="sim-card-user">@anurag</div>
-                          </div>
-                          <div className="sim-card-badge">MONAD · NFC</div>
-                        </div>
-                      </div>
-
-                      {/* Action Buttons Row */}
-                      <div className="sim-quick-actions">
-                        <div className={`sim-btn-action primary ${simulatedTapActive ? 'is-tapped' : ''}`}>
-                          <Radio size={15} />
-                          <span>Send Tap (NFC)</span>
-                        </div>
-                        <div className="sim-btn-action secondary">
-                          <span>Receive Tap</span>
-                        </div>
-                      </div>
-
-                      {/* Direct Transfer Bar */}
-                      <div className="sim-direct-row">
-                        <div className="sim-at-icon">@</div>
-                        <div>
-                          <div className="sim-direct-title">Direct Transfer</div>
-                          <div className="sim-direct-sub">Pay via @username or address</div>
-                        </div>
-                        <ChevronRight size={14} opacity={0.4} style={{ marginLeft: 'auto' }} />
-                      </div>
-
-                      {/* Recent Mini Activity */}
-                      <div className="sim-activity-preview">
-                        <div className="sim-activity-row">
-                          <div className="sim-tx-icon in">↘</div>
-                          <div style={{ flex: 1 }}>
-                            <div className="sim-tx-name">From @aditya</div>
-                            <div className="sim-tx-time">NFC Tap · 1h ago</div>
-                          </div>
-                          <div className="sim-tx-amount in">+25.0 MON</div>
-                        </div>
-                      </div>
-                    </div>
+                    <TapPayMockHome
+                      compact
+                      username="@anurag"
+                      avatarLetter="A"
+                      sendActive={simulatedTapActive}
+                    />
                   )}
 
-                  {/* SCREEN 2: ENTER AMOUNT */}
                   {currentStep === 'amount' && (
-                    <div className="screen-fade-in sim-amount-screen">
-                      <div className="sim-screen-title-bar">
-                        <div className="sim-amount-title">Send via NFC Touch</div>
-                        <div className="sim-badge-active">NFC Ready</div>
-                      </div>
-
-                      {/* Amount Display */}
-                      <div className="sim-amount-display-box">
-                        <div className="sim-amount-caption">AMOUNT TO SEND</div>
-                        <div className="sim-amount-val">
-                          {typedAmount} <span className="sim-amount-unit">MON</span>
-                        </div>
-                        <div className="sim-amount-fiat">
-                          ≈ ${(parseFloat(typedAmount || '0') * 2.86).toFixed(2)} USD
-                        </div>
-
-                        {/* Quick Presets */}
-                        <div className="sim-presets-row">
-                          {['1.0', '5.0', '12.5', '25.0'].map((val) => (
-                            <span
-                              key={val}
-                              className={`sim-preset-pill ${typedAmount === val ? 'active' : ''}`}
-                            >
-                              {val}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Target Info */}
-                      <div className="sim-target-hint">
-                        <Radio size={13} color="#10B981" />
-                        <span>Hold phones within 4cm to transmit</span>
-                      </div>
-
-                      {/* Mini Keypad */}
-                      <div className="sim-mini-keypad">
-                        {['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', '⌫'].map((key) => (
-                          <div
-                            key={key}
-                            className={`sim-keypad-key ${(['1', '2', '5', '.'].includes(key) && currentStep === 'amount') ? 'key-lit' : ''}`}
-                          >
-                            {key}
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Ready to Tap Button */}
-                      <div className={`sim-btn-ready ${simulatedTapActive ? 'is-tapped' : ''}`}>
-                        <Radio size={16} />
-                        <span>Tap to Pay with NFC</span>
-                      </div>
-                    </div>
+                    <TapPayMockPay
+                      compact
+                      typedAmount={typedAmount}
+                      activeKey={null}
+                      availableBalance={balance.toFixed(4)}
+                      addressShort="0x1a70…1A4E"
+                      primaryLabel="Ready to Tap"
+                      primaryTapped={simulatedTapActive}
+                    />
                   )}
 
-                  {/* SCREEN 3: SEARCHING & RADAR */}
                   {currentStep === 'nfc_search' && (
-                    <div className="screen-fade-in sim-search-screen">
-                      <div className="sim-radar-badge">CONTACTLESS BEAM</div>
-
-                      {/* Concentric Radar Ripples */}
-                      <div className="sim-radar-stage">
-                        <div className="radar-circle radar-c1" />
-                        <div className="radar-circle radar-c2" />
-                        <div className="radar-circle radar-c3" />
-                        <div className="radar-phone-icon">
-                          <Radio size={34} color="#FFFFFF" className="pulse-icon" />
-                        </div>
-                      </div>
-
-                      <div className="sim-search-status">
-                        <div className="sim-status-head">Hold Phones Together</div>
-                        <div className="sim-status-desc">Proximity distance: &lt; 4cm</div>
-                      </div>
-
-                      {/* Detected Device Card */}
-                      <div className="sim-detected-card">
-                        <div className="detected-avatar">M</div>
-                        <div>
-                          <div className="detected-name">@misbah (Receiver)</div>
-                          <div className="detected-addr">0x8F21...4E29</div>
-                        </div>
-                        <div className="detected-badge">LINKED</div>
-                      </div>
-
-                      <div className="sim-handshake-status">
-                        <span className="handshake-spinner" />
-                        <span>Executing atomic APDU on Monad...</span>
-                      </div>
-                    </div>
+                    <TapPayMockNfcSession
+                      title="Hold phones together"
+                      subtitle="Sending 12.5 MON"
+                      peerName="@misbah (Receiver)"
+                      peerAddr="0x8F21…4E29"
+                      peerLetter="M"
+                      statusLine="NFC session active on Monad…"
+                    />
                   )}
 
-                  {/* SCREEN 4: GPAY-STYLE PAYMENT SUCCESS */}
                   {currentStep === 'success' && (
-                    <div className="screen-fade-in sim-success-screen">
-                      {/* Expanding Emerald Circle Checkmark */}
-                      <div className="gpay-circle-wrapper">
-                        <div className="gpay-ripple-ring ring-a" />
-                        <div className="gpay-ripple-ring ring-b" />
-                        <div className="gpay-circle-main">
-                          <Check size={40} color="#FFFFFF" strokeWidth={3} className="gpay-check-icon" />
-                        </div>
-                      </div>
-
-                      <div className="sim-success-amount">12.5 MON</div>
-                      <div className="sim-success-title">Payment Confirmed!</div>
-                      <div className="sim-success-recipient">Sent to @misbah</div>
-
-                      {/* Ledger Verification Pill */}
-                      <div className="sim-ledger-box">
-                        <div className="ledger-row">
-                          <span className="ledger-lbl">Monad Finality</span>
-                          <span className="ledger-val green">0.82s Atomic</span>
-                        </div>
-                        <div className="ledger-row">
-                          <span className="ledger-lbl">Gas Fee</span>
-                          <span className="ledger-val">~0.0004 MON</span>
-                        </div>
-                        <div className="ledger-row">
-                          <span className="ledger-lbl">Tx Status</span>
-                          <span className="ledger-val verified">✓ Confirmed 143</span>
-                        </div>
-                      </div>
-
-                      <div className="sim-success-footer">
-                        <span>TapPay Monad Instant Ledger</span>
-                      </div>
-                    </div>
+                    <TapPayMockSuccess
+                      amount="12.5"
+                      signed="-"
+                      headline="Payment confirmed"
+                      subline="Sent to @misbah"
+                      rows={[
+                        { label: 'Balance', value: `${balance.toFixed(3)} MON` },
+                        { label: 'Finality', value: '~0.8s' },
+                        { label: 'Chain', value: '143 ✓' },
+                      ]}
+                    />
                   )}
 
                   {/* SCREEN 5: ACTIVITY & HISTORY LIST */}
                   {currentStep === 'history' && (
-                    <div className="screen-fade-in sim-history-screen">
-                      <div className="sim-screen-title-bar">
-                        <div className="sim-history-title">Activity</div>
-                        <div className="sim-filter-pill">Monad Mainnet</div>
-                      </div>
-
-                      {/* Filter Chips */}
-                      <div className="sim-history-filters">
-                        <span className="filter-chip active">All</span>
-                        <span className="filter-chip">Sent</span>
-                        <span className="filter-chip">Received</span>
-                      </div>
-
-                      {/* Transactions List */}
-                      <div className="sim-history-list">
-                        <div className={`history-item-row ${simulatedTapActive ? 'item-tapped' : ''}`}>
-                          <div className="tx-avatar-icon out">↗</div>
-                          <div className="tx-details-col">
-                            <div className="tx-person-name">Paid @misbah</div>
-                            <div className="tx-time-stamp">NFC Tap · Just now</div>
-                          </div>
-                          <div className="tx-val-col out">-12.5 MON</div>
-                        </div>
-
-                        <div className="history-item-row">
-                          <div className="tx-avatar-icon in">↘</div>
-                          <div className="tx-details-col">
-                            <div className="tx-person-name">From @aditya</div>
-                            <div className="tx-time-stamp">Direct Send · 1h ago</div>
-                          </div>
-                          <div className="tx-val-col in">+25.0 MON</div>
-                        </div>
-
-                        <div className="history-item-row">
-                          <div className="tx-avatar-icon out">↗</div>
-                          <div className="tx-details-col">
-                            <div className="tx-person-name">NFC Coffee Bar</div>
-                            <div className="tx-time-stamp">POS Terminal · 4h ago</div>
-                          </div>
-                          <div className="tx-val-col out">-1.2 MON</div>
-                        </div>
-
-                        <div className="history-item-row">
-                          <div className="tx-avatar-icon in">↘</div>
-                          <div className="tx-details-col">
-                            <div className="tx-person-name">Faucet Drop</div>
-                            <div className="tx-time-stamp">Devnet Faucet · 1d ago</div>
-                          </div>
-                          <div className="tx-val-col in">+10.0 MON</div>
-                        </div>
-                      </div>
-                    </div>
+                    <TapPayMockHistory compact highlightFirstRow={simulatedTapActive} />
                   )}
 
-                  {/* SCREEN 6: PARTICULAR TRANSACTION DETAIL PAGE */}
-                  {currentStep === 'tx_detail' && (
-                    <div className="screen-fade-in sim-detail-screen">
-                      <div className="sim-detail-header">
-                        <ArrowLeft size={16} />
-                        <span>Transaction Details</span>
-                        <Share2 size={15} style={{ marginLeft: 'auto' }} />
-                      </div>
+                  {currentStep === 'tx_detail' && <TapPayMockTxDetail compact />}
 
-                      {/* Main Amount Callout */}
-                      <div className="detail-amount-card">
-                        <div className="detail-icon-circle out">↗</div>
-                        <div className="detail-amount-text">-12.5 MON</div>
-                        <div className="detail-fiat-text">≈ $35.75 USD</div>
-                        <div className="detail-status-pill">✓ Completed on Monad</div>
-                      </div>
-
-                      {/* Metadata Table */}
-                      <div className="detail-meta-box">
-                        <div className="detail-meta-row">
-                          <span className="meta-k">To</span>
-                          <span className="meta-v">@misbah (0x8F21...4E29)</span>
-                        </div>
-                        <div className="detail-meta-row">
-                          <span className="meta-k">Payment Type</span>
-                          <span className="meta-v">NFC Tap-to-Pay</span>
-                        </div>
-                        <div className="detail-meta-row">
-                          <span className="meta-k">Settlement Speed</span>
-                          <span className="meta-v green">0.82 seconds</span>
-                        </div>
-                        <div className="detail-meta-row">
-                          <span className="meta-k">Network Fee</span>
-                          <span className="meta-v">0.000412 MON</span>
-                        </div>
-                        <div className="detail-meta-row">
-                          <span className="meta-k">TxHash</span>
-                          <span className="meta-v mono">0x5B17...6838</span>
-                        </div>
-                      </div>
-
-                      {/* MonadScan Button */}
-                      <div className="detail-scan-btn">
-                        <span>View on MonadScan</span>
-                        <ExternalLink size={12} />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* SCREEN 7: SETTINGS & PROFILE PAGE */}
-                  {currentStep === 'settings' && (
-                    <div className="screen-fade-in sim-settings-screen">
-                      <div className="sim-screen-title-bar">
-                        <div className="sim-settings-title">Profile &amp; Settings</div>
-                        <div className="sim-badge-active">Online</div>
-                      </div>
-
-                      {/* Profile Card */}
-                      <div className="settings-profile-card">
-                        <div className="profile-big-avatar">A</div>
-                        <div className="profile-info-col">
-                          <div className="profile-username">@anurag</div>
-                          <div className="profile-wallet-pill">
-                            <span>0x1A4E •••• 1A4E</span>
-                            <Copy size={11} />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Security Status Box */}
-                      <div className="settings-section-lbl">HARDWARE SECURITY</div>
-                      <div className="settings-items-list">
-                        <div className="settings-row">
-                          <div className="settings-icon-box"><Lock size={13} color="#10B981" /></div>
-                          <div className="settings-row-text">
-                            <div className="settings-row-title">Android Keystore</div>
-                            <div className="settings-row-sub">StrongBox Enclave Active</div>
-                          </div>
-                          <span className="settings-check">✓</span>
-                        </div>
-
-                        <div className="settings-row">
-                          <div className="settings-icon-box"><Radio size={13} color="#10B981" /></div>
-                          <div className="settings-row-text">
-                            <div className="settings-row-title">NFC Emulation (HCE)</div>
-                            <div className="settings-row-sub">ISO-DEP Protocol Ready</div>
-                          </div>
-                          <span className="settings-check">✓</span>
-                        </div>
-
-                        <div className="settings-row">
-                          <div className="settings-icon-box"><ShieldCheck size={13} color="#10B981" /></div>
-                          <div className="settings-row-text">
-                            <div className="settings-row-title">Non-Custodial Keys</div>
-                            <div className="settings-row-sub">Local Device Encryption</div>
-                          </div>
-                          <span className="settings-check">✓</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                  {currentStep === 'settings' && <TapPayMockSettings compact />}
 
                   {/* Simulated Tap Cursor Indicator */}
                   {tapCursorPos.visible && (
@@ -749,25 +454,7 @@ export const Hero: React.FC<HeroProps> = ({ onJoinWaitlist }) => {
                   )}
                 </div>
 
-                {/* Bottom App Navigation Bar */}
-                <div className="sim-bottom-nav">
-                  <div className={`nav-tab-item ${activeNavTab === 'home' ? 'active' : ''}`}>
-                    <HomeIcon size={17} />
-                    <span>Home</span>
-                  </div>
-                  <div className={`nav-tab-item ${activeNavTab === 'pay' ? 'active' : ''}`}>
-                    <Radio size={17} />
-                    <span>Pay</span>
-                  </div>
-                  <div className={`nav-tab-item ${activeNavTab === 'history' ? 'active' : ''}`}>
-                    <Clock size={17} />
-                    <span>History</span>
-                  </div>
-                  <div className={`nav-tab-item ${activeNavTab === 'settings' ? 'active' : ''}`}>
-                    <Sliders size={17} />
-                    <span>Settings</span>
-                  </div>
-                </div>
+                <TapPayMockTabBar active={activeNavTab} />
 
                 {/* Bottom Home Indicator */}
                 <div className="sim-home-bar" />

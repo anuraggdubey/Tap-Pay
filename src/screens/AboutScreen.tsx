@@ -2,7 +2,7 @@
  * AboutScreen — App information, version, features, and architecture
  */
 
-import React from 'react';
+import React, {useMemo} from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,8 @@ import {
 } from 'react-native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../navigation/AppNavigator';
+import {useTheme} from '../context/ThemeContext';
+import type {AppColors} from '../theme';
 import BrandLogo from '../components/BrandLogo';
 
 import {
@@ -25,6 +27,9 @@ type Props = {
 };
 
 export default function AboutScreen({navigation}: Props) {
+  const {colors} = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* App Header */}
@@ -44,7 +49,7 @@ export default function AboutScreen({navigation}: Props) {
       <View style={styles.card}>
         <View style={styles.featureRow}>
           <View style={styles.featureIconBox}>
-            <ContactlessWave size={18} color="#0A84FF" />
+            <ContactlessWave size={18} color={colors.accent} />
           </View>
           <View style={styles.featureMeta}>
             <Text style={styles.featureTitle}>Contactless Tap-to-Pay</Text>
@@ -58,7 +63,7 @@ export default function AboutScreen({navigation}: Props) {
 
         <View style={styles.featureRow}>
           <View style={styles.featureIconBox}>
-            <UserIcon size={18} color="#0A84FF" />
+            <UserIcon size={18} color={colors.accent} />
           </View>
           <View style={styles.featureMeta}>
             <Text style={styles.featureTitle}>Username Pay</Text>
@@ -72,7 +77,7 @@ export default function AboutScreen({navigation}: Props) {
 
         <View style={styles.featureRow}>
           <View style={styles.featureIconBox}>
-            <KeyIcon size={18} color="#0A84FF" />
+            <KeyIcon size={18} color={colors.accent} />
           </View>
           <View style={styles.featureMeta}>
             <Text style={styles.featureTitle}>Hardware Keystore</Text>
@@ -86,7 +91,7 @@ export default function AboutScreen({navigation}: Props) {
 
         <View style={styles.featureRow}>
           <View style={styles.featureIconBox}>
-            <GlobeIcon size={18} color="#0A84FF" />
+            <GlobeIcon size={18} color={colors.accent} />
           </View>
           <View style={styles.featureMeta}>
             <Text style={styles.featureTitle}>Monad Throughput</Text>
@@ -131,10 +136,11 @@ export default function AboutScreen({navigation}: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppColors) {
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#EEF3FA',
+    backgroundColor: colors.background,
   },
   content: {
     padding: 18,
@@ -167,47 +173,47 @@ const styles = StyleSheet.create({
   appName: {
     fontSize: 26,
     fontWeight: '800',
-    color: '#0B1220',
+    color: colors.text,
     letterSpacing: -0.5,
     marginBottom: 4,
   },
   appVersion: {
     fontSize: 13,
-    color: '#6B7280',
+    color: colors.textMuted,
     fontWeight: '500',
     marginBottom: 14,
   },
   tagline: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surfaceSolid,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(10, 132, 255, 0.16)',
+    borderColor: colors.borderStrong,
   },
   taglineText: {
     fontSize: 13,
-    color: '#0B1220',
+    color: colors.text,
     fontWeight: '600',
     textAlign: 'center',
   },
   sectionHeader: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#9AA3B2',
+    color: colors.textSubtle,
     letterSpacing: 0.8,
     marginTop: 12,
     marginBottom: 8,
     marginLeft: 4,
   },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surfaceSolid,
     borderRadius: 20,
     padding: 16,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(15, 40, 80, 0.08)',
+    borderColor: colors.borderSubtle,
     marginBottom: 10,
-    shadowColor: '#0A84FF',
+    shadowColor: colors.accent,
     shadowOffset: {width: 0, height: 6},
     shadowOpacity: 0.08,
     shadowRadius: 14,
@@ -223,7 +229,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 12,
-    backgroundColor: 'rgba(10, 132, 255, 0.12)',
+    backgroundColor: colors.accentWash,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -233,17 +239,17 @@ const styles = StyleSheet.create({
   featureTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#0B1220',
+    color: colors.text,
     marginBottom: 2,
   },
   featureDesc: {
     fontSize: 12,
-    color: '#6B7280',
+    color: colors.textMuted,
     lineHeight: 16,
   },
   featureDivider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(60, 60, 67, 0.12)',
+    backgroundColor: colors.separator,
     marginVertical: 10,
   },
   infoRow: {
@@ -251,14 +257,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(60, 60, 67, 0.12)',
+    borderBottomColor: colors.separator,
   },
   infoKey: {
-    color: '#6B7280',
+    color: colors.textMuted,
     fontSize: 14,
   },
   infoVal: {
-    color: '#0B1220',
+    color: colors.text,
     fontSize: 14,
     fontWeight: '500',
   },
@@ -294,11 +300,12 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 13,
-    color: '#6B7280',
+    color: colors.textMuted,
     marginBottom: 4,
   },
   footerSubtext: {
     fontSize: 12,
-    color: '#9AA3B2',
+    color: colors.textSubtle,
   },
-});
+  });
+}

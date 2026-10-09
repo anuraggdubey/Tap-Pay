@@ -12,7 +12,8 @@ import {
   TextStyle,
 } from 'react-native';
 import PressableScale from './PressableScale';
-import {colors, radii, shadows, spacing, premiumCard} from '../theme';
+import {useTheme} from '../context/ThemeContext';
+import {shadows, spacing} from '../theme';
 
 /** White premium surface card — single uniform plate */
 export function SurfaceCard({
@@ -22,14 +23,9 @@ export function SurfaceCard({
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
 }) {
-  return <View style={[surfaceStyles.card, style]}>{children}</View>;
+  const {premiumCard} = useTheme();
+  return <View style={[premiumCard, style]}>{children}</View>;
 }
-
-const surfaceStyles = StyleSheet.create({
-  card: {
-    ...premiumCard,
-  },
-});
 
 type SegmentOption<T extends string> = {
   key: T;
@@ -49,21 +45,42 @@ export function SegmentedControl<T extends string>({
   onChange: (next: T) => void;
   style?: StyleProp<ViewStyle>;
 }) {
+  const {colors, isDark} = useTheme();
+  const trackBg = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15, 40, 80, 0.06)';
+  const trackBorder = isDark
+    ? 'rgba(255,255,255,0.1)'
+    : 'rgba(15, 40, 80, 0.08)';
+  const countBg = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(15, 40, 80, 0.08)';
+
   return (
-    <View style={[segmentStyles.track, style]}>
+    <View
+      style={[
+        segmentStyles.track,
+        {backgroundColor: trackBg, borderColor: trackBorder},
+        style,
+      ]}>
       {options.map(opt => {
         const active = opt.key === value;
         return (
           <PressableScale
             key={opt.key}
-            style={[segmentStyles.item, active && segmentStyles.itemActive]}
+            style={[
+              segmentStyles.item,
+              active && {
+                backgroundColor: colors.surfaceSolid,
+                borderWidth: StyleSheet.hairlineWidth,
+                borderColor: trackBorder,
+                ...shadows.soft,
+              },
+            ]}
             contentStyle={segmentStyles.itemInner}
             onPress={() => onChange(opt.key)}
             scaleTo={0.97}>
             <Text
               style={[
                 segmentStyles.label,
-                active && segmentStyles.labelActive,
+                {color: colors.text},
+                active && {color: colors.accent, fontWeight: '700'},
               ]}>
               {opt.label}
             </Text>
@@ -71,7 +88,14 @@ export function SegmentedControl<T extends string>({
               <Text
                 style={[
                   segmentStyles.count,
-                  active && segmentStyles.countActive,
+                  {
+                    color: colors.textMuted,
+                    backgroundColor: countBg,
+                  },
+                  active && {
+                    color: colors.accent,
+                    backgroundColor: colors.accentWash,
+                  },
                 ]}>
                 {opt.count}
               </Text>
@@ -86,23 +110,15 @@ export function SegmentedControl<T extends string>({
 const segmentStyles = StyleSheet.create({
   track: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(15, 40, 80, 0.06)',
     borderRadius: 14,
     padding: 3,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(15, 40, 80, 0.08)',
     gap: 2,
   },
   item: {
     flex: 1,
     borderRadius: 11,
     minHeight: 36,
-  },
-  itemActive: {
-    backgroundColor: colors.surfaceSolid,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(15, 40, 80, 0.08)',
-    ...shadows.soft,
   },
   itemInner: {
     flexDirection: 'row',
@@ -116,28 +132,17 @@ const segmentStyles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.text,
     letterSpacing: -0.1,
-  },
-  labelActive: {
-    color: colors.accent,
-    fontWeight: '700',
   },
   count: {
     fontSize: 12,
     fontWeight: '700',
-    color: colors.textMuted,
-    backgroundColor: 'rgba(15, 40, 80, 0.08)',
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 8,
     overflow: 'hidden',
     minWidth: 20,
     textAlign: 'center',
-  },
-  countActive: {
-    color: colors.accent,
-    backgroundColor: colors.accentWash,
   },
 });
 
@@ -148,14 +153,18 @@ export function SectionLabel({
   children: string;
   style?: StyleProp<TextStyle>;
 }) {
-  return <Text style={[sectionLabelStyles.label, style]}>{children}</Text>;
+  const {colors} = useTheme();
+  return (
+    <Text style={[sectionLabelStyles.label, {color: colors.textSubtle}, style]}>
+      {children}
+    </Text>
+  );
 }
 
 const sectionLabelStyles = StyleSheet.create({
   label: {
     fontSize: 11,
     fontWeight: '700',
-    color: colors.textSubtle,
     letterSpacing: 0.8,
     marginBottom: spacing.sm,
     marginLeft: 4,
@@ -171,6 +180,7 @@ export function IconBadge({
   tone?: 'blue' | 'green' | 'red' | 'neutral';
   size?: number;
 }) {
+  const {colors} = useTheme();
   const bg =
     tone === 'green'
       ? 'rgba(52, 199, 89, 0.14)'

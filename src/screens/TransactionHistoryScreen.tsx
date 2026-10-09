@@ -3,7 +3,7 @@
  * Presentation only; history data + navigation unchanged.
  */
 
-import React, {useState, useEffect, useCallback} from 'react';
+import React, {useState, useEffect, useCallback, useMemo} from 'react';
 import {
   View,
   Text,
@@ -25,11 +25,13 @@ import {
 import {triggerHaptic} from '../utils/haptics';
 import {truncateAddress, formatTimestamp} from '../utils/format';
 import {useWallet} from '../context/WalletContext';
+import {useTheme} from '../context/ThemeContext';
 import LivePulseDot from '../components/LivePulseDot';
 import {RefreshIcon} from '../components/AppIcons';
 import PressableScale from '../components/PressableScale';
 import {SegmentedControl, SurfaceCard} from '../components/ui';
-import {colors, glass, radii, shadows} from '../theme';
+import {radii, shadows} from '../theme';
+import type {AppColors, AppGlass} from '../theme';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type FilterTab = 'all' | 'sent' | 'received';
@@ -38,6 +40,8 @@ export default function TransactionHistoryScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp>();
   const {address, username} = useWallet();
+  const {colors, glass} = useTheme();
+  const styles = useMemo(() => createStyles(colors, glass), [colors, glass]);
   const [history, setHistory] = useState<TransactionRecord[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<FilterTab>('all');
@@ -294,10 +298,11 @@ export default function TransactionHistoryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppColors, glass: AppGlass) {
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.background,
   },
   header: {
     paddingHorizontal: 20,
@@ -340,7 +345,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#F5F8FC',
+    backgroundColor: colors.surfaceSolidElevated,
     borderRadius: 16,
     paddingHorizontal: 11,
     paddingVertical: 8,
@@ -388,11 +393,11 @@ const styles = StyleSheet.create({
     minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surfaceSolid,
     borderRadius: 15,
     paddingHorizontal: 14,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(15, 40, 80, 0.10)',
+    borderColor: colors.borderSubtle,
   },
   searchGlyph: {
     width: 15,
@@ -415,10 +420,10 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    color: colors.text,
     fontSize: 15,
     paddingVertical: 10,
     backgroundColor: '#FFFFFF',
+    color: '#0B1220',
   },
   clearSearchButton: {
     width: 30,
@@ -573,4 +578,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
   },
-});
+  });
+}

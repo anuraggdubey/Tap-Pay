@@ -5,7 +5,7 @@
  * and absolutely ZERO emojis or colored tag boxes.
  */
 
-import React, {useState} from 'react';
+import React, {useMemo, useState} from 'react';
 import {
   View,
   Text,
@@ -13,12 +13,14 @@ import {
   ScrollView,
   Alert,
   Platform,
+  Switch,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import Clipboard from '@react-native-clipboard/clipboard';
 
 import {useWallet} from '../context/WalletContext';
+import {useTheme} from '../context/ThemeContext';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import {triggerHaptic} from '../utils/haptics';
 import {truncateAddress} from '../utils/format';
@@ -34,7 +36,7 @@ import {
 import PressableScale from '../components/PressableScale';
 import FadeInView from '../components/FadeInView';
 import LivePulseDot from '../components/LivePulseDot';
-import {colors, glass} from '../theme';
+import type {AppColors, AppGlass} from '../theme';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList>;
@@ -54,7 +56,8 @@ function SettingsRow({
   value,
   onPress,
   isDestructive = false,
-}: SettingsRowProps) {
+  styles,
+}: SettingsRowProps & {styles: ReturnType<typeof createStyles>}) {
   return (
     <PressableScale
       style={styles.rowItem}
@@ -94,6 +97,8 @@ function SettingsRow({
 export default function SettingsScreen({navigation}: Props) {
   const insets = useSafeAreaInsets();
   const {address, username, resetWallet} = useWallet();
+  const {colors, glass, isDark, setDarkMode} = useTheme();
+  const styles = useMemo(() => createStyles(colors, glass), [colors, glass]);
   const [addressCopied, setAddressCopied] = useState(false);
 
   const copyAddress = () => {
@@ -209,6 +214,7 @@ export default function SettingsScreen({navigation}: Props) {
           <Text style={styles.groupHeading}>ACCOUNT</Text>
           <View style={styles.groupCard}>
             <SettingsRow
+              styles={styles}
               renderIcon={() => <UserIcon size={16} color={colors.accent} />}
               title="Profile & Identity"
               value={username ? `@${username}` : 'Claim handle'}
@@ -216,13 +222,17 @@ export default function SettingsScreen({navigation}: Props) {
             />
             <View style={styles.divider} />
             <SettingsRow
-              renderIcon={() => <WalletCardIcon size={16} color={colors.accent} />}
+              styles={styles}
+              renderIcon={() => (
+                <WalletCardIcon size={16} color={colors.accent} />
+              )}
               title="Wallet Address"
               value={address ? truncateAddress(address, 5, 4) : 'Not linked'}
               onPress={() => navigation.navigate('AccountInfo')}
             />
             <View style={styles.divider} />
             <SettingsRow
+              styles={styles}
               renderIcon={() => <KeyIcon size={16} color={colors.accent} />}
               title="Secret Key"
               value="Encrypted"
@@ -232,9 +242,35 @@ export default function SettingsScreen({navigation}: Props) {
         </FadeInView>
 
         <FadeInView delay={120} translateY={8}>
+          <Text style={styles.groupHeading}>APPEARANCE</Text>
+          <View style={styles.groupCard}>
+            <View style={styles.rowItemInner}>
+              <View style={styles.rowLeft}>
+                <View style={styles.iconContainer}>
+                  <Text style={styles.darkModeGlyph}>{isDark ? '☾' : '☀'}</Text>
+                </View>
+                <Text style={styles.rowTitle}>Dark Mode</Text>
+              </View>
+              <Switch
+                value={isDark}
+                onValueChange={enabled => {
+                  triggerHaptic.selection();
+                  setDarkMode(enabled);
+                }}
+                trackColor={{false: colors.separator, true: colors.accent}}
+                thumbColor="#FFFFFF"
+                ios_backgroundColor={colors.separator}
+                accessibilityLabel="Toggle dark mode"
+              />
+            </View>
+          </View>
+        </FadeInView>
+
+        <FadeInView delay={140} translateY={8}>
           <Text style={styles.groupHeading}>NETWORK & SYSTEM</Text>
           <View style={styles.groupCard}>
             <SettingsRow
+              styles={styles}
               renderIcon={() => <GlobeIcon size={16} color={colors.accent} />}
               title="Network Details"
               value="RPC Live"
@@ -242,6 +278,7 @@ export default function SettingsScreen({navigation}: Props) {
             />
             <View style={styles.divider} />
             <SettingsRow
+              styles={styles}
               renderIcon={() => <InfoIcon size={16} color={colors.accent} />}
               title="About TapPay"
               value="v0.0.1"
@@ -254,6 +291,7 @@ export default function SettingsScreen({navigation}: Props) {
           <Text style={styles.groupHeading}>SECURITY</Text>
           <View style={styles.groupCard}>
             <SettingsRow
+              styles={styles}
               renderIcon={() => <PowerIcon size={16} color="#FF453A" />}
               title="Reset Wallet"
               onPress={handleResetWallet}
@@ -266,252 +304,259 @@ export default function SettingsScreen({navigation}: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  screenWrapper: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  container: {
-    flex: 1,
-  },
-  content: {
-    paddingHorizontal: 20,
-    paddingBottom: 120,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 17,
-  },
-  pageEyebrow: {
-    color: colors.accent,
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1.2,
-    marginBottom: 2,
-  },
-  pageTitle: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: colors.text,
-    letterSpacing: -0.8,
-  },
-  walletCard: {
-    backgroundColor: colors.accent,
-    borderRadius: 23,
-    marginBottom: 18,
-    overflow: 'hidden',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#0A4C9A',
-        shadowOffset: {width: 0, height: 8},
-        shadowOpacity: 0.16,
-        shadowRadius: 16,
-      },
-      android: {elevation: 4},
-      default: {},
-    }),
-  },
-  walletCardTop: {
-    minHeight: 78,
-  },
-  walletCardTopInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 17,
-    paddingVertical: 15,
-    gap: 12,
-  },
-  walletAvatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.5)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  walletAvatarText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  walletIdentity: {
-    flex: 1,
-  },
-  walletName: {
-    color: '#FFFFFF',
-    fontSize: 17,
-    fontWeight: '700',
-  },
-  walletCaption: {
-    color: 'rgba(255,255,255,0.78)',
-    fontSize: 12,
-    marginTop: 3,
-  },
-  walletChevron: {
-    color: 'rgba(255,255,255,0.85)',
-    fontSize: 25,
-    fontWeight: '300',
-  },
-  walletCardDivider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(255,255,255,0.27)',
-    marginHorizontal: 17,
-  },
-  walletAddressRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 18,
-    paddingVertical: 13,
-    gap: 12,
-  },
-  walletAddressCopy: {
-    flex: 1,
-    minWidth: 0,
-  },
-  walletAddressLabel: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 0.9,
-    marginBottom: 3,
-  },
-  walletAddressValue: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '600',
-    letterSpacing: 0.2,
-  },
-  copyAddressButton: {
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.16)',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.3)',
-  },
-  copyAddressButtonInner: {
-    paddingHorizontal: 13,
-    paddingVertical: 8,
-  },
-  copyAddressButtonText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  statusCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: glass.fillElevated,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: glass.borderBright,
-    borderRadius: 20,
-    padding: 16,
-    marginBottom: 26,
-  },
-  statusCardLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  statusTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  statusSubtitle: {
-    fontSize: 12,
-    color: colors.textMuted,
-    marginTop: 2,
-  },
-  activePill: {
-    backgroundColor: colors.accentWash,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 10,
-  },
-  activePillText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.accent,
-    letterSpacing: 0.4,
-  },
-  groupHeading: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textSubtle,
-    letterSpacing: 0.6,
-    marginBottom: 8,
-    marginLeft: 4,
-  },
-  groupCard: {
-    backgroundColor: glass.fillElevated,
-    borderRadius: 20,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: glass.borderSubtle,
-    marginBottom: 22,
-    overflow: 'hidden',
-  },
-  rowItem: {
-    minHeight: 52,
-  },
-  rowItemInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    minHeight: 52,
-  },
-  rowLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
-  },
-  iconContainer: {
-    width: 30,
-    height: 30,
-    borderRadius: 10,
-    backgroundColor: colors.accentWash,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconContainerDestructive: {
-    backgroundColor: 'rgba(255, 59, 48, 0.12)',
-  },
-  rowTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: colors.text,
-  },
-  rowTitleDestructive: {
-    color: colors.danger,
-  },
-  rowRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  rowValue: {
-    fontSize: 14,
-    color: colors.textMuted,
-    fontWeight: '400',
-  },
-  rowChevron: {
-    fontSize: 18,
-    color: colors.accent,
-    fontWeight: '400',
-  },
-  rowChevronDestructive: {
-    color: colors.danger,
-  },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.separator,
-    marginLeft: 56,
-  },
-});
+function createStyles(colors: AppColors, glass: AppGlass) {
+  return StyleSheet.create({
+    screenWrapper: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    container: {
+      flex: 1,
+    },
+    content: {
+      paddingHorizontal: 20,
+      paddingBottom: 120,
+    },
+    titleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 17,
+    },
+    pageEyebrow: {
+      color: colors.accent,
+      fontSize: 10,
+      fontWeight: '700',
+      letterSpacing: 1.2,
+      marginBottom: 2,
+    },
+    pageTitle: {
+      fontSize: 32,
+      fontWeight: '700',
+      color: colors.text,
+      letterSpacing: -0.8,
+    },
+    walletCard: {
+      backgroundColor: colors.accent,
+      borderRadius: 23,
+      marginBottom: 18,
+      overflow: 'hidden',
+      ...Platform.select({
+        ios: {
+          shadowColor: '#0A4C9A',
+          shadowOffset: {width: 0, height: 8},
+          shadowOpacity: 0.16,
+          shadowRadius: 16,
+        },
+        android: {elevation: 4},
+        default: {},
+      }),
+    },
+    walletCardTop: {
+      minHeight: 78,
+    },
+    walletCardTopInner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 17,
+      paddingVertical: 15,
+      gap: 12,
+    },
+    walletAvatar: {
+      width: 42,
+      height: 42,
+      borderRadius: 21,
+      backgroundColor: 'rgba(255,255,255,0.2)',
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: 'rgba(255,255,255,0.5)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    walletAvatarText: {
+      color: '#FFFFFF',
+      fontSize: 18,
+      fontWeight: '700',
+    },
+    walletIdentity: {
+      flex: 1,
+    },
+    walletName: {
+      color: '#FFFFFF',
+      fontSize: 17,
+      fontWeight: '700',
+    },
+    walletCaption: {
+      color: 'rgba(255,255,255,0.78)',
+      fontSize: 12,
+      marginTop: 3,
+    },
+    walletChevron: {
+      color: 'rgba(255,255,255,0.85)',
+      fontSize: 25,
+      fontWeight: '300',
+    },
+    walletCardDivider: {
+      height: StyleSheet.hairlineWidth,
+      backgroundColor: 'rgba(255,255,255,0.27)',
+      marginHorizontal: 17,
+    },
+    walletAddressRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 18,
+      paddingVertical: 13,
+      gap: 12,
+    },
+    walletAddressCopy: {
+      flex: 1,
+      minWidth: 0,
+    },
+    walletAddressLabel: {
+      color: 'rgba(255,255,255,0.7)',
+      fontSize: 9,
+      fontWeight: '700',
+      letterSpacing: 0.9,
+      marginBottom: 3,
+    },
+    walletAddressValue: {
+      color: '#FFFFFF',
+      fontSize: 13,
+      fontWeight: '600',
+      letterSpacing: 0.2,
+    },
+    copyAddressButton: {
+      borderRadius: 12,
+      backgroundColor: 'rgba(255,255,255,0.16)',
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: 'rgba(255,255,255,0.3)',
+    },
+    copyAddressButtonInner: {
+      paddingHorizontal: 13,
+      paddingVertical: 8,
+    },
+    copyAddressButtonText: {
+      color: '#FFFFFF',
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    statusCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: glass.fillElevated,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: glass.borderBright,
+      borderRadius: 20,
+      padding: 16,
+      marginBottom: 26,
+    },
+    statusCardLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    statusTitle: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    statusSubtitle: {
+      fontSize: 12,
+      color: colors.textMuted,
+      marginTop: 2,
+    },
+    activePill: {
+      backgroundColor: colors.accentWash,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 10,
+    },
+    activePillText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: colors.accent,
+      letterSpacing: 0.4,
+    },
+    groupHeading: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.textSubtle,
+      letterSpacing: 0.6,
+      marginBottom: 8,
+      marginLeft: 4,
+    },
+    groupCard: {
+      backgroundColor: glass.fillElevated,
+      borderRadius: 20,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: glass.borderSubtle,
+      marginBottom: 22,
+      overflow: 'hidden',
+    },
+    rowItem: {
+      minHeight: 52,
+    },
+    rowItemInner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      minHeight: 52,
+    },
+    rowLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      flex: 1,
+    },
+    iconContainer: {
+      width: 30,
+      height: 30,
+      borderRadius: 10,
+      backgroundColor: colors.accentWash,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    iconContainerDestructive: {
+      backgroundColor: 'rgba(255, 59, 48, 0.12)',
+    },
+    darkModeGlyph: {
+      fontSize: 15,
+      color: colors.accent,
+      fontWeight: '700',
+    },
+    rowTitle: {
+      fontSize: 16,
+      fontWeight: '500',
+      color: colors.text,
+    },
+    rowTitleDestructive: {
+      color: colors.danger,
+    },
+    rowRight: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    rowValue: {
+      fontSize: 14,
+      color: colors.textMuted,
+      fontWeight: '400',
+    },
+    rowChevron: {
+      fontSize: 18,
+      color: colors.accent,
+      fontWeight: '400',
+    },
+    rowChevronDestructive: {
+      color: colors.danger,
+    },
+    divider: {
+      height: StyleSheet.hairlineWidth,
+      backgroundColor: colors.separator,
+      marginLeft: 56,
+    },
+  });
+}

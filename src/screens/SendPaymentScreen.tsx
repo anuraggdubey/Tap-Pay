@@ -3,7 +3,7 @@
  * After recipient is resolved, amount entry matches NFC sender Cash App-style keypad.
  */
 
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useMemo} from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,7 @@ import {useRoute} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {ethers} from 'ethers';
 import {useWallet} from '../context/WalletContext';
+import {useTheme} from '../context/ThemeContext';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import {resolveUsername} from '../services/registry';
 import {validateAmount, validateUsername, validateAddress} from '../utils/validation';
@@ -37,7 +38,7 @@ import ConfirmPaymentModal from '../components/ConfirmPaymentModal';
 import InsufficientBalanceModal from '../components/InsufficientBalanceModal';
 import {CrossIcon} from '../components/AppIcons';
 import {triggerHaptic} from '../utils/haptics';
-import {colors} from '../theme';
+import type {AppColors} from '../theme';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'SendPayment'>;
@@ -60,6 +61,8 @@ export default function SendPaymentScreen({navigation}: Props) {
   const route = useRoute();
   const isPayTab = route.name === 'Pay';
   const {address, balance, refreshBalance} = useWallet();
+  const {colors} = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [mode, setMode] = useState<PayMode>('username');
 
   // Recipient state
@@ -520,7 +523,8 @@ export default function SendPaymentScreen({navigation}: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppColors) {
+  return StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -553,7 +557,7 @@ const styles = StyleSheet.create({
     padding: 3,
     marginBottom: 24,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(15, 40, 80, 0.08)',
+    borderColor: colors.borderSubtle,
   },
   modeTab: {
     flex: 1,
@@ -614,10 +618,10 @@ const styles = StyleSheet.create({
   recipientInput: {
     flex: 1,
     fontSize: 15,
-    color: colors.text,
     paddingHorizontal: 14,
     paddingVertical: 14,
     backgroundColor: '#FFFFFF',
+    color: '#0B1220',
   },
   searchBtn: {
     paddingHorizontal: 16,
@@ -759,4 +763,5 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
   },
-});
+  });
+}

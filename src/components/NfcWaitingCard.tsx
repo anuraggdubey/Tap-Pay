@@ -4,7 +4,7 @@
  * Pure UI; no NFC / payment logic.
  */
 
-import React, {useEffect, useRef} from 'react';
+import React, {useEffect, useMemo, useRef} from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,9 @@ import {
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {CrossIcon, ContactlessWave, ReceiveTapIcon} from './AppIcons';
 import PressableScale from './PressableScale';
-import {colors, glass, radii, shadows} from '../theme';
+import {useTheme} from '../context/ThemeContext';
+import {radii, shadows} from '../theme';
+import type {AppColors, AppGlass} from '../theme';
 
 type NfcPhaseVisual = 'searching' | 'broadcasting' | 'success' | 'failed';
 
@@ -143,7 +145,6 @@ const radar = StyleSheet.create({
     borderWidth: 1.5,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: glass.fillElevated,
     ...shadows.soft,
   },
   innerGlow: {
@@ -240,6 +241,8 @@ export default function NfcWaitingCard({
   footer,
 }: Props) {
   const insets = useSafeAreaInsets();
+  const {colors, glass} = useTheme();
+  const s = useMemo(() => createNfcStyles(colors, glass), [colors, glass]);
   const accentColor =
     accent === 'green'
       ? colors.success
@@ -379,7 +382,8 @@ export default function NfcWaitingCard({
   );
 }
 
-const s = StyleSheet.create({
+function createNfcStyles(colors: AppColors, glass: AppGlass) {
+  return StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colors.background,
@@ -561,3 +565,4 @@ const s = StyleSheet.create({
     color: colors.textMuted,
   },
 });
+}

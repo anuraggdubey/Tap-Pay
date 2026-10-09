@@ -4,7 +4,7 @@
  * Absolutely ZERO highlighted badge tags or emojis.
  */
 
-import React from 'react';
+import React, {useMemo} from 'react';
 import {
   View,
   Text,
@@ -14,12 +14,17 @@ import {
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import {MONAD_CONFIG} from '../config/monad';
+import {useTheme} from '../context/ThemeContext';
+import type {AppColors} from '../theme';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'NetworkInfo'>;
 };
 
-export default function NetworkScreen({_navigation}: Props) {
+export default function NetworkScreen(_props: Props) {
+  const {colors} = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Network Status Header */}
@@ -73,7 +78,7 @@ export default function NetworkScreen({_navigation}: Props) {
 
         <View style={styles.rpcRow}>
           <View style={styles.rpcLeft}>
-            <View style={[styles.rpcStatusDot, {backgroundColor: '#FF9F0A'}]} />
+            <View style={[styles.rpcStatusDot, {backgroundColor: colors.warning}]} />
             <View>
               <Text style={styles.rpcLabel}>Fallback 1</Text>
               <Text style={styles.rpcUrl}>{MONAD_CONFIG.rpcUrls.fallback1}</Text>
@@ -85,7 +90,7 @@ export default function NetworkScreen({_navigation}: Props) {
 
         <View style={styles.rpcRow}>
           <View style={styles.rpcLeft}>
-            <View style={[styles.rpcStatusDot, {backgroundColor: '#FF9F0A'}]} />
+            <View style={[styles.rpcStatusDot, {backgroundColor: colors.warning}]} />
             <View>
               <Text style={styles.rpcLabel}>Fallback 2</Text>
               <Text style={styles.rpcUrl}>{MONAD_CONFIG.rpcUrls.fallback2}</Text>
@@ -118,10 +123,11 @@ export default function NetworkScreen({_navigation}: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppColors) {
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#EEF3FA',
+    backgroundColor: colors.background,
   },
   content: {
     padding: 18,
@@ -146,36 +152,36 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#34C759',
+    backgroundColor: colors.success,
   },
   statusText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#34C759',
+    color: colors.success,
   },
   networkName: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#0B1220',
+    color: colors.text,
     letterSpacing: -0.3,
   },
   sectionHeader: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#9AA3B2',
+    color: colors.textSubtle,
     letterSpacing: 0.8,
     marginTop: 12,
     marginBottom: 8,
     marginLeft: 4,
   },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surfaceSolid,
     borderRadius: 20,
     padding: 16,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(15, 40, 80, 0.08)',
+    borderColor: colors.borderSubtle,
     marginBottom: 10,
-    shadowColor: '#0A84FF',
+    shadowColor: colors.accent,
     shadowOffset: {width: 0, height: 6},
     shadowOpacity: 0.08,
     shadowRadius: 14,
@@ -187,25 +193,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(60, 60, 67, 0.12)',
+    borderBottomColor: colors.separator,
   },
   infoKey: {
-    color: '#6B7280',
+    color: colors.textMuted,
     fontSize: 14,
   },
   infoVal: {
-    color: '#0B1220',
+    color: colors.text,
     fontSize: 14,
     fontWeight: '600',
   },
   chainIdBadge: {
-    backgroundColor: 'rgba(10, 132, 255, 0.12)',
+    backgroundColor: colors.accentWash,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
   },
   chainIdText: {
-    color: '#0A84FF',
+    color: colors.accent,
     fontSize: 12,
     fontWeight: '700',
     fontFamily: 'monospace',
@@ -228,22 +234,22 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#34C759',
+    backgroundColor: colors.success,
   },
   rpcLabel: {
-    color: '#0B1220',
+    color: colors.text,
     fontSize: 14,
     fontWeight: '600',
   },
   rpcUrl: {
-    color: '#6B7280',
+    color: colors.textMuted,
     fontSize: 12,
     fontFamily: 'monospace',
     marginTop: 2,
   },
   rpcDivider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(60, 60, 67, 0.12)',
+    backgroundColor: colors.separator,
     marginVertical: 10,
   },
   linkRow: {
@@ -287,17 +293,18 @@ const styles = StyleSheet.create({
   perfValue: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#0A84FF',
+    color: colors.accent,
   },
   perfLabel: {
     fontSize: 11,
-    color: '#6B7280',
+    color: colors.textMuted,
     marginTop: 4,
     fontWeight: '600',
   },
   perfDivider: {
     width: 1,
     height: 32,
-    backgroundColor: 'rgba(60, 60, 67, 0.12)',
+    backgroundColor: colors.separator,
   },
-});
+  });
+}

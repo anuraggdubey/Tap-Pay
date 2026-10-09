@@ -25,7 +25,8 @@ import {useWallet} from '../context/WalletContext';
 import {triggerHaptic} from '../utils/haptics';
 import {updateTransactionStatus} from '../services/history';
 import {CrossIcon, ExternalLinkIcon, WalletCardIcon} from '../components/AppIcons';
-import {colors} from '../theme';
+import {useTheme} from '../context/ThemeContext';
+import type {AppColors} from '../theme';
 import {getTokenBySymbol} from '../config/tokens';
 
 type Props = {
@@ -35,15 +36,19 @@ type Props = {
 
 function DirectionArrow({
   direction,
+  sentColor,
+  receivedColor,
 }: {
   direction: 'up' | 'down';
+  sentColor: string;
+  receivedColor: string;
 }) {
   return (
     <Text
       style={{
         fontSize: 28,
         fontWeight: '700',
-        color: direction === 'up' ? '#FF6B6B' : colors.success,
+        color: direction === 'up' ? sentColor : receivedColor,
         marginTop: direction === 'up' ? -2 : 2,
       }}>
       {direction === 'up' ? '↑' : '↓'}
@@ -57,18 +62,22 @@ function PartyRow({
   secondary,
   balanceLabel,
   balanceValue,
+  styles,
+  iconMuted,
 }: {
   label: string;
   primary: string;
   secondary?: string;
   balanceLabel?: string;
   balanceValue?: string;
+  styles: ReturnType<typeof createStyles>;
+  iconMuted: string;
 }) {
   return (
     <View style={styles.partyRow}>
       <View style={styles.partyLeft}>
         <View style={styles.partyIcon}>
-          <WalletCardIcon size={14} color="#8E8E93" />
+          <WalletCardIcon size={14} color={iconMuted} />
         </View>
         <View style={styles.partyTextCol}>
           <Text style={styles.partyLabel}>{label}</Text>
@@ -106,6 +115,8 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
     completedAt: completedAtParam,
   } = route.params;
   const {address, username, balance, refreshBalance} = useWallet();
+  const {colors} = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const [status, setStatus] = useState<'pending' | 'confirmed' | 'failed'>(
     initialStatus ?? 'pending',
@@ -290,7 +301,9 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
   const badgeLetter = displaySymbol.charAt(0);
 
   const signedAmount = `${isReceived ? '+' : '-'}${amount} ${displaySymbol}`;
-  const amountColor = isReceived ? colors.success : '#FF6B6B';
+  const sentAmountColor = '#FF6B6B';
+  const amountColor = isReceived ? colors.success : sentAmountColor;
+  const iconMuted = colors.textSubtle;
 
   if (status === 'pending') {
     return (
@@ -358,7 +371,11 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
               transform: [{scale: checkmarkScale}],
             },
           ]}>
-          <DirectionArrow direction={isReceived ? 'down' : 'up'} />
+          <DirectionArrow
+            direction={isReceived ? 'down' : 'up'}
+            sentColor={sentAmountColor}
+            receivedColor={colors.success}
+          />
         </Animated.View>
 
         <Text style={styles.heroStatus}>{isReceived ? 'Received' : 'Sent'}</Text>
@@ -372,6 +389,8 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
             secondary={fromParty.secondary}
             balanceLabel={!isReceived ? 'Balance' : undefined}
             balanceValue={!isReceived ? formatMon(balance) : undefined}
+            styles={styles}
+            iconMuted={iconMuted}
           />
           <View style={styles.partyConnector}>
             <Text style={styles.partyConnectorIcon}>⌄</Text>
@@ -382,6 +401,8 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
             secondary={toParty.secondary}
             balanceLabel={isReceived ? 'Balance' : undefined}
             balanceValue={isReceived ? formatMon(balance) : undefined}
+            styles={styles}
+            iconMuted={iconMuted}
           />
         </View>
 
@@ -426,7 +447,7 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
             onPress={openExplorer}
             activeOpacity={0.7}>
             <Text style={styles.explorerLinkText}>View Raw Transaction</Text>
-            <ExternalLinkIcon size={14} color="#8E8E93" />
+            <ExternalLinkIcon size={14} color={iconMuted} />
           </TouchableOpacity>
         )}
 
@@ -441,10 +462,11 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppColors) {
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#EEF3FA',
+    backgroundColor: colors.background,
   },
   scrollContent: {
     paddingHorizontal: 22,
@@ -456,7 +478,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   backChevron: {
-    color: '#0B1220',
+    color: colors.text,
     fontSize: 32,
     fontWeight: '300',
     marginTop: -4,
@@ -475,20 +497,20 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 28,
     fontWeight: '700',
-    color: '#0B1220',
+    color: colors.text,
     letterSpacing: -0.4,
   },
   heroAmount: {
     textAlign: 'center',
     fontSize: 22,
     fontWeight: '600',
-    color: '#0B1220',
+    color: colors.text,
     marginTop: 6,
   },
   heroTime: {
     textAlign: 'center',
     fontSize: 13,
-    color: '#6B7280',
+    color: colors.textMuted,
     marginTop: 8,
     marginBottom: 28,
   },
@@ -510,7 +532,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 12,
-    backgroundColor: 'rgba(10, 132, 255, 0.12)',
+    backgroundColor: colors.accentWash,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -520,17 +542,17 @@ const styles = StyleSheet.create({
   },
   partyLabel: {
     fontSize: 12,
-    color: '#6B7280',
+    color: colors.textMuted,
     marginBottom: 2,
   },
   partyPrimary: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#0B1220',
+    color: colors.text,
   },
   partySecondary: {
     fontSize: 12,
-    color: '#9AA3B2',
+    color: colors.textSubtle,
     marginTop: 2,
     fontFamily: 'monospace',
   },
@@ -540,19 +562,19 @@ const styles = StyleSheet.create({
   partyBalance: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#0B1220',
+    color: colors.text,
   },
   partyConnector: {
     paddingLeft: 10,
     paddingVertical: 4,
   },
   partyConnectorIcon: {
-    color: '#9AA3B2',
+    color: colors.textSubtle,
     fontSize: 16,
   },
   divider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(60, 60, 67, 0.12)',
+    backgroundColor: colors.separator,
     marginVertical: 18,
   },
   detailList: {
@@ -572,22 +594,22 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#0A84FF',
+    backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
   monBadgeText: {
-    color: '#0B1220',
+    color: colors.textOnAccent,
     fontWeight: '800',
     fontSize: 16,
   },
   assetName: {
-    color: '#0B1220',
+    color: colors.text,
     fontSize: 15,
     fontWeight: '600',
   },
   assetTicker: {
-    color: '#6B7280',
+    color: colors.textMuted,
     fontSize: 12,
     marginTop: 1,
   },
@@ -605,12 +627,12 @@ const styles = StyleSheet.create({
   },
   metaLabel: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.textMuted,
   },
   metaValue: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#0B1220',
+    color: colors.text,
   },
   explorerLink: {
     marginTop: 28,
@@ -621,12 +643,12 @@ const styles = StyleSheet.create({
   },
   explorerLinkText: {
     fontSize: 14,
-    color: '#0A84FF',
+    color: colors.accent,
     fontWeight: '600',
   },
   homeBtn: {
     marginTop: 28,
-    backgroundColor: '#0A84FF',
+    backgroundColor: colors.accent,
     borderRadius: 28,
     minHeight: 52,
     alignItems: 'center',
@@ -634,7 +656,7 @@ const styles = StyleSheet.create({
     borderWidth: 0,
   },
   homeBtnText: {
-    color: '#FFFFFF',
+    color: colors.textOnAccent,
     fontSize: 16,
     fontWeight: '700',
   },
@@ -648,13 +670,13 @@ const styles = StyleSheet.create({
     marginTop: 18,
     fontSize: 22,
     fontWeight: '700',
-    color: '#0B1220',
+    color: colors.text,
     textAlign: 'center',
   },
   pendingHint: {
     marginTop: 8,
     fontSize: 13,
-    color: '#6B7280',
+    color: colors.textMuted,
     textAlign: 'center',
     lineHeight: 18,
   },
@@ -663,10 +685,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surfaceSolid,
   },
   pendingAmount: {
-    color: '#0B1220',
+    color: colors.text,
     fontWeight: '700',
     fontSize: 16,
   },
@@ -684,4 +706,5 @@ const styles = StyleSheet.create({
     color: colors.danger,
     textAlign: 'center',
   },
-});
+  });
+}

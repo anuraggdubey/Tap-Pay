@@ -101,6 +101,8 @@ export default function TransactionHistoryScreen() {
             recipient: item.counterparty,
             direction: item.direction,
             counterpartyUsername: item.counterpartyUsername,
+            initialStatus: item.status,
+            completedAt: item.timestamp,
           });
         }}>
         <View style={styles.txLeft}>

@@ -47,7 +47,7 @@ export const Footer: React.FC<FooterProps> = ({ onJoinWaitlist }) => {
           className="footer-bento-grid"
         >
           {/* LEFT COLUMN — Two stacked cards */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }} data-parallax="0.05">
+          <div className="footer-bento-col" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {/* Card: Deep Navy — NFC Touch */}
             <div
               className="scroll-reveal-left scroll-delay-1"
@@ -102,7 +102,7 @@ export const Footer: React.FC<FooterProps> = ({ onJoinWaitlist }) => {
 
           {/* CENTER — Phone showing home screen, 70% visible from top */}
           <div
-            className="scroll-reveal-scale"
+            className="scroll-reveal-scale footer-bento-phone"
             style={{
               position: 'relative',
               display: 'flex',
@@ -152,7 +152,7 @@ export const Footer: React.FC<FooterProps> = ({ onJoinWaitlist }) => {
 
             {/* Phone — sits at bottom, overflows down (70% visible) with dynamic scroll lift */}
             <div
-              data-parallax="0.16"
+              className="footer-bento-phone-device"
               style={{
                 width: '260px',
                 flexShrink: 0,
@@ -186,7 +186,7 @@ export const Footer: React.FC<FooterProps> = ({ onJoinWaitlist }) => {
           </div>
 
           {/* RIGHT COLUMN — Two stacked cards */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }} data-parallax="0.05">
+          <div className="footer-bento-col" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {/* Card: Dark Teal — Security */}
             <div
               className="scroll-reveal-right scroll-delay-1"
@@ -407,12 +407,50 @@ export const Footer: React.FC<FooterProps> = ({ onJoinWaitlist }) => {
           .footer-bento-grid {
             grid-template-columns: 1fr !important;
             min-height: auto !important;
+            width: 100%;
+            gap: 16px !important;
+          }
+          .footer-bento-col,
+          .footer-bento-phone,
+          .footer-bento-grid > div {
+            width: 100% !important;
+            max-width: 100% !important;
+            transform: none !important;
+          }
+          .footer-bento-col > div,
+          .footer-bento-phone {
+            width: 100%;
+            box-sizing: border-box;
           }
           .footer-bottom-grid {
             grid-template-columns: 1fr 1fr !important;
           }
         }
         @media (max-width: 600px) {
+          .footer-bento-grid {
+            gap: 12px !important;
+            margin-bottom: 36px !important;
+          }
+          .footer-bento-col > div {
+            min-height: 180px;
+            padding: 24px 20px !important;
+            transform: none !important;
+          }
+          .footer-bento-phone {
+            min-height: 420px;
+            align-items: center !important;
+          }
+          .footer-bento-phone > div:first-child {
+            padding: 24px 20px 0 !important;
+            width: 100%;
+            box-sizing: border-box;
+          }
+          .footer-bento-phone-device {
+            width: min(240px, calc(100% - 48px)) !important;
+            margin-left: auto;
+            margin-right: auto;
+            margin-bottom: -110px !important;
+          }
           .footer-bottom-grid {
             grid-template-columns: 1fr !important;
           }

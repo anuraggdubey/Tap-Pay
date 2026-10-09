@@ -14,7 +14,7 @@ const InteractivePhone: React.FC<PhoneProps> = ({ val, setVal, paid, onPay, isMo
     <div
       className="realistic-phone-chassis"
       style={{
-        width: isMobile ? 'min(290px, 82vw)' : '320px',
+        width: isMobile ? 'min(280px, 100%)' : '320px',
         height: isMobile ? '530px' : '640px',
         borderRadius: isMobile ? '44px' : '52px',
         padding: isMobile ? '10px' : '12px',
@@ -466,8 +466,10 @@ export const CenterPhoneShowcase: React.FC = () => {
           .center-phone-mobile-showcase {
             display: block !important;
             position: relative;
-            max-width: 480px;
+            width: 100%;
+            max-width: 100%;
             margin: 0 auto;
+            box-sizing: border-box;
           }
 
           /* Stationary Phone Anchor: Stays locked in viewport as user scrolls */
@@ -478,18 +480,27 @@ export const CenterPhoneShowcase: React.FC = () => {
             display: flex;
             justify-content: center;
             align-items: center;
-            margin-bottom: -500px;
+            width: 100%;
+            margin-left: 0;
+            margin-right: 0;
+            margin-bottom: -420px;
             pointer-events: auto;
-            transform: translateZ(0);
+            transform: none;
+          }
+          .mobile-sticky-phone-stage .realistic-phone-chassis {
+            margin-left: auto;
+            margin-right: auto;
           }
 
           /* Scrolling Stream that glides up and ABOVE the phone */
           .mobile-cards-stream {
             position: relative;
             z-index: 10;
-            margin-top: 480px;
+            margin-top: 420px;
             display: flex;
             flex-direction: column;
+            align-items: stretch;
+            width: 100%;
             pointer-events: none;
           }
 
@@ -516,9 +527,14 @@ export const CenterPhoneShowcase: React.FC = () => {
           .mobile-stack-card {
             pointer-events: auto;
             position: sticky;
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            margin-left: 0;
+            margin-right: 0;
             border-radius: 28px;
-            padding: 30px 24px;
-            min-height: 220px;
+            padding: 24px 20px;
+            min-height: 200px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -526,13 +542,12 @@ export const CenterPhoneShowcase: React.FC = () => {
             border: 1px solid rgba(255, 255, 255, 0.2);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
-            margin-bottom: 260px;
-            transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-            will-change: transform;
+            margin-bottom: 180px;
+            transform: none !important;
           }
 
           .mobile-stack-card:last-child {
-            margin-bottom: 60px;
+            margin-bottom: 40px;
           }
 
           /* Layered Sticky Offsets (Wallet-Deck Effect) */

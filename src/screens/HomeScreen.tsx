@@ -408,10 +408,10 @@ export default function HomeScreen() {
             colors={[colors.accent]}
           />
         }>
-        {/* Header — profile only */}
+        {/* Header */}
         <FadeInView delay={0} translateY={6}>
           <View style={styles.topBar}>
-            <View style={styles.topBarSpacer} />
+            <Text style={styles.topBrand}>TapPay</Text>
             <PressableScale
               style={styles.profileCircle}
               contentStyle={styles.profileCircleInner}
@@ -441,11 +441,6 @@ export default function HomeScreen() {
                   resizeMode="cover"
                   accessibilityIgnoresInvertColors
                 />
-                <View style={styles.waveSwooshTop} />
-                <View style={styles.waveSwooshMid} />
-                <View style={styles.waveSwooshBottom} />
-                <View style={styles.waveHighlight} />
-                <View style={styles.cardGlassEdge} />
               </View>
 
               <View style={styles.cardTopRow}>
@@ -510,11 +505,6 @@ export default function HomeScreen() {
                   resizeMode="cover"
                   accessibilityIgnoresInvertColors
                 />
-                <View style={styles.waveSwooshTop} />
-                <View style={styles.waveSwooshMid} />
-                <View style={styles.waveSwooshBottom} />
-                <View style={styles.waveHighlight} />
-                <View style={styles.cardGlassEdge} />
               </View>
               <View style={styles.cardBackTopRow}>
                 <View style={styles.cardBrand}>
@@ -770,11 +760,14 @@ const styles = StyleSheet.create({
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
     marginBottom: 14,
   },
-  topBarSpacer: {
-    flex: 1,
+  topBrand: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: -0.4,
   },
   headerRight: {
     flexDirection: 'row',
@@ -1012,7 +1005,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   cardBody: {
-    backgroundColor: '#0066DB',
+    backgroundColor: colors.accent,
     borderRadius: 28,
     padding: 18,
     minHeight: 210,
@@ -1028,7 +1021,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#0066DB',
+    backgroundColor: colors.accent,
     borderRadius: 28,
     padding: 18,
     minHeight: 210,
@@ -1038,6 +1031,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.42)',
     ...shadows.card,
   },
+  /** Clipped layered-wave background — visuals only, no layout impact */
   cardBgLayer: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: 28,
@@ -1048,59 +1042,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     left: 0,
-    right: 0,
-    bottom: 0,
     width: '100%',
     height: '100%',
-  },
-  /** High-contrast liquid swooshes so waves stay visible on device */
-  waveSwooshTop: {
-    position: 'absolute',
-    top: -70,
-    left: -90,
-    width: 280,
-    height: 200,
-    borderRadius: 140,
-    backgroundColor: 'rgba(210, 235, 255, 0.55)',
-    transform: [{rotate: '-32deg'}, {scaleX: 1.45}],
-  },
-  waveSwooshMid: {
-    position: 'absolute',
-    top: 20,
-    right: -110,
-    width: 300,
-    height: 180,
-    borderRadius: 150,
-    backgroundColor: 'rgba(100, 210, 255, 0.42)',
-    transform: [{rotate: '16deg'}, {scaleX: 1.35}],
-  },
-  waveSwooshBottom: {
-    position: 'absolute',
-    bottom: -100,
-    left: -50,
-    width: 340,
-    height: 210,
-    borderRadius: 170,
-    backgroundColor: 'rgba(255, 255, 255, 0.28)',
-    transform: [{rotate: '-14deg'}, {scaleX: 1.3}],
-  },
-  waveHighlight: {
-    position: 'absolute',
-    top: 55,
-    left: 20,
-    width: 220,
-    height: 100,
-    borderRadius: 80,
-    backgroundColor: 'rgba(255, 255, 255, 0.18)',
-    transform: [{rotate: '-10deg'}, {scaleX: 1.5}],
-  },
-  cardGlassEdge: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 2,
-    backgroundColor: 'rgba(255,255,255,0.5)',
   },
   cardTopRow: {
     flexDirection: 'row',

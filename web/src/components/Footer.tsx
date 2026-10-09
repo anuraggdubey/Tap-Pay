@@ -58,6 +58,7 @@ export const Footer: React.FC<FooterProps> = ({ onJoinWaitlist }) => {
           <div className="footer-editorial-col">
             <h3 className="footer-editorial-col-title">Product</h3>
             <nav className="footer-editorial-links" aria-label="Product">
+              <Link to="/docs" className="footer-editorial-link">Documentation</Link>
               <Link to="/#how-it-works" className="footer-editorial-link">Features</Link>
               <Link to="/#demo" className="footer-editorial-link">NFC Simulator</Link>
               <Link to="/download" className="footer-editorial-link">Download</Link>
@@ -72,6 +73,7 @@ export const Footer: React.FC<FooterProps> = ({ onJoinWaitlist }) => {
           <div className="footer-editorial-col">
             <h3 className="footer-editorial-col-title">Developers &amp; Docs</h3>
             <nav className="footer-editorial-links" aria-label="Developers">
+              <Link to="/docs" className="footer-editorial-link">TapPay Docs</Link>
               <ExtLink href="https://docs.monad.xyz">Monad Documentation</ExtLink>
               <a
                 href="https://github.com/anuraggdubey/Tap-Pay"
@@ -124,25 +126,22 @@ export const Footer: React.FC<FooterProps> = ({ onJoinWaitlist }) => {
         </div>
 
         <div className="footer-wordmark-block" aria-hidden>
-          <svg className="footer-wordmark-glyph" viewBox="0 0 512 512" fill="none">
-            <circle cx="200" cy="120" r="62" fill="currentColor" />
-            <circle cx="340" cy="215" r="44" fill="currentColor" opacity="0.6" />
-            <circle cx="200" cy="400" r="72" fill="currentColor" />
-            <path
-              d="M200 182 C200 215, 240 215, 340 215"
-              stroke="currentColor"
-              strokeWidth="52"
-              strokeLinecap="round"
-              fill="none"
-            />
-            <path d="M200 328 L200 182" stroke="currentColor" strokeWidth="52" strokeLinecap="round" fill="none" />
-          </svg>
-          <svg className="footer-wordmark-logo" viewBox="0 0 512 512" fill="none">
-            <circle cx="200" cy="120" r="62" fill="currentColor" />
-            <circle cx="340" cy="215" r="44" fill="currentColor" opacity="0.6" />
-            <circle cx="200" cy="400" r="72" fill="currentColor" />
-          </svg>
-          <div className="footer-wordmark-text">TAPPAY</div>
+          <div className="footer-wordmark-inner">
+            <svg className="footer-wordmark-mark" viewBox="0 0 512 512" fill="none">
+              <circle cx="200" cy="120" r="62" fill="currentColor" />
+              <circle cx="340" cy="215" r="44" fill="currentColor" opacity="0.65" />
+              <circle cx="200" cy="400" r="72" fill="currentColor" />
+              <path
+                d="M200 182 C200 215, 240 215, 340 215"
+                stroke="currentColor"
+                strokeWidth="52"
+                strokeLinecap="round"
+                fill="none"
+              />
+              <path d="M200 328 L200 182" stroke="currentColor" strokeWidth="52" strokeLinecap="round" fill="none" />
+            </svg>
+            <div className="footer-wordmark-text">TapPay</div>
+          </div>
         </div>
 
         <div className="footer-legal-bar">

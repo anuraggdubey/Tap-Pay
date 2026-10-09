@@ -84,7 +84,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onJoinWaitlist }) => {
               />
               <path d="M200 328 L200 182" stroke="currentColor" strokeWidth="52" strokeLinecap="round" fill="none" />
             </svg>
-            <span style={{ letterSpacing: '-0.02em', fontWeight: 800 }}>tappay</span>
+            <span style={{ letterSpacing: '-0.02em', fontWeight: 800 }}>TapPay</span>
           </Link>
 
           <nav
@@ -109,17 +109,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onJoinWaitlist }) => {
               <span>Download</span>
               <ChevronDown size={14} opacity={0.6} />
             </Link>
-            <a
-              href="https://x.com/tapxpay"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="phantom-nav-item"
-            >
-              <span>Community</span>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style={{ opacity: 0.8, marginLeft: '2px' }}>
-                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-              </svg>
-            </a>
+            <Link to="/docs" className="phantom-nav-item">
+              <span>Docs</span>
+              <ChevronDown size={14} opacity={0.6} />
+            </Link>
           </nav>
 
           <div
@@ -194,6 +187,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onJoinWaitlist }) => {
             style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-dark)' }}
           >
             Download
+          </Link>
+          <Link
+            to="/docs"
+            onClick={() => setMobileMenuOpen(false)}
+            style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-dark)' }}
+          >
+            Docs
           </Link>
           <div className={`${splitClass} nav-download-mobile-only`} style={{ marginTop: 8 }}>
             <Link

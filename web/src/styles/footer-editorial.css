@@ -102,44 +102,40 @@
 }
 
 .footer-wordmark-block {
-  position: relative;
-  padding: 8px 0 48px;
+  padding: 16px 0 48px;
   user-select: none;
   pointer-events: none;
 }
 
-.footer-wordmark-glyph {
-  position: absolute;
-  left: 2%;
-  top: 12%;
-  width: 28px;
-  height: 32px;
-  opacity: 0.35;
-  color: var(--text-dark);
+.footer-wordmark-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(8px, 2vw, 16px);
+  width: 100%;
 }
 
-.footer-wordmark-logo {
-  position: absolute;
-  left: 50%;
-  top: 0;
-  transform: translateX(-50%);
-  width: 36px;
-  height: 36px;
-  opacity: 0.45;
+.footer-wordmark-mark {
+  width: clamp(48px, 8vw, 72px);
+  height: auto;
+  flex-shrink: 0;
   color: var(--text-dark);
-  pointer-events: none;
+  opacity: 0.14;
 }
 
 .footer-wordmark-text {
   font-family: 'Instrument Serif', Georgia, 'Times New Roman', serif;
-  font-size: clamp(72px, 16.5vw, 200px);
+  font-size: clamp(64px, 15vw, 188px);
   font-weight: 400;
-  letter-spacing: -0.03em;
-  line-height: 0.92;
+  letter-spacing: -0.035em;
+  line-height: 0.95;
   text-align: center;
-  color: rgba(26, 26, 26, 0.07);
+  text-transform: none;
+  color: rgba(26, 26, 26, 0.08);
   white-space: nowrap;
   width: 100%;
+  max-width: 100%;
   overflow: hidden;
 }
 
@@ -218,13 +214,11 @@
   }
 
   .footer-wordmark-text {
-    font-size: clamp(56px, 22vw, 96px);
+    font-size: clamp(52px, 20vw, 88px);
   }
 
-  .footer-wordmark-glyph {
-    width: 22px;
-    height: 26px;
-    left: 0;
+  .footer-wordmark-mark {
+    width: clamp(40px, 12vw, 52px);
   }
 
   .footer-legal-bar {

@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import WaitlistPage from './pages/WaitlistPage';
 import DownloadPage from './pages/DownloadPage';
+import DocsPage from './pages/DocsPage';
 import {
   WaitlistLaunchModal,
   shouldShowWaitlistLaunchModal,
@@ -33,6 +34,7 @@ function AppRoutes() {
         <Route path="/" element={<LandingPage onJoinWaitlist={goWaitlist} />} />
         <Route path="/waitlist" element={<WaitlistPage />} />
         <Route path="/download" element={<DownloadPage />} />
+        <Route path="/docs" element={<DocsPage />} />
       </Routes>
 
       <WaitlistLaunchModal isOpen={launchOpen} onClose={() => setLaunchOpen(false)} onJoin={goWaitlist} />

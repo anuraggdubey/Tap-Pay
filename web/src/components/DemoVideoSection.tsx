@@ -3,7 +3,7 @@ import { ArrowUpRight } from 'lucide-react';
 import '../styles/demo-video.css';
 
 const DEMO_SRC = '/videos/tappay-demo.mp4';
-const POSTER = '/screenshots/home.png';
+const POSTER = '/screenshots/home.jpg';
 
 export const DemoVideoSection: React.FC = () => {
   return (

@@ -13,6 +13,19 @@ Two payment modes:
 - **Tap Pay** — proximity-based, phone-to-phone, NFC HCE
 - **Username Pay** — search-based, username → wallet address lookup
 
+### App UI reference (current builds)
+
+Screens and marketing captures live under `docs/screenshots/social/`:
+
+| Screen | Asset |
+|--------|--------|
+| Home (balance, tap / receive, quick actions) | `Home.jpg` |
+| Pay (`@username`, amount keypad) | `payment screen.jpg` |
+| History | `history.jpg` |
+| Settings (network & account) | `settings.jpg` |
+| Product demo (NFC tap film) | `watermark-removed.mp4` |
+| README brand mark only | `logo.png` |
+
 ---
 
 ## 2. User Flow

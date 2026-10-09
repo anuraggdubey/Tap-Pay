@@ -44,7 +44,7 @@ import {colors, glass, shadows, premiumCard} from '../theme';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-const CARD_WAVE_BG = require('../assets/tappay-card-wave-bg.png');
+const CARD_WAVE_BG = require('../assets/tappay-card-wave-bg.jpg');
 
 function getTxBadge(tx: TransactionRecord): {label: string; variant: 'tap' | 'direct' | 'received'} {
   if (tx.direction === 'received') {

@@ -7,7 +7,7 @@ import {
   AccessibilityInfo,
   Animated,
   Easing,
-  Image,
+  ImageBackground,
   Modal,
   Pressable,
   View,
@@ -44,7 +44,7 @@ import {colors, glass, shadows, premiumCard} from '../theme';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-const CARD_WAVE_BG = require('../assets/tappay-card-wave-bg.jpg');
+const CARD_WAVE_BG = require('../assets/tappay-card-wave-bg.png');
 
 function getTxBadge(tx: TransactionRecord): {label: string; variant: 'tap' | 'direct' | 'received'} {
   if (tx.direction === 'received') {
@@ -434,15 +434,11 @@ export default function HomeScreen() {
               pointerEvents={showingCardBack ? 'none' : 'auto'}
               accessibilityElementsHidden={showingCardBack}
               importantForAccessibility={showingCardBack ? 'no-hide-descendants' : 'auto'}>
-              <View pointerEvents="none" style={styles.cardBgLayer}>
-                <Image
-                  source={CARD_WAVE_BG}
-                  style={styles.cardWaveImage}
-                  resizeMode="cover"
-                  accessibilityIgnoresInvertColors
-                />
-              </View>
-
+              <ImageBackground
+                source={CARD_WAVE_BG}
+                style={styles.cardFaceFill}
+                imageStyle={styles.cardFaceImage}
+                resizeMode="cover">
               <View style={styles.cardTopRow}>
                 <View style={styles.cardBrand}>
                   <BrandLogo size={22} color="#FFFFFF" />
@@ -491,6 +487,7 @@ export default function HomeScreen() {
                   </View>
                 </View>
               </View>
+              </ImageBackground>
             </Animated.View>
 
             <Animated.View
@@ -498,14 +495,11 @@ export default function HomeScreen() {
               pointerEvents={showingCardBack ? 'auto' : 'none'}
               accessibilityElementsHidden={!showingCardBack}
               importantForAccessibility={showingCardBack ? 'auto' : 'no-hide-descendants'}>
-              <View pointerEvents="none" style={styles.cardBgLayer}>
-                <Image
-                  source={CARD_WAVE_BG}
-                  style={styles.cardWaveImage}
-                  resizeMode="cover"
-                  accessibilityIgnoresInvertColors
-                />
-              </View>
+              <ImageBackground
+                source={CARD_WAVE_BG}
+                style={styles.cardFaceFill}
+                imageStyle={styles.cardFaceImage}
+                resizeMode="cover">
               <View style={styles.cardBackTopRow}>
                 <View style={styles.cardBrand}>
                   <BrandLogo size={20} color="#FFFFFF" />
@@ -562,6 +556,7 @@ export default function HomeScreen() {
                   </Text>
                 </View>
               </View>
+              </ImageBackground>
             </Animated.View>
             </View>
           </View>
@@ -1005,11 +1000,8 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   cardBody: {
-    backgroundColor: colors.accent,
     borderRadius: 28,
-    padding: 18,
     minHeight: 210,
-    justifyContent: 'space-between',
     overflow: 'hidden',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(255,255,255,0.42)',
@@ -1021,41 +1013,32 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: colors.accent,
     borderRadius: 28,
-    padding: 18,
     minHeight: 210,
-    justifyContent: 'space-between',
     overflow: 'hidden',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(255,255,255,0.42)',
     ...shadows.card,
   },
-  /** Clipped layered-wave background — visuals only, no layout impact */
-  cardBgLayer: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 28,
-    overflow: 'hidden',
-    zIndex: 0,
+  /** Image is the only card fill — same size + rounded corners */
+  cardFaceFill: {
+    flex: 1,
+    minHeight: 210,
+    padding: 18,
+    justifyContent: 'space-between',
   },
-  cardWaveImage: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '100%',
+  cardFaceImage: {
+    borderRadius: 28,
   },
   cardTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    zIndex: 2,
   },
   cardMainRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
-    zIndex: 2,
     gap: 12,
     marginTop: 8,
   },

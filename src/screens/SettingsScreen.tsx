@@ -30,7 +30,6 @@ import {
   GlobeIcon,
   InfoIcon,
   PowerIcon,
-  SettingsIcon,
 } from '../components/AppIcons';
 import PressableScale from '../components/PressableScale';
 import FadeInView from '../components/FadeInView';
@@ -141,9 +140,6 @@ export default function SettingsScreen({navigation}: Props) {
             <View>
               <Text style={styles.pageEyebrow}>TAPPAY</Text>
               <Text style={styles.pageTitle}>Settings</Text>
-            </View>
-            <View style={styles.settingsMark}>
-              <SettingsIcon size={20} color={colors.accent} />
             </View>
           </View>
         </FadeInView>
@@ -294,14 +290,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 1.2,
     marginBottom: 2,
-  },
-  settingsMark: {
-    width: 42,
-    height: 42,
-    borderRadius: 15,
-    backgroundColor: '#F3F7FC',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   pageTitle: {
     fontSize: 32,

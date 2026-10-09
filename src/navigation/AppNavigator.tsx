@@ -50,6 +50,9 @@ export type RootStackParamList = {
     waitForBalance?: boolean;
     expectedAmountWei?: string;
     tokenSymbol?: string;
+    /** When opening from History, prefer the stored outcome over live waiting UI */
+    initialStatus?: 'confirmed' | 'pending' | 'failed';
+    completedAt?: string;
   };
   AccountInfo: undefined;
   AboutTapPay: undefined;

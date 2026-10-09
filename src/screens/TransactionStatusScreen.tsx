@@ -102,13 +102,21 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
     waitForBalance,
     expectedAmountWei,
     tokenSymbol = 'MON',
+    initialStatus,
+    completedAt: completedAtParam,
   } = route.params;
   const {address, username, balance, refreshBalance} = useWallet();
   const insets = useSafeAreaInsets();
-  const [status, setStatus] = useState<'pending' | 'confirmed' | 'failed'>('pending');
+  const [status, setStatus] = useState<'pending' | 'confirmed' | 'failed'>(
+    initialStatus ?? 'pending',
+  );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const checkmarkScale = useRef(new Animated.Value(0)).current;
-  const completedAt = useRef(new Date()).current;
+  const checkmarkScale = useRef(
+    new Animated.Value(initialStatus === 'confirmed' ? 1 : 0),
+  ).current;
+  const completedAt = useRef(
+    completedAtParam ? new Date(completedAtParam) : new Date(),
+  ).current;
 
   const isRealTxHash =
     txHash &&
@@ -147,6 +155,14 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
   };
 
   useEffect(() => {
+    // History / already-finalized txs: show the stored outcome, don't re-enter waiting UI.
+    if (initialStatus === 'confirmed' || initialStatus === 'failed') {
+      if (initialStatus === 'confirmed' && checkmarkScale) {
+        checkmarkScale.setValue(1);
+      }
+      return;
+    }
+
     let isMounted = true;
 
     (async () => {
@@ -206,7 +222,7 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
     return () => {
       isMounted = false;
     };
-  }, [txHash, waitForBalance, expectedAmountWei, address, balance, refreshBalance]);
+  }, [txHash, waitForBalance, expectedAmountWei, address, balance, refreshBalance, initialStatus]);
 
   const openExplorer = () => {
     if (isRealTxHash) {

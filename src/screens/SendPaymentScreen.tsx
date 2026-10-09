@@ -474,6 +474,7 @@ export default function SendPaymentScreen({navigation}: Props) {
               }}
               autoCapitalize="none"
               autoCorrect={false}
+              underlineColorAndroid="transparent"
             />
             <TouchableOpacity
               style={styles.searchBtn}
@@ -503,6 +504,7 @@ export default function SendPaymentScreen({navigation}: Props) {
               }}
               autoCapitalize="none"
               autoCorrect={false}
+              underlineColorAndroid="transparent"
             />
             <TouchableOpacity
               style={styles.searchBtn}
@@ -615,6 +617,7 @@ const styles = StyleSheet.create({
     color: colors.text,
     paddingHorizontal: 14,
     paddingVertical: 14,
+    backgroundColor: '#FFFFFF',
   },
   searchBtn: {
     paddingHorizontal: 16,

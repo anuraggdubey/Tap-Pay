@@ -101,6 +101,8 @@ export default function TransactionHistoryScreen() {
             recipient: item.counterparty,
             direction: item.direction,
             counterpartyUsername: item.counterpartyUsername,
+            initialStatus: item.status,
+            completedAt: item.timestamp,
           });
         }}>
         <View style={styles.txLeft}>
@@ -171,7 +173,7 @@ export default function TransactionHistoryScreen() {
         <View style={styles.identityRow}>
           <View style={styles.identityMark}>
             <Text style={styles.identityMarkText}>
-              (username || address?.slice(2, 3) || 'T').charAt(0).toUpperCase()
+              {(username || address?.slice(2, 3) || 'T').charAt(0).toUpperCase()}
             </Text>
           </View>
           <View style={styles.identityCopy}>
@@ -211,6 +213,7 @@ export default function TransactionHistoryScreen() {
             autoCapitalize="none"
             autoCorrect={false}
             accessibilityLabel="Search transactions"
+            underlineColorAndroid="transparent"
           />
           {searchQuery.length > 0 && (
             <PressableScale
@@ -385,9 +388,11 @@ const styles = StyleSheet.create({
     minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F5F7FA',
+    backgroundColor: '#FFFFFF',
     borderRadius: 15,
     paddingHorizontal: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(15, 40, 80, 0.10)',
   },
   searchGlyph: {
     width: 15,
@@ -413,6 +418,7 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 15,
     paddingVertical: 10,
+    backgroundColor: '#FFFFFF',
   },
   clearSearchButton: {
     width: 30,

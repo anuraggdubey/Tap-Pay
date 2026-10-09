@@ -7,6 +7,7 @@ import {
   AccessibilityInfo,
   Animated,
   Easing,
+  ImageBackground,
   Modal,
   Pressable,
   View,
@@ -27,7 +28,13 @@ import {truncateAddress, formatTimestamp} from '../utils/format';
 import {triggerHaptic} from '../utils/haptics';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import BrandLogo from '../components/BrandLogo';
-import {ContactlessWave, SettingsIcon, UserIcon} from '../components/AppIcons';
+import {
+  ContactlessWave,
+  SettingsIcon,
+  UserIcon,
+  SendTapIcon,
+  ReceiveTapIcon,
+} from '../components/AppIcons';
 import {getTransactionHistory, initHistory, TransactionRecord} from '../services/history';
 import {initNfc, isNfcEnabled, isNfcSupported} from '../services/nfcReader';
 import PressableScale from '../components/PressableScale';
@@ -36,6 +43,8 @@ import LivePulseDot from '../components/LivePulseDot';
 import {colors, glass, shadows, premiumCard} from '../theme';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
+const CARD_WAVE_BG = require('../assets/tappay-card-wave-bg.png');
 
 function getTxBadge(tx: TransactionRecord): {label: string; variant: 'tap' | 'direct' | 'received'} {
   if (tx.direction === 'received') {
@@ -399,10 +408,10 @@ export default function HomeScreen() {
             colors={[colors.accent]}
           />
         }>
-        {/* Header — profile only */}
+        {/* Header */}
         <FadeInView delay={0} translateY={6}>
           <View style={styles.topBar}>
-            <View style={styles.topBarSpacer} />
+            <Text style={styles.topBrand}>TapPay</Text>
             <PressableScale
               style={styles.profileCircle}
               contentStyle={styles.profileCircleInner}
@@ -425,10 +434,11 @@ export default function HomeScreen() {
               pointerEvents={showingCardBack ? 'none' : 'auto'}
               accessibilityElementsHidden={showingCardBack}
               importantForAccessibility={showingCardBack ? 'no-hide-descendants' : 'auto'}>
-              <View style={styles.cardOrbLarge} />
-              <View style={styles.cardOrbSmall} />
-              <View style={styles.cardGlassEdge} />
-
+              <ImageBackground
+                source={CARD_WAVE_BG}
+                style={styles.cardFaceFill}
+                imageStyle={styles.cardFaceImage}
+                resizeMode="cover">
               <View style={styles.cardTopRow}>
                 <View style={styles.cardBrand}>
                   <BrandLogo size={22} color="#FFFFFF" />
@@ -444,39 +454,40 @@ export default function HomeScreen() {
                 </PressableScale>
               </View>
 
-              <View style={styles.cardChipRow}>
-                <View style={styles.cardChip}>
-                  <View style={styles.cardChipInner} />
-                  <View style={styles.cardChipH} />
-                  <View style={styles.cardChipV} />
+              <View style={styles.cardMainRow}>
+                <View style={styles.cardLeftCol}>
+                  <View style={styles.cardChip}>
+                    <View style={styles.cardChipInner} />
+                    <View style={styles.cardChipH} />
+                    <View style={styles.cardChipV} />
+                  </View>
+                  <Text style={styles.cardNumberText}>{formattedCardNumber}</Text>
+                  <View style={styles.cardHolderBlock}>
+                    <Text style={styles.cardHolderLabel}>CARDHOLDER</Text>
+                    <Text style={styles.cardHolderName}>
+                      {username ? `@${username}` : 'TAP-PAY USER'}
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.cardNetworkPill}>
-                  <Text style={styles.cardNetworkText}>MONAD</Text>
-                </View>
-              </View>
 
-              <View style={styles.cardMidRow}>
-                <Text style={styles.cardNumberText}>{formattedCardNumber}</Text>
-                <PressableScale
-                  style={[styles.copyChip, copied && styles.copiedChip]}
-                  onPress={copyAddress}>
-                  <Text style={styles.copyChipText}>
-                    {copied ? 'Copied' : 'Copy'}
-                  </Text>
-                </PressableScale>
-              </View>
-
-              <View style={styles.cardBottomRow}>
-                <View>
-                  <Text style={styles.cardHolderLabel}>CARDHOLDER</Text>
-                  <Text style={styles.cardHolderName}>
-                    {username ? `@${username}` : 'TAP-PAY USER'}
-                  </Text>
-                </View>
-                <View style={styles.cardTypeBadge}>
-                  <Text style={styles.cardTypeText}>NFC PAY</Text>
+                <View style={styles.cardRightCol}>
+                  <View style={styles.cardNetworkPill}>
+                    <Text style={styles.cardNetworkText}>MONAD</Text>
+                  </View>
+                  <PressableScale
+                    style={[styles.copyChip, copied && styles.copiedChip]}
+                    contentStyle={styles.copyChipInner}
+                    onPress={copyAddress}>
+                    <Text style={styles.copyChipText}>
+                      {copied ? 'Copied' : 'Copy'}
+                    </Text>
+                  </PressableScale>
+                  <View style={styles.cardTypeBadge}>
+                    <Text style={styles.cardTypeText}>NFC PAY</Text>
+                  </View>
                 </View>
               </View>
+              </ImageBackground>
             </Animated.View>
 
             <Animated.View
@@ -484,8 +495,11 @@ export default function HomeScreen() {
               pointerEvents={showingCardBack ? 'auto' : 'none'}
               accessibilityElementsHidden={!showingCardBack}
               importantForAccessibility={showingCardBack ? 'auto' : 'no-hide-descendants'}>
-              <View style={styles.cardBackOrbLarge} />
-              <View style={styles.cardBackOrbSmall} />
+              <ImageBackground
+                source={CARD_WAVE_BG}
+                style={styles.cardFaceFill}
+                imageStyle={styles.cardFaceImage}
+                resizeMode="cover">
               <View style={styles.cardBackTopRow}>
                 <View style={styles.cardBrand}>
                   <BrandLogo size={20} color="#FFFFFF" />
@@ -542,6 +556,7 @@ export default function HomeScreen() {
                   </Text>
                 </View>
               </View>
+              </ImageBackground>
             </Animated.View>
             </View>
           </View>
@@ -575,7 +590,7 @@ export default function HomeScreen() {
                 navigation.navigate('SendTap');
               }}>
               <View style={styles.sendTapIconWrap}>
-                <ContactlessWave size={18} color="#FFFFFF" />
+                <SendTapIcon size={18} color="#FFFFFF" />
               </View>
               <Text style={styles.sendTapTitle}>Send Tap</Text>
               <Text style={styles.sendTapSubtitle}>NFC pay</Text>
@@ -589,7 +604,7 @@ export default function HomeScreen() {
                 navigation.navigate('ReceiveTap');
               }}>
               <View style={styles.receiveIconWrap}>
-                <ContactlessWave size={18} color={colors.accent} />
+                <ReceiveTapIcon size={18} color={colors.accent} />
               </View>
               <Text style={styles.receiveTapTitle}>Receive Tap</Text>
               <Text style={styles.receiveTapSubtitle}>Get paid</Text>
@@ -740,11 +755,14 @@ const styles = StyleSheet.create({
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
     marginBottom: 14,
   },
-  topBarSpacer: {
-    flex: 1,
+  topBrand: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: -0.4,
   },
   headerRight: {
     flexDirection: 'row',
@@ -982,14 +1000,11 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   cardBody: {
-    backgroundColor: colors.accent,
     borderRadius: 28,
-    padding: 20,
     minHeight: 210,
-    justifyContent: 'space-between',
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.35)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.42)',
     ...shadows.card,
   },
   cardBackBody: {
@@ -998,78 +1013,64 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#0875E8',
     borderRadius: 28,
-    padding: 20,
     minHeight: 210,
-    justifyContent: 'space-between',
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.35)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.42)',
     ...shadows.card,
   },
-  cardBackOrbLarge: {
-    position: 'absolute',
-    top: -76,
-    right: -42,
-    width: 230,
-    height: 230,
-    borderRadius: 115,
-    backgroundColor: 'rgba(255,255,255,0.13)',
+  /** Image is the only card fill — same size + rounded corners */
+  cardFaceFill: {
+    flex: 1,
+    minHeight: 210,
+    padding: 18,
+    justifyContent: 'space-between',
   },
-  cardBackOrbSmall: {
-    position: 'absolute',
-    bottom: -76,
-    left: -38,
-    width: 190,
-    height: 190,
-    borderRadius: 95,
-    backgroundColor: 'rgba(0, 72, 165, 0.34)',
-  },
-  cardOrbLarge: {
-    position: 'absolute',
-    top: -50,
-    right: -30,
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    backgroundColor: 'rgba(255,255,255,0.16)',
-  },
-  cardOrbSmall: {
-    position: 'absolute',
-    bottom: -40,
-    left: -20,
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: 'rgba(0, 102, 219, 0.45)',
-  },
-  cardGlassEdge: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.45)',
+  cardFaceImage: {
+    borderRadius: 28,
   },
   cardTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    zIndex: 1,
+  },
+  cardMainRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginTop: 8,
+  },
+  cardLeftCol: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    gap: 14,
+    paddingBottom: 2,
+  },
+  cardRightCol: {
+    alignItems: 'flex-end',
+    justifyContent: 'flex-end',
+    gap: 8,
+    paddingBottom: 2,
+  },
+  cardHolderBlock: {
+    marginTop: 2,
   },
   cardFlipHint: {
-    maxWidth: 150,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    maxWidth: 168,
+    backgroundColor: 'rgba(255,255,255,0.22)',
     borderRadius: 18,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.35)',
   },
   cardFlipHintInner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
+    paddingHorizontal: 11,
+    paddingVertical: 8,
   },
   cardFlipHintText: {
     color: '#FFFFFF',
@@ -1087,10 +1088,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    zIndex: 1,
+    zIndex: 2,
   },
   cardBackBalances: {
-    zIndex: 1,
+    zIndex: 2,
   },
   cardBackBalanceHeading: {
     flexDirection: 'row',
@@ -1164,20 +1165,13 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     letterSpacing: -0.3,
   },
-  cardChipRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    zIndex: 1,
-    marginTop: 4,
-  },
   cardChip: {
-    width: 36,
+    width: 38,
     height: 28,
     borderRadius: 6,
     borderWidth: 1.2,
-    borderColor: 'rgba(255,255,255,0.55)',
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderColor: 'rgba(255,255,255,0.65)',
+    backgroundColor: 'rgba(255,255,255,0.14)',
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
@@ -1186,41 +1180,36 @@ const styles = StyleSheet.create({
     width: '70%',
     height: '42%',
     borderWidth: 0.8,
-    borderColor: 'rgba(255,255,255,0.45)',
+    borderColor: 'rgba(255,255,255,0.5)',
     borderRadius: 2,
   },
   cardChipH: {
     position: 'absolute',
     width: '100%',
     height: 0.8,
-    backgroundColor: 'rgba(255,255,255,0.4)',
+    backgroundColor: 'rgba(255,255,255,0.45)',
   },
   cardChipV: {
     position: 'absolute',
     width: 0.8,
     height: '100%',
-    backgroundColor: 'rgba(255,255,255,0.4)',
+    backgroundColor: 'rgba(255,255,255,0.45)',
   },
   cardNetworkPill: {
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.20)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.3)',
+    borderColor: 'rgba(255,255,255,0.34)',
+    minWidth: 78,
+    alignItems: 'center',
   },
   cardNetworkText: {
     color: '#FFFFFF',
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 0.8,
-  },
-  cardMidRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    zIndex: 1,
-    marginTop: 8,
   },
   cardNumberText: {
     fontSize: 15,
@@ -1230,32 +1219,31 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
   copyChip: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.20)',
+    borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.35)',
+    borderColor: 'rgba(255,255,255,0.34)',
+    minWidth: 78,
+  },
+  copyChipInner: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   copiedChip: {
-    backgroundColor: 'rgba(52, 199, 89, 0.35)',
-    borderColor: 'rgba(255,255,255,0.4)',
+    backgroundColor: 'rgba(52, 199, 89, 0.38)',
+    borderColor: 'rgba(255,255,255,0.45)',
   },
   copyChipText: {
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '700',
   },
-  cardBottomRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    zIndex: 1,
-  },
   cardHolderLabel: {
     fontSize: 10,
     fontWeight: '600',
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(255,255,255,0.72)',
     letterSpacing: 0.9,
     marginBottom: 3,
   },
@@ -1265,12 +1253,14 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   cardTypeBadge: {
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.20)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.3)',
+    borderColor: 'rgba(255,255,255,0.34)',
+    minWidth: 78,
+    alignItems: 'center',
   },
   cardTypeText: {
     fontSize: 10,

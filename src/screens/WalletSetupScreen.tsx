@@ -193,12 +193,13 @@ export default function WalletSetupScreen({navigation}: Props) {
           <TextInput
             style={styles.textInput}
             placeholder="Enter Private Key (0x...)"
-            placeholderTextColor="#545458"
+            placeholderTextColor="#9AA3B2"
             value={privateKeyInput}
             onChangeText={setPrivateKeyInput}
             autoCapitalize="none"
             autoCorrect={false}
             secureTextEntry
+            underlineColorAndroid="transparent"
           />
 
           <TouchableOpacity
@@ -246,7 +247,7 @@ export default function WalletSetupScreen({navigation}: Props) {
             <TextInput
               style={styles.usernameInput}
               placeholder="alex"
-              placeholderTextColor="#545458"
+              placeholderTextColor="#9AA3B2"
               value={usernameInput}
               onChangeText={(text) => {
                 setUsernameInput(text);
@@ -254,6 +255,7 @@ export default function WalletSetupScreen({navigation}: Props) {
               }}
               autoCapitalize="none"
               autoCorrect={false}
+              underlineColorAndroid="transparent"
             />
           </View>
 
@@ -498,13 +500,13 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
   textInput: {
-    backgroundColor: '#121216',
-    borderWidth: 1,
-    borderColor: '#22222C',
+    backgroundColor: '#FFFFFF',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(15, 40, 80, 0.12)',
     borderRadius: 16,
     paddingHorizontal: 18,
     paddingVertical: 16,
-    color: '#FFFFFF',
+    color: '#0B1220',
     fontSize: 15,
     fontFamily: 'monospace',
     marginBottom: 24,
@@ -512,9 +514,9 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#121216',
-    borderWidth: 1,
-    borderColor: '#22222C',
+    backgroundColor: '#FFFFFF',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(15, 40, 80, 0.12)',
     borderRadius: 16,
     paddingHorizontal: 18,
     paddingVertical: 14,
@@ -523,20 +525,21 @@ const styles = StyleSheet.create({
   atSymbol: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#0A84FF',
     marginRight: 8,
   },
   usernameInput: {
     flex: 1,
-    color: '#FFFFFF',
+    color: '#0B1220',
     fontSize: 17,
     fontWeight: '600',
     padding: 0,
+    backgroundColor: '#FFFFFF',
   },
   credentialCard: {
-    backgroundColor: '#121216',
-    borderWidth: 1,
-    borderColor: '#22222C',
+    backgroundColor: '#FFFFFF',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(15, 40, 80, 0.12)',
     borderRadius: 16,
     padding: 18,
     marginBottom: 18,
@@ -550,17 +553,17 @@ const styles = StyleSheet.create({
   credentialLabel: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#636366',
+    color: '#9AA3B2',
     letterSpacing: 0.8,
   },
   copyActionText: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#30D158',
+    color: '#34C759',
     letterSpacing: 0.6,
   },
   credentialValueMono: {
-    color: '#E5E7EB',
+    color: '#0B1220',
     fontSize: 13,
     fontFamily: 'monospace',
     lineHeight: 18,
@@ -570,7 +573,7 @@ const styles = StyleSheet.create({
   },
   suggestionsTitle: {
     fontSize: 12,
-    color: '#8E8E93',
+    color: '#6B7280',
     marginBottom: 10,
     fontWeight: '600',
     letterSpacing: 0.5,
@@ -581,15 +584,15 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   suggestionChip: {
-    backgroundColor: '#1C1C1E',
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#2C2C2E',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(10, 132, 255, 0.18)',
   },
   suggestionText: {
-    color: '#FFFFFF',
+    color: '#0B1220',
     fontSize: 14,
     fontWeight: '600',
   },

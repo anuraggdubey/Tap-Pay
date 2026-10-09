@@ -13,7 +13,7 @@ import {
   Easing,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {CrossIcon, ContactlessWave} from './AppIcons';
+import {CrossIcon, ContactlessWave, ReceiveTapIcon} from './AppIcons';
 import PressableScale from './PressableScale';
 import {colors, glass, radii, shadows} from '../theme';
 
@@ -31,7 +31,15 @@ type Props = {
   footer?: React.ReactNode;
 };
 
-function NfcRadar({color, active}: {color: string; active: boolean}) {
+function NfcRadar({
+  color,
+  active,
+  direction,
+}: {
+  color: string;
+  active: boolean;
+  direction: 'send' | 'receive';
+}) {
   const anim1 = useRef(new Animated.Value(0)).current;
   const anim2 = useRef(new Animated.Value(0)).current;
   const anim3 = useRef(new Animated.Value(0)).current;
@@ -103,7 +111,11 @@ function NfcRadar({color, active}: {color: string; active: boolean}) {
       )}
       <View style={[radar.circle, {borderColor: color + '33', backgroundColor: color + '14'}]}>
         <View style={[radar.innerGlow, {backgroundColor: color}]}>
-          <ContactlessWave size={36} color="#FFFFFF" />
+          {direction === 'receive' ? (
+            <ReceiveTapIcon size={36} color="#FFFFFF" />
+          ) : (
+            <ContactlessWave size={36} color="#FFFFFF" />
+          )}
         </View>
       </View>
     </View>
@@ -309,7 +321,11 @@ export default function NfcWaitingCard({
         {isSuccess ? (
           <GPayCheck color={accentColor} />
         ) : (
-          <NfcRadar color={accentColor} active={isSearching || isBroadcasting} />
+          <NfcRadar
+            color={accentColor}
+            active={isSearching || isBroadcasting}
+            direction={direction}
+          />
         )}
 
         <Text style={s.statusTitle}>{statusTitle}</Text>

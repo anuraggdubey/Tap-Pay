@@ -220,6 +220,7 @@ export default function AccountInfoScreen({navigation}: Props) {
               onChangeText={setClaimInput}
               autoCapitalize="none"
               autoCorrect={false}
+              underlineColorAndroid="transparent"
             />
           </View>
           <TouchableOpacity
@@ -416,7 +417,7 @@ const styles = StyleSheet.create({
   claimInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F2F6FC',
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(10, 132, 255, 0.16)',
@@ -439,6 +440,7 @@ const styles = StyleSheet.create({
     color: '#0B1220',
     paddingHorizontal: 12,
     paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
   },
   claimButton: {
     backgroundColor: '#0A84FF',

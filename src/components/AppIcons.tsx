@@ -629,3 +629,71 @@ export function ExplorerIcon({size = 18, color = '#FFFFFF'}: {size?: number; col
     </View>
   );
 }
+
+/** Send Tap — upward arrow (clear “send” affordance) */
+export function SendTapIcon({size = 24, color = '#FFFFFF'}: {size?: number; color?: string}) {
+  const s = size;
+  const stemW = Math.max(2, Math.round(s * 0.14));
+  const stemH = s * 0.48;
+  const head = s * 0.34;
+  return (
+    <View style={{width: s, height: s, alignItems: 'center', justifyContent: 'center'}}>
+      <View style={{alignItems: 'center', marginBottom: -stemW}}>
+        <View
+          style={{
+            width: 0,
+            height: 0,
+            borderLeftWidth: head / 2,
+            borderRightWidth: head / 2,
+            borderBottomWidth: head * 0.72,
+            borderLeftColor: 'transparent',
+            borderRightColor: 'transparent',
+            borderBottomColor: color,
+          }}
+        />
+      </View>
+      <View
+        style={{
+          width: stemW,
+          height: stemH,
+          borderRadius: stemW / 2,
+          backgroundColor: color,
+        }}
+      />
+    </View>
+  );
+}
+
+/** Receive Tap — downward arrow (clear “receive” affordance) */
+export function ReceiveTapIcon({size = 24, color = '#FFFFFF'}: {size?: number; color?: string}) {
+  const s = size;
+  const stemW = Math.max(2, Math.round(s * 0.14));
+  const stemH = s * 0.48;
+  const head = s * 0.34;
+  return (
+    <View style={{width: s, height: s, alignItems: 'center', justifyContent: 'center'}}>
+      <View
+        style={{
+          width: stemW,
+          height: stemH,
+          borderRadius: stemW / 2,
+          backgroundColor: color,
+        }}
+      />
+      <View style={{alignItems: 'center', marginTop: -stemW}}>
+        <View
+          style={{
+            width: 0,
+            height: 0,
+            borderLeftWidth: head / 2,
+            borderRightWidth: head / 2,
+            borderTopWidth: head * 0.72,
+            borderLeftColor: 'transparent',
+            borderRightColor: 'transparent',
+            borderTopColor: color,
+          }}
+        />
+      </View>
+    </View>
+  );
+}

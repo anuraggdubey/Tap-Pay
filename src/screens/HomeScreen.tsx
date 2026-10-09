@@ -27,7 +27,13 @@ import {truncateAddress, formatTimestamp} from '../utils/format';
 import {triggerHaptic} from '../utils/haptics';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import BrandLogo from '../components/BrandLogo';
-import {ContactlessWave, SettingsIcon, UserIcon} from '../components/AppIcons';
+import {
+  ContactlessWave,
+  SettingsIcon,
+  UserIcon,
+  SendTapIcon,
+  ReceiveTapIcon,
+} from '../components/AppIcons';
 import {getTransactionHistory, initHistory, TransactionRecord} from '../services/history';
 import {initNfc, isNfcEnabled, isNfcSupported} from '../services/nfcReader';
 import PressableScale from '../components/PressableScale';
@@ -575,7 +581,7 @@ export default function HomeScreen() {
                 navigation.navigate('SendTap');
               }}>
               <View style={styles.sendTapIconWrap}>
-                <ContactlessWave size={18} color="#FFFFFF" />
+                <SendTapIcon size={18} color="#FFFFFF" />
               </View>
               <Text style={styles.sendTapTitle}>Send Tap</Text>
               <Text style={styles.sendTapSubtitle}>NFC pay</Text>
@@ -589,7 +595,7 @@ export default function HomeScreen() {
                 navigation.navigate('ReceiveTap');
               }}>
               <View style={styles.receiveIconWrap}>
-                <ContactlessWave size={18} color={colors.accent} />
+                <ReceiveTapIcon size={18} color={colors.accent} />
               </View>
               <Text style={styles.receiveTapTitle}>Receive Tap</Text>
               <Text style={styles.receiveTapSubtitle}>Get paid</Text>

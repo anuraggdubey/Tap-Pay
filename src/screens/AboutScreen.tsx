@@ -34,7 +34,9 @@ export default function AboutScreen({navigation}: Props) {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* App Header */}
       <View style={styles.appHeader}>
-        <BrandLogo size={76} style={{marginBottom: 14}} />
+        <View style={styles.logoBox}>
+          <BrandLogo size={44} natural />
+        </View>
         <Text style={styles.appName}>TapPay</Text>
         <Text style={styles.appVersion}>Version 0.0.1 • Monad Native</Text>
         <View style={styles.tagline}>
@@ -152,23 +154,14 @@ function createStyles(colors: AppColors) {
     marginBottom: 8,
   },
   logoBox: {
-    width: 72,
-    height: 72,
+    width: 76,
+    height: 76,
     borderRadius: 22,
-    backgroundColor: '#0A84FF',
+    backgroundColor: '#000000',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 14,
-    shadowColor: '#0A84FF',
-    shadowOffset: {width: 0, height: 8},
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 4,
-  },
-  logoMonogram: {
-    fontSize: 34,
-    fontWeight: '900',
-    color: '#FFFFFF',
+    overflow: 'hidden',
   },
   appName: {
     fontSize: 26,

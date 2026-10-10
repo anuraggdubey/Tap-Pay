@@ -29,7 +29,6 @@ import {triggerHaptic} from '../utils/haptics';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import BrandLogo from '../components/BrandLogo';
 import {
-  ContactlessWave,
   SettingsIcon,
   UserIcon,
   SendTapIcon,
@@ -446,7 +445,7 @@ export default function HomeScreen() {
               <View style={styles.cardFaceFill}>
               <View style={styles.cardTopRow}>
                 <View style={styles.cardBrand}>
-                  <BrandLogo size={22} color="#FFFFFF" />
+                  <BrandLogo size={26} natural />
                   <Text style={styles.cardBrandText}>TapPay</Text>
                 </View>
                 <PressableScale
@@ -503,7 +502,7 @@ export default function HomeScreen() {
               <View style={styles.cardFaceFill}>
               <View style={styles.cardBackTopRow}>
                 <View style={styles.cardBrand}>
-                  <BrandLogo size={20} color="#FFFFFF" />
+                  <BrandLogo size={24} natural />
                   <Text style={styles.cardBrandText}>TapPay</Text>
                 </View>
                 <PressableScale
@@ -573,10 +572,33 @@ export default function HomeScreen() {
                 <Text style={styles.terminalCaption}>{terminalStatus.caption}</Text>
               </View>
             </View>
-            <ContactlessWave
-              size={22}
-              color={terminalStatus.ready ? colors.success : colors.textMuted}
-            />
+            <View
+              style={[
+                styles.nfcCircleMark,
+                {
+                  borderColor: terminalStatus.ready
+                    ? colors.success
+                    : colors.textMuted,
+                },
+              ]}
+              accessibilityLabel={terminalStatus.label}>
+              {[0.72, 0.48, 0.24].map(scale => (
+                <View
+                  key={scale}
+                  style={[
+                    styles.nfcCircleRing,
+                    {
+                      width: 28 * scale,
+                      height: 28 * scale,
+                      borderRadius: (28 * scale) / 2,
+                      borderColor: terminalStatus.ready
+                        ? colors.success
+                        : colors.textMuted,
+                    },
+                  ]}
+                />
+              ))}
+            </View>
           </View>
         </FadeInView>
 
@@ -1435,6 +1457,18 @@ function createStyles(
     color: ios.secondaryLabel,
     marginTop: 1,
     fontWeight: '400',
+  },
+  nfcCircleMark: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nfcCircleRing: {
+    position: 'absolute',
+    borderWidth: 2,
   },
   transactionsSection: {
     marginBottom: 10,

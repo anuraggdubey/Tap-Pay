@@ -24,7 +24,13 @@ import {waitForReceipt, getBalance} from '../services/wallet';
 import {useWallet} from '../context/WalletContext';
 import {triggerHaptic} from '../utils/haptics';
 import {updateTransactionStatus} from '../services/history';
-import {CrossIcon, ExternalLinkIcon, WalletCardIcon} from '../components/AppIcons';
+import {
+  CrossIcon,
+  ExternalLinkIcon,
+  ReceiveTapIcon,
+  SendTapIcon,
+  WalletCardIcon,
+} from '../components/AppIcons';
 import {useTheme} from '../context/ThemeContext';
 import type {AppColors} from '../theme';
 import {getTokenBySymbol} from '../config/tokens';
@@ -43,17 +49,10 @@ function DirectionArrow({
   sentColor: string;
   receivedColor: string;
 }) {
-  return (
-    <Text
-      style={{
-        fontSize: 28,
-        fontWeight: '700',
-        color: direction === 'up' ? sentColor : receivedColor,
-        marginTop: direction === 'up' ? -2 : 2,
-      }}>
-      {direction === 'up' ? '↑' : '↓'}
-    </Text>
-  );
+  if (direction === 'up') {
+    return <SendTapIcon size={28} color={sentColor} />;
+  }
+  return <ReceiveTapIcon size={28} color={receivedColor} />;
 }
 
 function PartyRow({

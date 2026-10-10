@@ -469,7 +469,7 @@ export default function SendPaymentScreen({navigation}: Props) {
             <TextInput
               style={styles.recipientInput}
               placeholder="Enter username"
-              placeholderTextColor="#9AA3B2"
+              placeholderTextColor={colors.textSubtle}
               value={usernameInput}
               onChangeText={(text) => {
                 setUsernameInput(text);
@@ -500,7 +500,7 @@ export default function SendPaymentScreen({navigation}: Props) {
             <TextInput
               style={styles.recipientInput}
               placeholder="Enter wallet address"
-              placeholderTextColor="#9AA3B2"
+              placeholderTextColor={colors.textSubtle}
               value={addressInput}
               onChangeText={(text) => {
                 setAddressInput(text);
@@ -621,8 +621,8 @@ function createStyles(colors: AppColors) {
     fontSize: 15,
     paddingHorizontal: 14,
     paddingVertical: 14,
-    backgroundColor: '#FFFFFF',
-    color: '#0B1220',
+    backgroundColor: 'transparent',
+    color: colors.text,
   },
   searchBtn: {
     paddingHorizontal: 16,

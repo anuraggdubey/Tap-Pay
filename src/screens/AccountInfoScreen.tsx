@@ -422,7 +422,7 @@ function createStyles(colors: AppColors) {
     claimInputRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: '#FFFFFF',
+      backgroundColor: colors.surfaceSolid,
       borderRadius: 12,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderStrong,
@@ -442,10 +442,10 @@ function createStyles(colors: AppColors) {
     claimInput: {
       flex: 1,
       fontSize: 14,
-      color: '#0B1220',
+      color: colors.text,
       paddingHorizontal: 12,
       paddingVertical: 12,
-      backgroundColor: '#FFFFFF',
+      backgroundColor: 'transparent',
     },
     claimButton: {
       backgroundColor: colors.accent,

@@ -426,8 +426,8 @@ function createStyles(colors: AppColors, glass: AppGlass) {
     flex: 1,
     fontSize: 15,
     paddingVertical: 10,
-    backgroundColor: '#FFFFFF',
-    color: '#0B1220',
+    backgroundColor: 'transparent',
+    color: colors.text,
   },
   clearSearchButton: {
     width: 30,

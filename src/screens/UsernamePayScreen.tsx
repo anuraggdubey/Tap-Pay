@@ -164,6 +164,7 @@ export default function UsernamePayScreen({navigation}: Props) {
           counterparty: resolvedAddress,
           counterpartyUsername: username ? username.trim().toLowerCase() : undefined,
           amount,
+          tokenSymbol: selectedToken,
           status: 'pending',
           txHash: result.txHash,
         });

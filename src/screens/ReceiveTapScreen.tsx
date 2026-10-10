@@ -144,6 +144,7 @@ export default function ReceiveTapScreen({navigation}: Props) {
             counterparty: counterpartyLabel,
             counterpartyUsername: senderUsername,
             amount: amountStr,
+            tokenSymbol: 'MON',
             status: 'confirmed',
             txHash: payment.txHash || 'tap-payment',
           });
@@ -156,6 +157,7 @@ export default function ReceiveTapScreen({navigation}: Props) {
             counterpartyUsername: senderUsername,
             waitForBalance: false,
             expectedAmountWei: '0',
+            tokenSymbol: 'MON',
           });
         }
       }

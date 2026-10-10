@@ -284,6 +284,7 @@ export default function SendPaymentScreen({navigation}: Props) {
           counterparty: resolvedAddress,
           counterpartyUsername: resolvedUsername || undefined,
           amount,
+          tokenSymbol: selectedToken,
           status: 'pending',
           txHash: result.txHash,
         });

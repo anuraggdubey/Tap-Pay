@@ -15,9 +15,17 @@ export interface TransactionRecord {
   counterparty: string;
   counterpartyUsername?: string;
   amount: string;
+  /** Token ticker shown in UI (AUSD, USDC, USDT, MON). Defaults to MON for legacy rows. */
+  tokenSymbol?: string;
   status: 'confirmed' | 'pending' | 'failed';
   txHash: string;
   timestamp: string; // ISO 8601
+}
+
+/** Resolve display ticker for a history row (legacy rows without tokenSymbol → MON). */
+export function getTxTokenSymbol(tx: Pick<TransactionRecord, 'tokenSymbol'>): string {
+  const symbol = tx.tokenSymbol?.trim();
+  return symbol ? symbol.toUpperCase() : 'MON';
 }
 
 let historyCache: TransactionRecord[] = [];

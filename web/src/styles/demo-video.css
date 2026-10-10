@@ -1,0 +1,302 @@
+/* —— Landing: product film (matches site canvas + phantom cards) —— */
+
+.demo-cinema {
+  padding: clamp(64px, 9vw, 110px) 0 clamp(48px, 7vw, 88px);
+  position: relative;
+}
+
+.demo-cinema-header {
+  text-align: center;
+  max-width: 720px;
+  margin: 0 auto 40px;
+}
+
+.demo-cinema-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 9999px;
+  background: var(--pill-bg);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-dark-muted);
+  margin-bottom: 20px;
+}
+
+.demo-cinema-rec {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25);
+}
+
+.demo-cinema-title {
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-size: clamp(40px, 6.5vw, 72px);
+  font-weight: 400;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+  color: var(--text-dark);
+  margin-bottom: 14px;
+}
+
+.demo-cinema-title em {
+  font-style: italic;
+  color: #3c315b;
+}
+
+.demo-cinema-sub {
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--text-dark-muted);
+  margin: 0;
+}
+
+.demo-cinema-card-wrap {
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+.demo-cinema-card {
+  background: #fdfcfe !important;
+  color: #3c315b;
+  overflow: hidden;
+}
+
+.demo-cinema-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: clamp(28px, 4vw, 48px);
+  align-items: center;
+  padding: clamp(28px, 4vw, 40px) clamp(22px, 3.5vw, 40px) clamp(20px, 2.5vw, 28px);
+}
+
+.demo-cinema-phone-zone {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 380px;
+}
+
+.demo-cinema-phone {
+  width: min(270px, 72vw) !important;
+  height: auto !important;
+  aspect-ratio: 290 / 590;
+  max-height: min(520px, 68vh);
+  transform: none;
+}
+
+.demo-cinema-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #050508;
+}
+
+.demo-cinema-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  background: #050508;
+}
+
+.demo-cinema-chip {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  z-index: 2;
+  pointer-events: none;
+  background: var(--card-white);
+  border: 1px solid rgba(26, 26, 26, 0.08);
+  color: #3c315b;
+  box-shadow: 0 8px 24px rgba(26, 26, 26, 0.06);
+}
+
+.demo-cinema-chip--a {
+  top: 8%;
+  left: 4%;
+}
+
+.demo-cinema-chip--b {
+  bottom: 12%;
+  right: 2%;
+}
+
+.demo-cinema-panel {
+  background: #e2effe;
+  border: 1px solid rgba(37, 99, 235, 0.12);
+  border-radius: var(--radius-card-sm);
+  padding: clamp(22px, 3vw, 32px);
+}
+
+.demo-cinema-panel-lede {
+  font-size: 15px;
+  line-height: 1.65;
+  color: #6c628a;
+  margin: 0 0 22px;
+}
+
+.demo-cinema-steps {
+  list-style: none;
+  margin: 0 0 24px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.demo-cinema-steps li {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.demo-cinema-step-n {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #2563eb;
+  padding-top: 4px;
+}
+
+.demo-cinema-steps strong {
+  display: block;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+  color: #3c315b;
+}
+
+.demo-cinema-steps p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: #6c628a;
+}
+
+.demo-cinema-cta {
+  margin-top: 4px;
+}
+
+.demo-cinema-marquee {
+  border-top: 1px solid rgba(26, 26, 26, 0.08);
+  background: var(--pill-bg);
+  overflow: hidden;
+  padding: 12px 0;
+}
+
+.demo-cinema-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: demo-cinema-marquee 28s linear infinite;
+}
+
+.demo-cinema-marquee-track span {
+  flex-shrink: 0;
+  padding-right: 2rem;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-dark-subtle);
+  white-space: nowrap;
+}
+
+@keyframes demo-cinema-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (max-width: 900px) {
+  .demo-cinema-inner {
+    grid-template-columns: 1fr;
+    padding-bottom: 16px;
+  }
+
+  .demo-cinema-phone-zone {
+    min-height: 0;
+    padding: 8px 0 4px;
+  }
+
+  .demo-cinema-phone {
+    max-height: min(480px, 58vh);
+  }
+
+  .demo-cinema-chip--a {
+    left: 0;
+    top: 0;
+  }
+
+  .demo-cinema-chip--b {
+    right: 0;
+    bottom: 4%;
+  }
+
+  .demo-cinema-cta {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .demo-cinema-marquee-track {
+    animation: none;
+  }
+}
+
+/* —— Docs compact embed —— */
+
+.docs-video-embed {
+  margin: 24px 0 8px;
+  border-radius: 20px;
+  padding: 8px;
+  background: var(--card-white);
+  border: 1px solid rgba(26, 26, 26, 0.08);
+  box-shadow: 0 12px 32px rgba(26, 26, 26, 0.06);
+  max-width: 280px;
+  margin-inline: auto;
+}
+
+.docs-video-embed-inner {
+  border-radius: 14px;
+  overflow: hidden;
+  aspect-ratio: 9 / 16;
+  width: 100%;
+  background: #050508;
+  line-height: 0;
+}
+
+.docs-video-embed-inner video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  background: #050508;
+}
+
+.docs-video-embed-caption {
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-dark-muted);
+  margin-top: 12px;
+}

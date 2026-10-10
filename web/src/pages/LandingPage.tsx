@@ -5,6 +5,7 @@ import { Navbar } from '../components/Navbar';
 import { Hero } from '../components/Hero';
 import { StatsCarousel } from '../components/StatsCarousel';
 import { CenterPhoneShowcase } from '../components/CenterPhoneShowcase';
+import { DemoVideoSection } from '../components/DemoVideoSection';
 import { FeatureSlider } from '../components/FeatureSlider';
 import { Prerequisites } from '../components/Prerequisites';
 import { NfcSimulator } from '../components/NfcSimulator';
@@ -46,6 +47,7 @@ export default function LandingPage({ onJoinWaitlist }: LandingPageProps) {
         <BrandMarquee />
         <StatsCarousel />
         <CenterPhoneShowcase />
+        <DemoVideoSection />
         <FeatureSlider />
         <Prerequisites />
         <NfcSimulator />

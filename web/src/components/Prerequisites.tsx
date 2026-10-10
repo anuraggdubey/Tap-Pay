@@ -211,7 +211,7 @@ export const Prerequisites: React.FC = () => {
 
         {/* Device Compatibility Checker Pill */}
         <div
-          className="scroll-reveal"
+          className="scroll-reveal prereq-compat-bar"
           style={{
             background: '#FDFCFE',
             borderRadius: '24px',
@@ -224,7 +224,7 @@ export const Prerequisites: React.FC = () => {
             boxShadow: '0 8px 30px rgba(60, 49, 91, 0.06)',
           }}
         >
-          <div>
+          <div className="prereq-compat-copy">
             <h4 style={{ fontSize: '18px', fontWeight: 700, color: '#3C315B', marginBottom: '4px' }}>
               Is your device compatible?
             </h4>
@@ -233,7 +233,7 @@ export const Prerequisites: React.FC = () => {
             </p>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div className="prereq-compat-actions" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <button
               onClick={() => setDeviceTest('android')}
               className="phantom-btn-pill"
@@ -254,6 +254,7 @@ export const Prerequisites: React.FC = () => {
                 color: deviceTest === 'ios' ? '#FFFFFF' : 'var(--text-dark)',
               }}
             >
+              <AlertCircle size={16} />
               <span>iOS (Unsupported)</span>
             </button>
           </div>
@@ -261,16 +262,58 @@ export const Prerequisites: React.FC = () => {
       </div>
 
       <style>{`
-        @media (max-width: 640px) {
+        @media (max-width: 768px) {
+          #prerequisites {
+            padding: 56px 0 48px !important;
+          }
           .prereq-cards-grid {
             grid-template-columns: 1fr !important;
-            gap: 20px !important;
+            gap: 16px !important;
+            width: 100%;
+            margin-bottom: 16px !important;
+          }
+          .prereq-cards-grid .phantom-card-wrapper {
+            width: 100%;
+            max-width: 100%;
+            transform: none !important;
           }
           .prereq-cards-grid .phantom-card-main {
-            padding: 28px 20px !important;
+            padding: 24px 18px !important;
           }
           .prereq-cards-grid .phantom-card-shadow-layer {
             transform: none !important;
+          }
+          .prereq-compat-bar {
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+            flex-direction: column !important;
+            align-items: stretch !important;
+            justify-content: flex-start !important;
+            flex-wrap: nowrap !important;
+            gap: 16px !important;
+            padding: 20px 16px !important;
+            transform: none !important;
+          }
+          .prereq-compat-copy h4 {
+            font-size: 16px !important;
+          }
+          .prereq-compat-copy p {
+            font-size: 13px !important;
+            line-height: 1.45 !important;
+          }
+          .prereq-compat-actions {
+            width: 100% !important;
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 8px !important;
+          }
+          .prereq-compat-actions .phantom-btn-pill {
+            width: 100% !important;
+            justify-content: center !important;
+            white-space: nowrap !important;
+            padding: 12px 16px !important;
+            box-sizing: border-box !important;
           }
         }
       `}</style>

@@ -15,6 +15,14 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
 } from 'lucide-react';
+import {
+  TapPayMockHome,
+  TapPayMockPay,
+  TapPayMockNfcSession,
+  TapPayMockSuccess,
+  TapPayMockReceiveListen,
+  TapPayMockTabBar,
+} from './tappay-mock/TapPayMockScreens';
 
 type DemoPhase = 'home' | 'setup' | 'approaching' | 'broadcasting' | 'settled';
 
@@ -68,8 +76,8 @@ export const NfcSimulator: React.FC = () => {
       // 1. Sender cursor targets "Send Tap (NFC)" button and Receiver cursor targets "Receive Tap"
       timers.push(
         setTimeout(() => {
-          setSenderCursor({ x: 30, y: 55, visible: true, tapped: false });
-          setReceiverCursor({ x: 70, y: 55, visible: true, tapped: false });
+          setSenderCursor({ x: 28, y: 52, visible: true, tapped: false });
+          setReceiverCursor({ x: 72, y: 52, visible: true, tapped: false });
         }, 400)
       );
 
@@ -385,8 +393,7 @@ export const NfcSimulator: React.FC = () => {
                 <div className="realistic-phone-btn-vol" />
                 <div className="realistic-phone-btn-pwr" />
 
-                <div className="realistic-phone-screen">
-                  <div className="glass-sheen-sweep" />
+                <div className="realistic-phone-screen tp-mock-root">
                   <div className="realistic-phone-camera" />
 
                   {/* Status Bar */}
@@ -406,179 +413,58 @@ export const NfcSimulator: React.FC = () => {
                   <div className="phone-screen-body">
                     {/* STAGE 1: HOME SCREEN ON SENDER */}
                     {phase === 'home' && (
-                      <div className="screen-content-view">
-                        <div className="sim-phone-top-bar">
-                          <div className="sim-user-chip">
-                            <div className="sim-user-avatar sender">A</div>
-                            <div>
-                              <div className="sim-user-handle">@anurag</div>
-                              <div className="sim-user-role">Sender Wallet</div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Virtual Card */}
-                        <div className="sim-mini-virtual-card">
-                          <div className="card-row-top">
-                            <span className="card-brand">TapPay</span>
-                            <Radio size={14} color="#FFF" />
-                          </div>
-                          <div className="card-balance-lbl">CARD BALANCE</div>
-                          <div className="card-balance-val">
-                            {senderBal.toFixed(2)} <span className="card-currency">MON</span>
-                          </div>
-                          <div className="card-address-mono">0x1406 •••• Fa002</div>
-                        </div>
-
-                        {/* Quick Action Buttons */}
-                        <div className="sim-quick-actions">
-                          <div className={`sim-btn-action primary ${senderCursor.tapped ? 'is-tapped' : ''}`}>
-                            <Radio size={14} />
-                            <span>Send Tap (NFC)</span>
-                          </div>
-                          <div className="sim-btn-action secondary">
-                            <span>Receive Tap</span>
-                          </div>
-                        </div>
-
-                        <div className="sim-direct-row">
-                          <div className="sim-at-icon">@</div>
-                          <div>
-                            <div className="sim-direct-title">Direct Transfer</div>
-                            <div className="sim-direct-sub">Pay via @username or address</div>
-                          </div>
-                          <ChevronRight size={13} opacity={0.4} style={{ marginLeft: 'auto' }} />
-                        </div>
-
-                        <div className="sim-card-footer-tip">
-                          <span>Tap "Send Tap" to begin NFC transfer</span>
-                        </div>
-                      </div>
+                      <>
+                        <TapPayMockHome
+                          compact
+                          username="@anurag"
+                          avatarLetter="A"
+                          sendActive={senderCursor.tapped}
+                          showTransactions={false}
+                          footerTip='Tap "Send Tap" to begin'
+                        />
+                        <TapPayMockTabBar active="home" />
+                      </>
                     )}
 
-                    {/* STAGE 2: ENTER AMOUNT SCREEN ON SENDER */}
                     {phase === 'setup' && (
-                      <div className="screen-content-view">
-                        <div className="sim-screen-title-bar">
-                          <div className="sim-amount-title">Send via NFC Touch</div>
-                          <div className="sim-badge-active">NFC Ready</div>
-                        </div>
-
-                        <div className="sim-amount-display-box">
-                          <div className="sim-amount-caption">TRANSFER AMOUNT</div>
-                          <div className="sim-amount-val">
-                            {typedAmount} <span className="sim-amount-unit">MON</span>
-                          </div>
-                          <div className="sim-amount-fiat">
-                            ≈ ${(parseFloat(typedAmount || '0') * 2.86).toFixed(2)} USD
-                          </div>
-                        </div>
-
-                        <div className="sim-target-hint">
-                          <Radio size={13} color="#10B981" />
-                          <span>Hold phones within 4cm to transmit</span>
-                        </div>
-
-                        <div className="sim-mini-keypad">
-                          {['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', '⌫'].map((key) => (
-                            <div
-                              key={key}
-                              className={`sim-keypad-key ${
-                                activeKey === key
-                                  ? 'key-active-press'
-                                  : typedAmount.includes(key) && key !== '0'
-                                  ? 'key-lit'
-                                  : ''
-                              }`}
-                            >
-                              {key}
-                            </div>
-                          ))}
-                        </div>
-
-                        <div className={`sim-btn-ready ${senderCursor.tapped ? 'is-tapped' : ''}`}>
-                          <Radio size={15} />
-                          <span>Ready to Tap (NFC)</span>
-                        </div>
-                      </div>
+                      <TapPayMockPay
+                        compact
+                        typedAmount={typedAmount}
+                        activeKey={activeKey}
+                        availableBalance={senderBal.toFixed(4)}
+                        addressShort="0x1a70…1A4E"
+                        primaryLabel="Ready to Tap"
+                        primaryTapped={senderCursor.tapped}
+                      />
                     )}
 
-                    {/* STAGE 3 & 4: APPROACHING & BROADCASTING ON SENDER */}
                     {(phase === 'approaching' || phase === 'broadcasting') && (
-                      <div className="screen-content-view">
-                        <div className="sim-radar-badge">NFC BEAM ACTIVE</div>
-
-                        <div className="sim-radar-stage">
-                          <div className="radar-circle radar-c1" />
-                          <div className="radar-circle radar-c2" />
-                          <div className="radar-phone-icon">
-                            <Radio size={30} color="#FFFFFF" className="pulse-icon" />
-                          </div>
-                        </div>
-
-                        <div className="sim-search-status">
-                          <div className="sim-status-head">Phones In 4cm Range!</div>
-                          <div className="sim-status-desc">Transmitting {amount} MON APDU Payload</div>
-                        </div>
-
-                        <div className="sim-detected-card">
-                          <div className="detected-avatar">M</div>
-                          <div>
-                            <div className="detected-name">@misbah (Receiver)</div>
-                            <div className="detected-addr">0xEebB...1aDD</div>
-                          </div>
-                          <div className="detected-badge">PAIRED</div>
-                        </div>
-
-                        <div className="sim-handshake-status">
-                          <span className="handshake-spinner" />
-                          <span>
-                            {phase === 'broadcasting'
-                              ? 'Broadcasting atomic tx to Monad...'
-                              : 'Exchanging cryptographic keypair...'}
-                          </span>
-                        </div>
-                      </div>
+                      <TapPayMockNfcSession
+                        title="Phones in range"
+                        subtitle={`Sending ${amount} MON`}
+                        peerName="@misbah (Receiver)"
+                        peerAddr="0xEebB…1aDD"
+                        peerLetter="M"
+                        statusLine={
+                          phase === 'broadcasting'
+                            ? 'Broadcasting to Monad Mainnet…'
+                            : 'Exchanging NFC session…'
+                        }
+                      />
                     )}
 
-                    {/* STAGE 5: GPAY SUCCESS SCREEN ON SENDER */}
                     {phase === 'settled' && (
-                      <div className="screen-content-view success-view">
-                        <div className="gpay-circle-wrapper">
-                          <div className="gpay-ripple-ring ring-1" />
-                          <div className="gpay-ripple-ring ring-2" />
-                          <div className="gpay-circle-main">
-                            <Check size={38} color="#FFFFFF" strokeWidth={3} className="gpay-check-icon" />
-                          </div>
-                        </div>
-
-                        <div className="gpay-amount-text">-{amount} MON</div>
-                        <div className="gpay-status-headline">Payment Successful!</div>
-                        <div className="gpay-recipient-sub">Paid to @misbah via NFC</div>
-
-                        <div className="gpay-receipt-card">
-                          <div className="receipt-row">
-                            <span className="rk">New Balance</span>
-                            <span className="rv">{senderBal.toFixed(2)} MON</span>
-                          </div>
-                          <div className="receipt-row">
-                            <span className="rk">Settlement Speed</span>
-                            <span className="rv green">0.82s (Monad)</span>
-                          </div>
-                          <div className="receipt-row">
-                            <span className="rk">Tx Status</span>
-                            <span className="rv green">✓ Confirmed 143</span>
-                          </div>
-                          <div className="receipt-row">
-                            <span className="rk">TxHash</span>
-                            <span className="rv mono">{txHash}</span>
-                          </div>
-                        </div>
-
-                        <div className="gpay-footer-note">
-                          <span>Atomic peer-to-peer delivery</span>
-                        </div>
-                      </div>
+                      <TapPayMockSuccess
+                        amount={amount}
+                        signed="-"
+                        headline="Payment successful"
+                        subline="Paid to @misbah via NFC"
+                        rows={[
+                          { label: 'Balance', value: `${senderBal.toFixed(2)} MON` },
+                          { label: 'Finality', value: '~0.8s' },
+                          { label: 'Tx', value: txHash },
+                        ]}
+                      />
                     )}
 
                     {/* Sender Tap Cursor Indicator */}
@@ -649,8 +535,7 @@ export const NfcSimulator: React.FC = () => {
                 <div className="realistic-phone-btn-vol" />
                 <div className="realistic-phone-btn-pwr" />
 
-                <div className="realistic-phone-screen">
-                  <div className="glass-sheen-sweep" />
+                <div className="realistic-phone-screen tp-mock-root">
                   <div className="realistic-phone-camera" />
 
                   {/* Status Bar */}
@@ -668,169 +553,51 @@ export const NfcSimulator: React.FC = () => {
 
                   {/* Screen Body */}
                   <div className="phone-screen-body">
-                    {/* STAGE 1: HOME SCREEN ON RECEIVER */}
                     {phase === 'home' && (
-                      <div className="screen-content-view">
-                        <div className="sim-phone-top-bar">
-                          <div className="sim-user-chip">
-                            <div className="sim-user-avatar receiver">M</div>
-                            <div>
-                              <div className="sim-user-handle">@misbah</div>
-                              <div className="sim-user-role">Receiver Wallet</div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Receiver Card */}
-                        <div className="sim-mini-virtual-card receiver-card">
-                          <div className="card-row-top">
-                            <span className="card-brand">TapPay</span>
-                            <Radio size={14} color="#10B981" />
-                          </div>
-                          <div className="card-balance-lbl">CARD BALANCE</div>
-                          <div className="card-balance-val">
-                            {receiverBal.toFixed(2)} <span className="card-currency green">MON</span>
-                          </div>
-                          <div className="card-address-mono">0xEebB •••• 1aDD</div>
-                        </div>
-
-                        {/* Quick Action Buttons */}
-                        <div className="sim-quick-actions">
-                          <div className="sim-btn-action secondary">
-                            <span>Send Tap (NFC)</span>
-                          </div>
-                          <div className={`sim-btn-action primary receiver-btn ${receiverCursor.tapped ? 'is-tapped' : ''}`}>
-                            <Radio size={14} color="#10B981" />
-                            <span>Receive Tap</span>
-                          </div>
-                        </div>
-
-                        <div className="sim-direct-row">
-                          <div className="sim-at-icon">@</div>
-                          <div>
-                            <div className="sim-direct-title">Direct Transfer</div>
-                            <div className="sim-direct-sub">Pay via @username or address</div>
-                          </div>
-                          <ChevronRight size={13} opacity={0.4} style={{ marginLeft: 'auto' }} />
-                        </div>
-
-                        <div className="sim-card-footer-tip">
-                          <span>Tap "Receive Tap" to start HCE listener</span>
-                        </div>
-                      </div>
+                      <>
+                        <TapPayMockHome
+                          compact
+                          username="@misbah"
+                          avatarLetter="M"
+                          cardNumber="0xEebB •••• 1aDD"
+                          receiveActive={receiverCursor.tapped}
+                          showTransactions={false}
+                          footerTip='Tap "Receive Tap" to listen'
+                        />
+                        <TapPayMockTabBar active="home" />
+                      </>
                     )}
 
-                    {/* STAGE 2: RECEIVER LISTENING SCREEN */}
-                    {phase === 'setup' && (
-                      <div className="screen-content-view">
-                        <div className="sim-screen-title-bar">
-                          <div className="sim-amount-title">Receive via Contactless</div>
-                          <div className="sim-badge-active green">HCE Active</div>
-                        </div>
+                    {phase === 'setup' && <TapPayMockReceiveListen compact />}
 
-                        <div className="sim-transfer-card receiver-mode">
-                          <div className="transfer-header-row">
-                            <span className="transfer-label">HCE TERMINAL LISTENING</span>
-                            <span className="transfer-method-badge green">ISO-DEP</span>
-                          </div>
-                          <div className="rx-idle-state-box">
-                            <div className="rx-hint-pulse">Waiting for Sender Phone...</div>
-                            <div className="rx-hint-sub">Listening on AID F00102030405</div>
-                          </div>
-                        </div>
-
-                        <div className="sim-phone-radar-zone">
-                          <div className="radar-idle-hint">
-                            <div className="radar-phone-symbol receiver-symbol">
-                              <Radio size={26} color="#059669" />
-                            </div>
-                            <div className="radar-hint-text">Ready to Receive</div>
-                            <div className="radar-hint-sub">Bring sender phone close</div>
-                          </div>
-                        </div>
-
-                        <div className="sim-card-footer-tip">
-                          <span>StrongBox Keystore Emulation Active</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* STAGE 3 & 4: APPROACHING & BROADCASTING ON RECEIVER */}
                     {(phase === 'approaching' || phase === 'broadcasting') && (
-                      <div className="screen-content-view">
-                        <div className="sim-radar-badge green">NFC TOUCH DETECTED</div>
-
-                        <div className="sim-radar-stage">
-                          <div className="radar-circle radar-c1 green" />
-                          <div className="radar-circle radar-c2 green" />
-                          <div className="radar-phone-icon receiver-icon">
-                            <Radio size={30} color="#FFFFFF" className="pulse-icon" />
-                          </div>
-                        </div>
-
-                        <div className="sim-search-status">
-                          <div className="sim-status-head">Receiving from @anurag</div>
-                          <div className="sim-status-desc">Incoming Payment: +{amount} MON</div>
-                        </div>
-
-                        <div className="sim-detected-card">
-                          <div className="detected-avatar sender-bg">A</div>
-                          <div>
-                            <div className="detected-name">@anurag (Sender)</div>
-                            <div className="detected-addr">0x1406...Fa002</div>
-                          </div>
-                          <div className="detected-badge green">VERIFIED</div>
-                        </div>
-
-                        <div className="sim-handshake-status">
-                          <span className="handshake-spinner" />
-                          <span>
-                            {phase === 'broadcasting'
-                              ? 'Signing atomic settlement on Monad...'
-                              : 'Decrypting APDU payment token...'}
-                          </span>
-                        </div>
-                      </div>
+                      <TapPayMockNfcSession
+                        badge="NFC TOUCH"
+                        title="Receiving from @anurag"
+                        subtitle={`+${amount} MON incoming`}
+                        peerName="@anurag (Sender)"
+                        peerAddr="0x1406…Fa002"
+                        peerLetter="A"
+                        statusLine={
+                          phase === 'broadcasting'
+                            ? 'Confirming on Monad Mainnet…'
+                            : 'Reading tap session…'
+                        }
+                      />
                     )}
 
-                    {/* STAGE 5: GPAY SUCCESS SCREEN ON RECEIVER */}
                     {phase === 'settled' && (
-                      <div className="screen-content-view success-view">
-                        <div className="gpay-circle-wrapper">
-                          <div className="gpay-ripple-ring ring-1" />
-                          <div className="gpay-ripple-ring ring-2" />
-                          <div className="gpay-circle-main receiver-green">
-                            <Check size={38} color="#FFFFFF" strokeWidth={3} className="gpay-check-icon" />
-                          </div>
-                        </div>
-
-                        <div className="gpay-amount-text green">+{amount} MON</div>
-                        <div className="gpay-status-headline">Payment Received!</div>
-                        <div className="gpay-recipient-sub">Received from @anurag via NFC</div>
-
-                        <div className="gpay-receipt-card">
-                          <div className="receipt-row">
-                            <span className="rk">New Balance</span>
-                            <span className="rv">{receiverBal.toFixed(2)} MON</span>
-                          </div>
-                          <div className="receipt-row">
-                            <span className="rk">Terminal Protocol</span>
-                            <span className="rv green">Android HCE Verified</span>
-                          </div>
-                          <div className="receipt-row">
-                            <span className="rk">Settlement Speed</span>
-                            <span className="rv green">0.82s (Monad)</span>
-                          </div>
-                          <div className="receipt-row">
-                            <span className="rk">TxHash</span>
-                            <span className="rv mono">{txHash}</span>
-                          </div>
-                        </div>
-
-                        <div className="gpay-footer-note">
-                          <span>Deposited to non-custodial keystore</span>
-                        </div>
-                      </div>
+                      <TapPayMockSuccess
+                        amount={amount}
+                        signed="+"
+                        headline="Payment received"
+                        subline="From @anurag via NFC"
+                        rows={[
+                          { label: 'Balance', value: `${receiverBal.toFixed(2)} MON` },
+                          { label: 'HCE', value: 'Verified' },
+                          { label: 'Tx', value: txHash },
+                        ]}
+                      />
                     )}
 
                     {/* Receiver Tap Cursor Indicator */}
@@ -1070,7 +837,9 @@ export const NfcSimulator: React.FC = () => {
           flex: 1;
           position: relative;
           overflow: hidden;
-          background: #09090D;
+          background: #f3f5f9;
+          display: flex;
+          flex-direction: column;
         }
 
         .screen-content-view {

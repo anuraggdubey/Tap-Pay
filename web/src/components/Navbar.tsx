@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { ChevronDown, Menu, X } from 'lucide-react';
 
 interface NavbarProps {
@@ -7,13 +7,26 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ onJoinWaitlist }) => {
+  const location = useLocation();
+  const isSubpage = ['/docs', '/waitlist', '/download'].includes(location.pathname);
+  const isDocsPage = location.pathname === '/docs';
+
   const [isDarkNav, setIsDarkNav] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 15);
+
+      if (isSubpage) {
+        setIsDarkNav(false);
+        return;
+      }
 
       const sec = document.getElementById('security');
       if (sec) {
@@ -29,14 +42,15 @@ export const Navbar: React.FC<NavbarProps> = ({ onJoinWaitlist }) => {
     window.addEventListener('scroll', handleScroll, { passive: true });
     handleScroll();
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [isSubpage]);
 
+  const navSolid = isScrolled || isSubpage;
   const splitClass = `nav-download-split nav-download-split-desktop ${isDarkNav ? 'is-dark' : ''}`;
 
   return (
     <>
       <header
-        className={`site-navbar-header ${isScrolled ? 'is-scrolled' : ''} ${isDarkNav ? 'is-dark' : ''}`}
+        className={`site-navbar-header ${navSolid ? 'is-scrolled' : ''} ${isDarkNav ? 'is-dark' : ''}`}
         style={{
           position: 'fixed',
           top: 0,
@@ -84,7 +98,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onJoinWaitlist }) => {
               />
               <path d="M200 328 L200 182" stroke="currentColor" strokeWidth="52" strokeLinecap="round" fill="none" />
             </svg>
-            <span style={{ letterSpacing: '-0.02em', fontWeight: 800 }}>tappay</span>
+            <span style={{ letterSpacing: '-0.02em', fontWeight: 800 }}>TapPay</span>
           </Link>
 
           <nav
@@ -109,17 +123,15 @@ export const Navbar: React.FC<NavbarProps> = ({ onJoinWaitlist }) => {
               <span>Download</span>
               <ChevronDown size={14} opacity={0.6} />
             </Link>
-            <a
-              href="https://x.com/tapxpay"
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              to="/docs"
               className="phantom-nav-item"
+              style={isDocsPage ? { background: 'rgba(26, 26, 26, 0.08)' } : undefined}
+              aria-current={isDocsPage ? 'page' : undefined}
             >
-              <span>Community</span>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style={{ opacity: 0.8, marginLeft: '2px' }}>
-                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-              </svg>
-            </a>
+              <span>Docs</span>
+              <ChevronDown size={14} opacity={0.6} />
+            </Link>
           </nav>
 
           <div
@@ -194,6 +206,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onJoinWaitlist }) => {
             style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-dark)' }}
           >
             Download
+          </Link>
+          <Link
+            to="/docs"
+            onClick={() => setMobileMenuOpen(false)}
+            style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-dark)' }}
+          >
+            Docs
           </Link>
           <div className={`${splitClass} nav-download-mobile-only`} style={{ marginTop: 8 }}>
             <Link

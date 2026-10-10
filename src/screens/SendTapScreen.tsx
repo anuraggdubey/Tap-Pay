@@ -266,6 +266,7 @@ export default function SendTapScreen({navigation}: Props) {
             counterparty: result.receiverAddress,
             counterpartyUsername: receiverUsername,
             amount: amount,
+            tokenSymbol: 'MON',
             status: 'pending',
             txHash: result.txHash,
           });
@@ -276,6 +277,7 @@ export default function SendTapScreen({navigation}: Props) {
             recipient: result.receiverAddress,
             direction: 'sent',
             counterpartyUsername: receiverUsername,
+            tokenSymbol: 'MON',
           });
           return;
         }

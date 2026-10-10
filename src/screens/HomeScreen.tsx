@@ -34,7 +34,12 @@ import {
   SendTapIcon,
   ReceiveTapIcon,
 } from '../components/AppIcons';
-import {getTransactionHistory, initHistory, TransactionRecord} from '../services/history';
+import {
+  getTransactionHistory,
+  getTxTokenSymbol,
+  initHistory,
+  TransactionRecord,
+} from '../services/history';
 import {initNfc, isNfcEnabled, isNfcSupported} from '../services/nfcReader';
 import PressableScale from '../components/PressableScale';
 import FadeInView from '../components/FadeInView';
@@ -671,7 +676,7 @@ export default function HomeScreen() {
               <View style={styles.emptyFeed}>
                 <Text style={styles.emptyText}>No recent transactions</Text>
                 <Text style={styles.emptySubtext}>
-                  Tap to pay or receive MON to see activity here
+                  Tap to pay or send tokens to see activity here
                 </Text>
               </View>
             ) : (
@@ -703,7 +708,7 @@ export default function HomeScreen() {
                               : styles.txAmountSent,
                           ]}>
                           {tx.direction === 'sent' ? '- ' : '+ '}
-                          {tx.amount} MON
+                          {tx.amount} {getTxTokenSymbol(tx)}
                         </Text>
                         <View
                           style={[

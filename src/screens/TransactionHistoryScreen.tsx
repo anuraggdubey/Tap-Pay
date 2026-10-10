@@ -18,6 +18,7 @@ import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import {
   getTransactionHistory,
+  getTxTokenSymbol,
   subscribeHistory,
   initHistory,
   TransactionRecord,
@@ -79,6 +80,7 @@ export default function TransactionHistoryScreen() {
       tx.direction,
       tx.status,
       tx.amount,
+      getTxTokenSymbol(tx),
     ].some(value => value.toLowerCase().includes(normalizedQuery));
   });
 
@@ -89,6 +91,7 @@ export default function TransactionHistoryScreen() {
     const isSent = item.direction === 'sent';
     const isConfirmed = item.status === 'confirmed';
     const isPending = item.status === 'pending';
+    const tokenSymbol = getTxTokenSymbol(item);
     const counterparty = item.counterpartyUsername
       ? `@${item.counterpartyUsername}`
       : truncateAddress(item.counterparty, 6, 4);
@@ -105,6 +108,7 @@ export default function TransactionHistoryScreen() {
             recipient: item.counterparty,
             direction: item.direction,
             counterpartyUsername: item.counterpartyUsername,
+            tokenSymbol,
             initialStatus: item.status,
             completedAt: item.timestamp,
           });
@@ -165,7 +169,7 @@ export default function TransactionHistoryScreen() {
             isSent ? styles.amountSent : styles.amountReceived,
           ]}>
           {isSent ? '-' : '+'}
-          {item.amount} MON
+          {item.amount} {tokenSymbol}
         </Text>
       </PressableScale>
     );

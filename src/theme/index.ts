@@ -1,48 +1,23 @@
 /**
  * Shared TapPay design tokens — light Apple glass, blue accent.
+ * Prefer `useTheme()` from ThemeContext for live light/dark switching.
  */
 
 import {Platform, StyleSheet} from 'react-native';
+import {lightColors, lightGlass} from './palettes';
 
-export const colors = {
-  background: '#EEF3FA',
-  backgroundSoft: '#F7FAFF',
-  surface: 'rgba(255, 255, 255, 0.72)',
-  surfaceElevated: 'rgba(255, 255, 255, 0.92)',
-  surfaceSolid: '#FFFFFF',
-  surfaceSolidElevated: '#F2F6FC',
-  surfaceBlue: 'rgba(10, 132, 255, 0.08)',
-  border: 'rgba(10, 132, 255, 0.12)',
-  borderSubtle: 'rgba(15, 40, 80, 0.06)',
-  borderStrong: 'rgba(10, 132, 255, 0.22)',
-  text: '#0B1220',
-  textMuted: '#6B7280',
-  textSubtle: '#9AA3B2',
-  textOnAccent: '#FFFFFF',
-  accent: '#0A84FF',
-  accentSoft: '#64D2FF',
-  accentDeep: '#0066DB',
-  accentWash: 'rgba(10, 132, 255, 0.12)',
-  accentPurple: '#6E54FF',
-  accentPurpleSoft: '#836EF9',
-  success: '#34C759',
-  successSoft: '#34C759',
-  danger: '#FF3B30',
-  warning: '#FF9F0A',
-  black: '#000000',
-  separator: 'rgba(60, 60, 67, 0.12)',
-};
+export {
+  lightColors,
+  darkColors,
+  lightGlass,
+  darkGlass,
+  getPremiumCardStyle,
+} from './palettes';
+export type {AppColors, AppGlass} from './palettes';
 
-export const glass = {
-  fill: 'rgba(255, 255, 255, 0.72)',
-  fillElevated: 'rgba(255, 255, 255, 0.88)',
-  fillHeavy: 'rgba(255, 255, 255, 0.94)',
-  fillBlue: 'rgba(10, 132, 255, 0.08)',
-  border: 'rgba(255, 255, 255, 0.85)',
-  borderSubtle: 'rgba(15, 40, 80, 0.08)',
-  borderBright: 'rgba(10, 132, 255, 0.18)',
-  edge: 'rgba(255, 255, 255, 0.95)',
-};
+/** Default light tokens (static imports / StyleSheet fallbacks). */
+export const colors = lightColors;
+export const glass = lightGlass;
 
 export const spacing = {
   xs: 6,

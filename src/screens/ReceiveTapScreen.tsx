@@ -3,7 +3,7 @@
  * Broadcasts address and polls for incoming payments.
  */
 
-import React, {useState, useEffect, useRef} from 'react';
+import React, {useState, useEffect, useRef, useMemo} from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useWallet} from '../context/WalletContext';
+import {useTheme} from '../context/ThemeContext';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import {
   initNfc,
@@ -31,7 +32,7 @@ import NfcNotAvailableModal from '../components/NfcNotAvailableModal';
 import NfcWaitingCard from '../components/NfcWaitingCard';
 import {triggerHaptic} from '../utils/haptics';
 import {formatMon, truncateAddress} from '../utils/format';
-import {colors} from '../theme';
+import type {AppColors} from '../theme';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'ReceiveTap'>;
@@ -39,6 +40,8 @@ type Props = {
 
 export default function ReceiveTapScreen({navigation}: Props) {
   const {address, balance, refreshBalance} = useWallet();
+  const {colors} = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [nfcModalVisible, setNfcModalVisible] = useState(false);
   const [isReceiving, setIsReceiving] = useState(true);
 
@@ -194,9 +197,11 @@ export default function ReceiveTapScreen({navigation}: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppColors) {
+  return StyleSheet.create({
   root: {
     flex: 1,
+    backgroundColor: colors.background,
   },
   walletHint: {
     marginTop: 18,
@@ -206,4 +211,5 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
   },
-});
+  });
+}

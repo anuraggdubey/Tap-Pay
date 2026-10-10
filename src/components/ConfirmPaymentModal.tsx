@@ -2,7 +2,7 @@
  * ConfirmPaymentModal — Apple Pay-style confirmation sheet (light glass).
  */
 
-import React, {useEffect, useRef} from 'react';
+import React, {useEffect, useMemo, useRef} from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,9 @@ import {
 import {formatMon, truncateAddress} from '../utils/format';
 import {MONAD_CONFIG} from '../config/monad';
 import PressableScale from './PressableScale';
-import {colors, glass, motion, shadows} from '../theme';
+import {useTheme} from '../context/ThemeContext';
+import {motion, shadows} from '../theme';
+import type {AppColors, AppGlass} from '../theme';
 
 interface Props {
   visible: boolean;
@@ -49,6 +51,11 @@ export default function ConfirmPaymentModal({
   tokenSymbol = 'MON',
   displayAmount,
 }: Props) {
+  const {colors, glass, isDark} = useTheme();
+  const styles = useMemo(
+    () => createStyles(colors, glass, isDark),
+    [colors, glass, isDark],
+  );
   const isMon = tokenSymbol === 'MON';
   const totalCostWei = amountWei + gasCostWei;
   const amountStr = isMon ? formatMon(amountWei) : `${displayAmount} ${tokenSymbol}`;
@@ -155,10 +162,11 @@ export default function ConfirmPaymentModal({
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppColors, glass: AppGlass, isDark: boolean) {
+  return StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(11, 18, 32, 0.35)',
+    backgroundColor: isDark ? 'rgba(0, 0, 0, 0.55)' : 'rgba(11, 18, 32, 0.35)',
     justifyContent: 'flex-end',
   },
   sheetContainer: {
@@ -290,3 +298,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+}

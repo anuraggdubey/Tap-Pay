@@ -5,7 +5,7 @@
  * solid white CTA pill, and clean unhighlighted backup verification.
  */
 
-import React, {useState} from 'react';
+import React, {useState, useMemo} from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,8 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 
 import {useWallet} from '../context/WalletContext';
+import {useTheme} from '../context/ThemeContext';
+import type {AppColors} from '../theme';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import {validateUsername} from '../utils/validation';
 import {resolveUsername, registerUsername, reverseResolveAddress} from '../services/registry';
@@ -36,6 +38,8 @@ type Props = {
 export default function WalletSetupScreen({navigation}: Props) {
   const insets = useSafeAreaInsets();
   const {createWallet, importWallet, saveUsername} = useWallet();
+  const {colors} = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [step, setStep] = useState<'welcome' | 'import' | 'username' | 'backup'>('welcome');
   const [privateKeyInput, setPrivateKeyInput] = useState('');
   const [newPrivateKey, setNewPrivateKey] = useState('');
@@ -193,7 +197,7 @@ export default function WalletSetupScreen({navigation}: Props) {
           <TextInput
             style={styles.textInput}
             placeholder="Enter Private Key (0x...)"
-            placeholderTextColor="#9AA3B2"
+            placeholderTextColor={colors.textSubtle}
             value={privateKeyInput}
             onChangeText={setPrivateKeyInput}
             autoCapitalize="none"
@@ -247,7 +251,7 @@ export default function WalletSetupScreen({navigation}: Props) {
             <TextInput
               style={styles.usernameInput}
               placeholder="alex"
-              placeholderTextColor="#9AA3B2"
+              placeholderTextColor={colors.textSubtle}
               value={usernameInput}
               onChangeText={(text) => {
                 setUsernameInput(text);
@@ -355,7 +359,7 @@ export default function WalletSetupScreen({navigation}: Props) {
     <View style={[styles.screenWrapper, {paddingTop: insets.top + 40, paddingBottom: insets.bottom + 20}]}>
       <View style={styles.welcomeHeroContainer}>
         {/* Freestanding Unboxed Minimalist Brand Logo (Top Center) */}
-        <BrandLogo size={56} color="#0A84FF" style={{marginBottom: 30}} />
+        <BrandLogo size={56} color={colors.accent} style={{marginBottom: 30}} />
 
         {/* Massive Fuse-style typography */}
         <Text style={styles.welcomeSubtitle}>Welcome to</Text>
@@ -370,7 +374,7 @@ export default function WalletSetupScreen({navigation}: Props) {
           disabled={loading}
           activeOpacity={0.85}>
           {loading ? (
-            <ActivityIndicator color="#0A84FF" />
+            <ActivityIndicator color={colors.accent} />
           ) : (
             <Text style={styles.primaryPillText}>Create Account (Passkey)</Text>
           )}
@@ -396,10 +400,11 @@ export default function WalletSetupScreen({navigation}: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppColors) {
+  return StyleSheet.create({
   screenWrapper: {
     flex: 1,
-    backgroundColor: '#EEF3FA',
+    backgroundColor: colors.background,
     paddingHorizontal: 24,
     justifyContent: 'space-between',
   },
@@ -411,14 +416,14 @@ const styles = StyleSheet.create({
   welcomeSubtitle: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#6B7280',
+    color: colors.textMuted,
     letterSpacing: -0.3,
     marginBottom: 6,
   },
   welcomeTitle: {
     fontSize: 56,
     fontWeight: '800',
-    color: '#0B1220',
+    color: colors.text,
     letterSpacing: -1.8,
     lineHeight: 60,
   },
@@ -429,7 +434,7 @@ const styles = StyleSheet.create({
   },
   primaryPillButton: {
     width: '100%',
-    backgroundColor: '#0A84FF',
+    backgroundColor: colors.accent,
     paddingVertical: 18,
     borderRadius: 32,
     alignItems: 'center',
@@ -437,24 +442,24 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   primaryPillText: {
-    color: '#FFFFFF',
+    color: colors.textOnAccent,
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: -0.3,
   },
   secondaryPillButton: {
     width: '100%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surfaceSolid,
     paddingVertical: 18,
     borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(10, 132, 255, 0.18)',
+    borderColor: colors.borderStrong,
     marginBottom: 16,
   },
   secondaryPillText: {
-    color: '#0B1220',
+    color: colors.text,
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: -0.3,
@@ -463,7 +468,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   secondaryText: {
-    color: '#6B7280',
+    color: colors.textMuted,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -476,33 +481,33 @@ const styles = StyleSheet.create({
   },
   backText: {
     fontSize: 16,
-    color: '#0A84FF',
+    color: colors.accent,
     fontWeight: '600',
   },
   stepIndicator: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#9AA3B2',
+    color: colors.textSubtle,
     letterSpacing: 1,
     marginBottom: 8,
   },
   viewTitle: {
     fontSize: 32,
     fontWeight: '800',
-    color: '#0B1220',
+    color: colors.text,
     letterSpacing: -0.8,
     marginBottom: 8,
   },
   viewSubtitle: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.textMuted,
     lineHeight: 20,
     marginBottom: 28,
   },
   textInput: {
     backgroundColor: '#FFFFFF',
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(15, 40, 80, 0.12)',
+    borderColor: colors.borderSubtle,
     borderRadius: 16,
     paddingHorizontal: 18,
     paddingVertical: 16,
@@ -516,7 +521,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(15, 40, 80, 0.12)',
+    borderColor: colors.borderSubtle,
     borderRadius: 16,
     paddingHorizontal: 18,
     paddingVertical: 14,
@@ -525,7 +530,7 @@ const styles = StyleSheet.create({
   atSymbol: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#0A84FF',
+    color: colors.accent,
     marginRight: 8,
   },
   usernameInput: {
@@ -537,9 +542,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   credentialCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surfaceSolid,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(15, 40, 80, 0.12)',
+    borderColor: colors.borderSubtle,
     borderRadius: 16,
     padding: 18,
     marginBottom: 18,
@@ -553,17 +558,17 @@ const styles = StyleSheet.create({
   credentialLabel: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#9AA3B2',
+    color: colors.textSubtle,
     letterSpacing: 0.8,
   },
   copyActionText: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#34C759',
+    color: colors.success,
     letterSpacing: 0.6,
   },
   credentialValueMono: {
-    color: '#0B1220',
+    color: colors.text,
     fontSize: 13,
     fontFamily: 'monospace',
     lineHeight: 18,
@@ -573,7 +578,7 @@ const styles = StyleSheet.create({
   },
   suggestionsTitle: {
     fontSize: 12,
-    color: '#6B7280',
+    color: colors.textMuted,
     marginBottom: 10,
     fontWeight: '600',
     letterSpacing: 0.5,
@@ -584,16 +589,17 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   suggestionChip: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surfaceSolid,
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 20,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(10, 132, 255, 0.18)',
+    borderColor: colors.borderStrong,
   },
   suggestionText: {
-    color: '#0B1220',
+    color: colors.text,
     fontSize: 14,
     fontWeight: '600',
   },
-});
+  });
+}

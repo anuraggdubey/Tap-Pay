@@ -7,7 +7,6 @@ import {
   AccessibilityInfo,
   Animated,
   Easing,
-  ImageBackground,
   Modal,
   Pressable,
   View,
@@ -24,12 +23,12 @@ import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 
 import {useWallet} from '../context/WalletContext';
+import {useTheme} from '../context/ThemeContext';
 import {truncateAddress, formatTimestamp} from '../utils/format';
 import {triggerHaptic} from '../utils/haptics';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import BrandLogo from '../components/BrandLogo';
 import {
-  ContactlessWave,
   SettingsIcon,
   UserIcon,
   SendTapIcon,
@@ -40,11 +39,11 @@ import {initNfc, isNfcEnabled, isNfcSupported} from '../services/nfcReader';
 import PressableScale from '../components/PressableScale';
 import FadeInView from '../components/FadeInView';
 import LivePulseDot from '../components/LivePulseDot';
-import {colors, glass, shadows, premiumCard} from '../theme';
+import {shadows} from '../theme';
+import type {AppColors, AppGlass} from '../theme';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-
-const CARD_WAVE_BG = require('../assets/tappay-card-wave-bg.png');
+type PremiumCard = Record<string, unknown>;
 
 function getTxBadge(tx: TransactionRecord): {label: string; variant: 'tap' | 'direct' | 'received'} {
   if (tx.direction === 'received') {
@@ -91,6 +90,8 @@ function ProfileDropdown({
   onCopyAddress,
   onNavigate,
   onDismiss,
+  styles,
+  colors,
 }: {
   username?: string | null;
   address?: string | null;
@@ -99,6 +100,8 @@ function ProfileDropdown({
   onCopyAddress: () => void;
   onNavigate: (destination: ProfileDestination) => void;
   onDismiss: () => void;
+  styles: ReturnType<typeof createStyles>;
+  colors: AppColors;
 }) {
   const insets = useSafeAreaInsets();
   const panelY = React.useRef(new Animated.Value(-420)).current;
@@ -272,6 +275,11 @@ function ProfileDropdown({
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const {address, balance, ausdBalance, username, refreshBalance} = useWallet();
+  const {colors, glass, premiumCard} = useTheme();
+  const styles = useMemo(
+    () => createStyles(colors, glass, premiumCard as PremiumCard),
+    [colors, glass, premiumCard],
+  );
   const navigation = useNavigation<NavigationProp>();
 
   const [refreshing, setRefreshing] = useState(false);
@@ -434,14 +442,10 @@ export default function HomeScreen() {
               pointerEvents={showingCardBack ? 'none' : 'auto'}
               accessibilityElementsHidden={showingCardBack}
               importantForAccessibility={showingCardBack ? 'no-hide-descendants' : 'auto'}>
-              <ImageBackground
-                source={CARD_WAVE_BG}
-                style={styles.cardFaceFill}
-                imageStyle={styles.cardFaceImage}
-                resizeMode="cover">
+              <View style={styles.cardFaceFill}>
               <View style={styles.cardTopRow}>
                 <View style={styles.cardBrand}>
-                  <BrandLogo size={22} color="#FFFFFF" />
+                  <BrandLogo size={26} natural />
                   <Text style={styles.cardBrandText}>TapPay</Text>
                 </View>
                 <PressableScale
@@ -487,7 +491,7 @@ export default function HomeScreen() {
                   </View>
                 </View>
               </View>
-              </ImageBackground>
+              </View>
             </Animated.View>
 
             <Animated.View
@@ -495,14 +499,10 @@ export default function HomeScreen() {
               pointerEvents={showingCardBack ? 'auto' : 'none'}
               accessibilityElementsHidden={!showingCardBack}
               importantForAccessibility={showingCardBack ? 'auto' : 'no-hide-descendants'}>
-              <ImageBackground
-                source={CARD_WAVE_BG}
-                style={styles.cardFaceFill}
-                imageStyle={styles.cardFaceImage}
-                resizeMode="cover">
+              <View style={styles.cardFaceFill}>
               <View style={styles.cardBackTopRow}>
                 <View style={styles.cardBrand}>
-                  <BrandLogo size={20} color="#FFFFFF" />
+                  <BrandLogo size={24} natural />
                   <Text style={styles.cardBrandText}>TapPay</Text>
                 </View>
                 <PressableScale
@@ -556,7 +556,7 @@ export default function HomeScreen() {
                   </Text>
                 </View>
               </View>
-              </ImageBackground>
+              </View>
             </Animated.View>
             </View>
           </View>
@@ -572,10 +572,33 @@ export default function HomeScreen() {
                 <Text style={styles.terminalCaption}>{terminalStatus.caption}</Text>
               </View>
             </View>
-            <ContactlessWave
-              size={22}
-              color={terminalStatus.ready ? colors.success : colors.textMuted}
-            />
+            <View
+              style={[
+                styles.nfcCircleMark,
+                {
+                  borderColor: terminalStatus.ready
+                    ? colors.success
+                    : colors.textMuted,
+                },
+              ]}
+              accessibilityLabel={terminalStatus.label}>
+              {[0.72, 0.48, 0.24].map(scale => (
+                <View
+                  key={scale}
+                  style={[
+                    styles.nfcCircleRing,
+                    {
+                      width: 28 * scale,
+                      height: 28 * scale,
+                      borderRadius: (28 * scale) / 2,
+                      borderColor: terminalStatus.ready
+                        ? colors.success
+                        : colors.textMuted,
+                    },
+                  ]}
+                />
+              ))}
+            </View>
           </View>
         </FadeInView>
 
@@ -716,6 +739,8 @@ export default function HomeScreen() {
           profileLetter={profileLetter}
           copied={copied}
           onCopyAddress={copyAddress}
+          styles={styles}
+          colors={colors}
           onDismiss={() => setProfileMenuOpen(false)}
           onNavigate={destination => {
             if (destination === 'AccountInfo') {
@@ -730,17 +755,22 @@ export default function HomeScreen() {
   );
 }
 
-const ios = {
-  bg: colors.background,
-  label: colors.text,
-  secondaryLabel: colors.textMuted,
-  tertiaryLabel: colors.textSubtle,
-  blue: colors.accent,
-  green: colors.success,
-  separator: colors.separator,
-};
+function createStyles(
+  colors: AppColors,
+  glass: AppGlass,
+  premiumCard: PremiumCard,
+) {
+  const ios = {
+    bg: colors.background,
+    label: colors.text,
+    secondaryLabel: colors.textMuted,
+    tertiaryLabel: colors.textSubtle,
+    blue: colors.accent,
+    green: colors.success,
+    separator: colors.separator,
+  };
 
-const styles = StyleSheet.create({
+  return StyleSheet.create({
   screenWrapper: {
     flex: 1,
     backgroundColor: ios.bg,
@@ -1000,6 +1030,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   cardBody: {
+    backgroundColor: colors.accent,
     borderRadius: 28,
     minHeight: 210,
     overflow: 'hidden',
@@ -1013,6 +1044,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+    backgroundColor: colors.accent,
     borderRadius: 28,
     minHeight: 210,
     overflow: 'hidden',
@@ -1020,15 +1052,11 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.42)',
     ...shadows.card,
   },
-  /** Image is the only card fill — same size + rounded corners */
   cardFaceFill: {
     flex: 1,
     minHeight: 210,
     padding: 18,
     justifyContent: 'space-between',
-  },
-  cardFaceImage: {
-    borderRadius: 28,
   },
   cardTopRow: {
     flexDirection: 'row',
@@ -1430,6 +1458,18 @@ const styles = StyleSheet.create({
     marginTop: 1,
     fontWeight: '400',
   },
+  nfcCircleMark: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nfcCircleRing: {
+    position: 'absolute',
+    borderWidth: 2,
+  },
   transactionsSection: {
     marginBottom: 10,
   },
@@ -1555,4 +1595,5 @@ const styles = StyleSheet.create({
   txBadgeTextReceived: {
     color: ios.green,
   },
-});
+  });
+}

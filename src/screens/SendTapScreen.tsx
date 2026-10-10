@@ -3,7 +3,7 @@
  * Amount entry UI inspired by Cash App keypad (dark theme).
  */
 
-import React, {useState, useEffect, useRef} from 'react';
+import React, {useState, useEffect, useRef, useMemo} from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {ethers} from 'ethers';
 import {useWallet} from '../context/WalletContext';
+import {useTheme} from '../context/ThemeContext';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import {validateAmount} from '../utils/validation';
 import {formatMon, truncateAddress} from '../utils/format';
@@ -37,7 +38,7 @@ import NfcNotAvailableModal from '../components/NfcNotAvailableModal';
 import NfcWaitingCard from '../components/NfcWaitingCard';
 import {CrossIcon} from '../components/AppIcons';
 import {triggerHaptic} from '../utils/haptics';
-import {colors} from '../theme';
+import type {AppColors} from '../theme';
 import PressableScale from '../components/PressableScale';
 
 type Props = {
@@ -75,6 +76,8 @@ const PHASE_COPY: Record<TapSenderPhase, {title: string; subtitle: string}> = {
 
 export default function SendTapScreen({navigation}: Props) {
   const {address, balance, refreshBalance} = useWallet();
+  const {colors} = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const [amount, setAmount] = useState('');
   const [phase, setPhase] = useState<TapSenderPhase>('idle');
@@ -430,7 +433,8 @@ export default function SendTapScreen({navigation}: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppColors) {
+  return StyleSheet.create({
   payRoot: {
     flex: 1,
     backgroundColor: colors.background,
@@ -448,7 +452,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     backgroundColor: colors.surfaceSolid,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(15, 40, 80, 0.08)',
+    borderColor: colors.borderSubtle,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -548,4 +552,5 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textMuted,
   },
-});
+  });
+}

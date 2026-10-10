@@ -4,13 +4,13 @@
  * 100% responsive across Google Pixel, Samsung One UI, Xiaomi/Redmi, and iOS.
  */
 
-import React from 'react';
+import React, {useMemo} from 'react';
 import {
   View,
   Text,
   StyleSheet,
 } from 'react-native';
-import {NavigationContainer, DefaultTheme} from '@react-navigation/native';
+import {NavigationContainer, DefaultTheme, DarkTheme} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {
   createBottomTabNavigator,
@@ -30,10 +30,12 @@ import AccountInfoScreen from '../screens/AccountInfoScreen';
 import AboutScreen from '../screens/AboutScreen';
 import NetworkScreen from '../screens/NetworkScreen';
 import {useWallet} from '../context/WalletContext';
+import {useTheme} from '../context/ThemeContext';
 import {HomeIcon, PayIcon, HistoryIcon, SettingsIcon} from '../components/AppIcons';
 import {triggerHaptic} from '../utils/haptics';
 import PressableScale from '../components/PressableScale';
-import {colors, glass, shadows} from '../theme';
+import {shadows} from '../theme';
+import type {AppColors, AppGlass} from '../theme';
 
 export type RootStackParamList = {
   WalletSetup: undefined;
@@ -71,24 +73,17 @@ export type TabParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<TabParamList>();
 
-const TapPayTheme = {
-  ...DefaultTheme,
-  colors: {
-    ...DefaultTheme.colors,
-    background: colors.background,
-    card: colors.surfaceSolid,
-    text: colors.text,
-    border: glass.borderSubtle,
-    primary: colors.text,
-  },
-};
-
 /**
  * FloatingTabBar — Capsule navigation floating in the air (Image 1)
  * Uses dynamic insets so it will NEVER collide with Android 3-button nav or iOS gesture pill.
  */
 function FloatingTabBar({state, descriptors, navigation}: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
+  const {colors, glass, isDark} = useTheme();
+  const styles = useMemo(
+    () => createTabStyles(colors, glass, isDark),
+    [colors, glass, isDark],
+  );
   // Lift above system navigation bar (3-button nav on Android is ~48dp, gesture pill is ~16-24dp)
   const bottomOffset = Math.max(insets.bottom, 12) + 8;
 
@@ -185,13 +180,29 @@ function MainTabs() {
 
 export default function AppNavigator() {
   const {isInitialized, isLoading} = useWallet();
+  const {colors, glass, isDark} = useTheme();
+
+  const navTheme = useMemo(
+    () => ({
+      ...(isDark ? DarkTheme : DefaultTheme),
+      colors: {
+        ...(isDark ? DarkTheme.colors : DefaultTheme.colors),
+        background: colors.background,
+        card: colors.surfaceSolid,
+        text: colors.text,
+        border: glass.borderSubtle,
+        primary: colors.accent,
+      },
+    }),
+    [colors, glass, isDark],
+  );
 
   if (isLoading) {
     return null;
   }
 
   return (
-    <NavigationContainer theme={TapPayTheme}>
+    <NavigationContainer theme={navTheme}>
       <Stack.Navigator
         initialRouteName={isInitialized ? 'MainTabs' : 'WalletSetup'}
         screenOptions={{
@@ -200,7 +211,6 @@ export default function AppNavigator() {
           headerTitleStyle: {
             fontWeight: '600',
             fontSize: 17,
-            letterSpacing: -0.2,
             color: colors.text,
           },
           headerShadowVisible: false,
@@ -257,57 +267,61 @@ export default function AppNavigator() {
   );
 }
 
-const styles = StyleSheet.create({
-  floatingContainer: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  capsulePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: 'rgba(255, 255, 255, 0.94)',
-    paddingHorizontal: 6,
-    paddingVertical: 6,
-    borderRadius: 36,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(10, 132, 255, 0.14)',
-    width: '92%',
-    maxWidth: 420,
-    ...shadows.heavy,
-  },
-  tabItem: {
-    flex: 1,
-    borderRadius: 28,
-  },
-  tabItemContent: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-  },
-  tabItemFocused: {
-    backgroundColor: colors.accentWash,
-  },
-  iconWrapper: {
-    width: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 2,
-  },
-  tabLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: -0.1,
-  },
-  tabLabelFocused: {
-    color: colors.accent,
-  },
-  tabLabelMuted: {
-    color: colors.textMuted,
-  },
-});
+function createTabStyles(colors: AppColors, glass: AppGlass, isDark: boolean) {
+  return StyleSheet.create({
+    floatingContainer: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    capsulePill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: isDark
+        ? 'rgba(28, 36, 56, 0.96)'
+        : 'rgba(255, 255, 255, 0.94)',
+      paddingHorizontal: 6,
+      paddingVertical: 6,
+      borderRadius: 36,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: isDark ? glass.borderBright : 'rgba(10, 132, 255, 0.14)',
+      width: '92%',
+      maxWidth: 420,
+      ...shadows.heavy,
+    },
+    tabItem: {
+      flex: 1,
+      borderRadius: 28,
+    },
+    tabItemContent: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 8,
+      paddingHorizontal: 4,
+    },
+    tabItemFocused: {
+      backgroundColor: colors.accentWash,
+    },
+    iconWrapper: {
+      width: 24,
+      height: 24,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 2,
+    },
+    tabLabel: {
+      fontSize: 11,
+      fontWeight: '600',
+      letterSpacing: -0.1,
+    },
+    tabLabelFocused: {
+      color: colors.accent,
+    },
+    tabLabelMuted: {
+      color: colors.textMuted,
+    },
+  });
+}

@@ -3,7 +3,7 @@
  * confirm with Apple Pay-style sheet, and broadcast on Monad Mainnet.
  */
 
-import React, {useState, useCallback, useEffect} from 'react';
+import React, {useState, useCallback, useEffect, useMemo} from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,8 @@ import {
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {ethers} from 'ethers';
 import {useWallet} from '../context/WalletContext';
+import {useTheme} from '../context/ThemeContext';
+import type {AppColors} from '../theme';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import {resolveUsername} from '../services/registry';
 import {validateAmount, validateUsername} from '../utils/validation';
@@ -37,6 +39,8 @@ type Props = {
 
 export default function UsernamePayScreen({navigation}: Props) {
   const {address, balance, refreshBalance} = useWallet();
+  const {colors} = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [username, setUsername] = useState('');
   const [resolvedAddress, setResolvedAddress] = useState<string | null>(null);
   const [amount, setAmount] = useState('');
@@ -196,7 +200,7 @@ export default function UsernamePayScreen({navigation}: Props) {
           <TextInput
             style={styles.searchInput}
             placeholder="username"
-            placeholderTextColor="#9AA3B2"
+            placeholderTextColor={colors.textSubtle}
             value={username}
             onChangeText={handleUsernameChange}
             autoCapitalize="none"
@@ -264,7 +268,7 @@ export default function UsernamePayScreen({navigation}: Props) {
             <TextInput
               style={styles.amountInput}
               placeholder="0.00"
-              placeholderTextColor="#9AA3B2"
+              placeholderTextColor={colors.textSubtle}
               value={amount}
               onChangeText={setAmount}
               keyboardType="decimal-pad"
@@ -326,31 +330,155 @@ export default function UsernamePayScreen({navigation}: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: '#0A0A0F'},
-  content: {flex: 1, justifyContent: 'center', paddingHorizontal: 24},
-  label: {fontSize: 14, color: '#8888AA', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1},
-  searchRow: {flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 16, paddingHorizontal: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(15, 40, 80, 0.12)', marginBottom: 16},
-  atSign: {fontSize: 20, fontWeight: '700', color: '#0A84FF', marginRight: 6},
-  searchInput: {flex: 1, fontSize: 18, color: '#0B1220', paddingVertical: 14, backgroundColor: '#FFFFFF'},
-  searchButton: {backgroundColor: '#0A84FF', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 10},
-  searchButtonText: {fontSize: 14, fontWeight: '700', color: '#FFFFFF'},
-  resolvedCard: {flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(15, 40, 80, 0.12)'},
-  avatarCircle: {width: 44, height: 44, borderRadius: 22, backgroundColor: '#0A84FF', justifyContent: 'center', alignItems: 'center', marginRight: 14},
-  avatarLetter: {fontSize: 20, fontWeight: '800', color: '#FFFFFF'},
-  resolvedMeta: {flex: 1},
-  resolvedName: {fontSize: 16, fontWeight: '700', color: '#0B1220', marginBottom: 2},
-  resolvedAddr: {fontSize: 12, color: '#6B7280', fontFamily: 'monospace'},
-  resolvedBadge: {backgroundColor: 'rgba(52, 199, 89, 0.14)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8},
-  resolvedBadgeText: {fontSize: 12, fontWeight: '700', color: '#34C759'},
-  amountInput: {fontSize: 48, fontWeight: '800', color: '#0B1220', textAlign: 'center', marginBottom: 8, paddingVertical: 12, backgroundColor: '#FFFFFF', borderRadius: 16},
-  gasHint: {fontSize: 13, color: '#0A84FF', textAlign: 'center', marginBottom: 6, fontWeight: '600'},
-  balanceHint: {fontSize: 14, color: '#6B7280', textAlign: 'center', marginBottom: 36},
-  sendButton: {backgroundColor: '#0A84FF', paddingVertical: 18, borderRadius: 16, alignItems: 'center'},
-  sendButtonText: {fontSize: 18, fontWeight: '700', color: '#FFFFFF'},
-  tokenSelector: {flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16, gap: 8},
-  tokenButton: {flex: 1, paddingVertical: 10, borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(15, 40, 80, 0.12)', backgroundColor: '#FFFFFF', alignItems: 'center'},
-  tokenButtonActive: {borderColor: '#0A84FF', backgroundColor: 'rgba(10, 132, 255, 0.12)'},
-  tokenButtonText: {fontSize: 14, fontWeight: '600', color: '#6B7280'},
-  tokenButtonTextActive: {color: '#0A84FF'},
-});
+function createStyles(colors: AppColors) {
+  return StyleSheet.create({
+    container: {flex: 1, backgroundColor: colors.background},
+    content: {flex: 1, justifyContent: 'center', paddingHorizontal: 24},
+    label: {
+      fontSize: 14,
+      color: colors.textMuted,
+      marginBottom: 8,
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+    },
+    searchRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.surfaceSolid,
+      borderRadius: 16,
+      paddingHorizontal: 16,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderSubtle,
+      marginBottom: 16,
+    },
+    atSign: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: colors.accent,
+      marginRight: 6,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: 18,
+      color: colors.text,
+      paddingVertical: 14,
+      backgroundColor: 'transparent',
+    },
+    searchButton: {
+      backgroundColor: colors.accent,
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+      borderRadius: 10,
+    },
+    searchButtonText: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: colors.textOnAccent,
+    },
+    resolvedCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.surfaceSolid,
+      borderRadius: 16,
+      padding: 16,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderSubtle,
+    },
+    avatarCircle: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: colors.accent,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: 14,
+    },
+    avatarLetter: {
+      fontSize: 20,
+      fontWeight: '800',
+      color: colors.textOnAccent,
+    },
+    resolvedMeta: {flex: 1},
+    resolvedName: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.text,
+      marginBottom: 2,
+    },
+    resolvedAddr: {
+      fontSize: 12,
+      color: colors.textMuted,
+      fontFamily: 'monospace',
+    },
+    resolvedBadge: {
+      backgroundColor: 'rgba(52, 199, 89, 0.14)',
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 8,
+    },
+    resolvedBadgeText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: colors.success,
+    },
+    amountInput: {
+      fontSize: 48,
+      fontWeight: '800',
+      color: colors.text,
+      textAlign: 'center',
+      marginBottom: 8,
+      paddingVertical: 12,
+      backgroundColor: colors.surfaceSolid,
+      borderRadius: 16,
+    },
+    gasHint: {
+      fontSize: 13,
+      color: colors.accent,
+      textAlign: 'center',
+      marginBottom: 6,
+      fontWeight: '600',
+    },
+    balanceHint: {
+      fontSize: 14,
+      color: colors.textMuted,
+      textAlign: 'center',
+      marginBottom: 36,
+    },
+    sendButton: {
+      backgroundColor: colors.accent,
+      paddingVertical: 18,
+      borderRadius: 16,
+      alignItems: 'center',
+    },
+    sendButtonText: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.textOnAccent,
+    },
+    tokenSelector: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: 16,
+      gap: 8,
+    },
+    tokenButton: {
+      flex: 1,
+      paddingVertical: 10,
+      borderRadius: 12,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderSubtle,
+      backgroundColor: colors.surfaceSolid,
+      alignItems: 'center',
+    },
+    tokenButtonActive: {
+      borderColor: colors.accent,
+      backgroundColor: colors.accentWash,
+    },
+    tokenButtonText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textMuted,
+    },
+    tokenButtonTextActive: {color: colors.accent},
+  });
+}

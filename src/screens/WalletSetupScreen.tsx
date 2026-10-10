@@ -505,13 +505,13 @@ function createStyles(colors: AppColors) {
     marginBottom: 28,
   },
   textInput: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surfaceSolid,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.borderSubtle,
     borderRadius: 16,
     paddingHorizontal: 18,
     paddingVertical: 16,
-    color: '#0B1220',
+    color: colors.text,
     fontSize: 15,
     fontFamily: 'monospace',
     marginBottom: 24,
@@ -519,7 +519,7 @@ function createStyles(colors: AppColors) {
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surfaceSolid,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.borderSubtle,
     borderRadius: 16,
@@ -535,11 +535,11 @@ function createStyles(colors: AppColors) {
   },
   usernameInput: {
     flex: 1,
-    color: '#0B1220',
+    color: colors.text,
     fontSize: 17,
     fontWeight: '600',
     padding: 0,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
   },
   credentialCard: {
     backgroundColor: colors.surfaceSolid,

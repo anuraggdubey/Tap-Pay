@@ -275,16 +275,16 @@ function createStyles(colors: AppColors) {
   linkTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#0B1220',
+    color: colors.text,
     marginBottom: 2,
   },
   linkSubtitle: {
     fontSize: 12,
-    color: '#0A84FF',
+    color: colors.accent,
   },
   chevron: {
     fontSize: 18,
-    color: '#0A84FF',
+    color: colors.accent,
     fontWeight: '600',
   },
   footer: {

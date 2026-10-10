@@ -866,13 +866,13 @@ function createStyles(
     left: 0,
   },
   profilePanel: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surfaceSolid,
     paddingHorizontal: 20,
     paddingBottom: 18,
     borderBottomLeftRadius: 26,
     borderBottomRightRadius: 26,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(15, 40, 80, 0.1)',
+    borderColor: colors.borderSubtle,
     ...Platform.select({
       ios: {
         shadowColor: '#0B1F3A',
@@ -988,10 +988,10 @@ function createStyles(
     fontWeight: '700',
   },
   profileMenuLinks: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surfaceSolidElevated,
     borderRadius: 17,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(15, 40, 80, 0.08)',
+    borderColor: colors.borderSubtle,
     overflow: 'hidden',
   },
   profileMenuLink: {

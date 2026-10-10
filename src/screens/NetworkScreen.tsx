@@ -272,7 +272,7 @@ function createStyles(colors: AppColors) {
     alignItems: 'center',
   },
   linkTitle: {
-    color: '#0B1220',
+    color: colors.text,
     fontSize: 14,
     fontWeight: '600',
   },

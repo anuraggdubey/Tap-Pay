@@ -121,6 +121,9 @@ backend/data/
 # APK / Bundle build outputs (download from CI instead)
 *.apk
 *.aab
+# Allow hosted release APKs in web/public if serving directly from website
+!web/public/*.apk
+!public/*.apk
 
 # Keystore / signing (NEVER commit real keystores)
 *.jks
@@ -153,6 +156,7 @@ dist/
 dist-ssr/
 web/dist/
 .vite/
+web/.vite/
 out/
 
 # Build caches & scratch
@@ -160,3 +164,9 @@ out/
 .screenshot-preview/
 web/scratch_test.js
 web/*.ps1
+
+# AI & IDE Tooling
+.gemini/
+.agents/
+.claude/
+.cursor/

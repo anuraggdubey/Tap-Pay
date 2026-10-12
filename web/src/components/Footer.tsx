@@ -14,9 +14,7 @@ function GitHubIcon({ size = 16 }: { size?: number }) {
   );
 }
 
-interface FooterProps {
-  onJoinWaitlist: () => void;
-}
+import { APK_DOWNLOAD_URL } from '../config';
 
 function ExtLink({
   href,
@@ -48,7 +46,7 @@ function ExtLink({
   );
 }
 
-export const Footer: React.FC<FooterProps> = ({ onJoinWaitlist }) => {
+export const Footer: React.FC = () => {
   const year = new Date().getFullYear();
 
   return (
@@ -63,11 +61,9 @@ export const Footer: React.FC<FooterProps> = ({ onJoinWaitlist }) => {
               <Link to="/#watch-demo" className="footer-editorial-link">Product film</Link>
               <Link to="/#demo" className="footer-editorial-link">NFC Simulator</Link>
               <Link to="/download" className="footer-editorial-link">Download</Link>
-              <Link to="/waitlist" className="footer-editorial-link">Waitlist</Link>
-              <button type="button" className="footer-editorial-cta" onClick={onJoinWaitlist}>
-                Join early access
-                <ArrowUpRight size={14} />
-              </button>
+              <a href={APK_DOWNLOAD_URL} target="_blank" rel="noopener noreferrer" className="footer-editorial-link">
+                Download APK
+              </a>
             </nav>
           </div>
 

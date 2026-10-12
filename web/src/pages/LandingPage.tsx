@@ -15,11 +15,7 @@ import { DownloadModal } from '../components/DownloadModal';
 import { CursorSpotlight } from '../components/effects/CursorSpotlight';
 import { BrandMarquee } from '../components/effects/BrandMarquee';
 
-interface LandingPageProps {
-  onJoinWaitlist: () => void;
-}
-
-export default function LandingPage({ onJoinWaitlist }: LandingPageProps) {
+export default function LandingPage() {
   const [downloadOpen, setDownloadOpen] = useState(false);
   const shellRef = useRef<HTMLDivElement>(null);
   const { scrollProgress } = useScrollMotion();
@@ -40,10 +36,10 @@ export default function LandingPage({ onJoinWaitlist }: LandingPageProps) {
       <div className="scroll-progress-beam" style={{ width: `${scrollProgress}%` }} />
       <div className="scroll-progress-glow" style={{ left: `${scrollProgress}%` }} />
 
-      <Navbar onJoinWaitlist={onJoinWaitlist} />
+      <Navbar />
 
       <main style={{ flex: 1, position: 'relative', zIndex: 1 }}>
-        <Hero onJoinWaitlist={onJoinWaitlist} />
+        <Hero />
         <BrandMarquee />
         <StatsCarousel />
         <CenterPhoneShowcase />
@@ -54,9 +50,9 @@ export default function LandingPage({ onJoinWaitlist }: LandingPageProps) {
         <SecurityBento />
       </main>
 
-      <Footer onJoinWaitlist={onJoinWaitlist} />
+      <Footer />
 
-      <DownloadModal isOpen={downloadOpen} onClose={() => setDownloadOpen(false)} onJoinWaitlist={onJoinWaitlist} />
+      <DownloadModal isOpen={downloadOpen} onClose={() => setDownloadOpen(false)} />
     </div>
   );
 }

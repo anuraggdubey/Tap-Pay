@@ -1,14 +1,15 @@
 import React, { useEffect } from 'react';
-import { X, Smartphone, Clock, ArrowUpRight } from 'lucide-react';
+import { X, Smartphone, ArrowUpRight } from 'lucide-react';
 import { stopSmoothScroll, startSmoothScroll } from '../motion/lenisStore';
+
+import { APK_DOWNLOAD_URL } from '../config';
 
 interface DownloadModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onJoinWaitlist: () => void;
 }
 
-export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose, onJoinWaitlist }) => {
+export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose }) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -99,10 +100,10 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose, o
             <Smartphone size={28} />
           </div>
           <h3 style={{ fontSize: '26px', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: '6px' }}>
-            Android app — coming soon
+            Download TapPay for Android
           </h3>
           <p style={{ color: 'var(--text-dark-muted)', fontSize: '15px', lineHeight: 1.55, maxWidth: '360px', margin: '0 auto' }}>
-            We&apos;re still polishing NFC tap-to-pay on Monad. The public APK isn&apos;t available yet — we&apos;ll post here when it&apos;s ready.
+            Get the TapPay APK and start making instant NFC tap-to-pay transactions on Monad Mainnet.
           </p>
         </div>
 
@@ -131,20 +132,18 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose, o
               marginBottom: '12px',
             }}
           >
-            <Clock size={16} color="#10B981" />
-            <span>Coming soon</span>
+            <Smartphone size={16} color="#10B981" />
+            <span>Android APK</span>
           </div>
           <p style={{ fontSize: '13px', color: 'var(--text-dark-muted)', lineHeight: 1.5, margin: 0 }}>
             Android 10+ · NFC required · Monad Mainnet
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => {
-            onClose();
-            onJoinWaitlist();
-          }}
+        <a
+          href={APK_DOWNLOAD_URL}
+          target="_blank"
+          rel="noopener noreferrer"
           className="phantom-btn-pill"
           style={{
             width: '100%',
@@ -161,11 +160,12 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose, o
             border: 'none',
             cursor: 'pointer',
             marginBottom: '12px',
+            textDecoration: 'none',
           }}
         >
-          <span>Join the waitlist</span>
+          <span>Download APK</span>
           <ArrowUpRight size={18} />
-        </button>
+        </a>
         <a
           href="https://x.com/tapxpay"
           target="_blank"

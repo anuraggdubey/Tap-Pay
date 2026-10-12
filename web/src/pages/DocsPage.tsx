@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { ArrowUpRight, BookOpen, ExternalLink } from 'lucide-react';
 import { Navbar } from '../components/Navbar';
 import { DocsDemoVideo } from '../components/DemoVideoSection';
@@ -23,7 +23,6 @@ const SECTIONS = [
 ] as const;
 
 export default function DocsPage() {
-  const navigate = useNavigate();
   const [activeId, setActiveId] = useState<string>('overview');
 
   useEffect(() => {
@@ -47,11 +46,9 @@ export default function DocsPage() {
     return () => observer.disconnect();
   }, []);
 
-  const joinWaitlist = () => navigate('/waitlist');
-
   return (
     <div className="docs-page">
-      <Navbar onJoinWaitlist={joinWaitlist} />
+      <Navbar />
 
       <div className="phantom-container docs-main">
         <header className="docs-hero">
@@ -369,14 +366,11 @@ export default function DocsPage() {
             <section id="testing" className="docs-section">
               <h2>Get the app</h2>
               <p>
-                TapPay for Android is rolling out through our waitlist. When your invite goes out, you&apos;ll install the
-                APK from the official <Link to="/download">Download</Link> page — no developer setup required.
+                TapPay for Android is available for installation. Download the APK directly from the official{' '}
+                <Link to="/download">Download</Link> page — no developer setup required.
               </p>
               <ul>
-                <li>
-                  Not on the list yet? <Link to="/waitlist">Join the waitlist</Link> and we&apos;ll email you when
-                  installs open.
-                </li>
+                <li>Download and install the APK on any Android phone (Android 10+).</li>
                 <li>After installing, turn on <strong>NFC</strong> on both phones and allow TapPay to use it.</li>
                 <li>If taps fail, disable battery saver limits for TapPay and keep phones steady, backs together.</li>
                 <li>
@@ -437,7 +431,7 @@ export default function DocsPage() {
         </div>
       </div>
 
-      <Footer onJoinWaitlist={joinWaitlist} />
+      <Footer />
     </div>
   );
 }

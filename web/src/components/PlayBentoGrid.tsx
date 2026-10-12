@@ -8,8 +8,8 @@ type PlayBentoGridProps = {
 export const PlayBentoGrid: React.FC<PlayBentoGridProps> = ({ variant = 'waitlist' }) => {
   const centerTitle =
     variant === 'download'
-      ? 'Android APK is almost ready.'
-      : 'Reserve your spot before we flip the switch.';
+      ? 'Android APK ready to install.'
+      : 'Official Android build.';
 
   return (
     <div className="play-bento-grid">

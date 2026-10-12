@@ -2,13 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ChevronDown, Menu, X } from 'lucide-react';
 
-interface NavbarProps {
-  onJoinWaitlist: () => void;
-}
+import { APK_DOWNLOAD_URL } from '../config';
 
-export const Navbar: React.FC<NavbarProps> = ({ onJoinWaitlist }) => {
+export const Navbar: React.FC = () => {
   const location = useLocation();
-  const isSubpage = ['/docs', '/waitlist', '/download'].includes(location.pathname);
+  const isSubpage = ['/docs', '/download'].includes(location.pathname);
   const isDocsPage = location.pathname === '/docs';
 
   const [isDarkNav, setIsDarkNav] = useState(false);
@@ -142,14 +140,15 @@ export const Navbar: React.FC<NavbarProps> = ({ onJoinWaitlist }) => {
               gap: '10px',
             }}
           >
-            <div className={splitClass}>
-              <Link to="/download" className="nav-download-soon" style={{ textDecoration: 'none' }}>
-                Coming soon
-              </Link>
-              <button type="button" className="nav-download-join" onClick={onJoinWaitlist}>
-                Join waitlist
-              </button>
-            </div>
+            <a
+              href={APK_DOWNLOAD_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="nav-download-join"
+              style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            >
+              Download APK
+            </a>
 
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -214,27 +213,16 @@ export const Navbar: React.FC<NavbarProps> = ({ onJoinWaitlist }) => {
           >
             Docs
           </Link>
-          <div className={`${splitClass} nav-download-mobile-only`} style={{ marginTop: 8 }}>
-            <Link
-              to="/download"
-              className="nav-download-soon"
-              style={{ textDecoration: 'none', flex: 1, justifyContent: 'center' }}
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Coming soon
-            </Link>
-            <button
-              type="button"
-              className="nav-download-join"
-              style={{ flex: 1 }}
-              onClick={() => {
-                setMobileMenuOpen(false);
-                onJoinWaitlist();
-              }}
-            >
-              Join waitlist
-            </button>
-          </div>
+          <a
+            href={APK_DOWNLOAD_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="nav-download-join"
+            style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: 8 }}
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            Download APK
+          </a>
         </div>
       )}
 

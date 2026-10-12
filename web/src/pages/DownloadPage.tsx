@@ -1,13 +1,13 @@
 import React, { useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { ArrowUpRight, Clock } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ArrowUpRight, Smartphone } from 'lucide-react';
 import { PlayBentoGrid } from '../components/PlayBentoGrid';
 import { runWaitlistPageMotion } from '../motion/initScrollAnimations';
 import '../styles/waitlist.css';
 
-export default function DownloadPage() {
-  const navigate = useNavigate();
+import { APK_DOWNLOAD_URL } from '../config';
 
+export default function DownloadPage() {
   useEffect(() => runWaitlistPageMotion(), []);
 
   return (
@@ -38,23 +38,28 @@ export default function DownloadPage() {
           TapPay for Android.
         </h1>
         <p className="waitlist-lede" style={{ marginBottom: 32 }}>
-          We&apos;re not shipping the APK publicly yet. Join the waitlist and we&apos;ll email you the install link on
-          launch day.
+          Get the TapPay APK and start making instant NFC tap-to-pay transactions on Monad Mainnet.
         </p>
 
         <div className="download-split-bar">
           <div className="download-split-left">
-            <Clock size={20} />
+            <Smartphone size={20} />
             <div>
               <div className="download-split-label">Android APK</div>
-              <div className="download-split-value">Coming soon</div>
+              <div className="download-split-value">Ready to install</div>
             </div>
           </div>
           <div className="download-split-divider" aria-hidden />
-          <button type="button" className="download-split-right" onClick={() => navigate('/waitlist')}>
-            <span>Join waitlist</span>
+          <a
+            href={APK_DOWNLOAD_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="download-split-right"
+            style={{ textDecoration: 'none' }}
+          >
+            <span>Download APK</span>
             <ArrowUpRight size={18} />
-          </button>
+          </a>
         </div>
 
         <div style={{ marginTop: 48, marginBottom: 24 }}>

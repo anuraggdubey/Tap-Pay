@@ -32,9 +32,7 @@ import {
   TapPayMockTxDetail,
 } from './tappay-mock/TapPayMockScreens';
 
-interface HeroProps {
-  onJoinWaitlist: () => void;
-}
+import { APK_DOWNLOAD_URL } from '../config';
 
 type FlowStep = 'home' | 'amount' | 'nfc_search' | 'success' | 'history' | 'tx_detail' | 'settings';
 
@@ -58,7 +56,7 @@ const STEPS_ORDER: FlowStep[] = [
   'settings',
 ];
 
-export const Hero: React.FC<HeroProps> = ({ onJoinWaitlist }) => {
+export const Hero: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<FlowStep>('home');
   const [isPaused, setIsPaused] = useState(false);
   const [typedAmount, setTypedAmount] = useState('0.0');
@@ -271,14 +269,17 @@ export const Hero: React.FC<HeroProps> = ({ onJoinWaitlist }) => {
 
             {/* Action Buttons */}
             <div className="hero-action-buttons">
-              <button
-                onClick={onJoinWaitlist}
+              <a
+                href={APK_DOWNLOAD_URL}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="hero-btn-primary"
+                style={{ textDecoration: 'none' }}
               >
                 <Smartphone size={18} />
-                <span>Join the waitlist</span>
-                <span className="btn-version-badge">Early access</span>
-              </button>
+                <span>Download APK</span>
+                <span className="btn-version-badge">Android</span>
+              </a>
 
               <a
                 href="https://x.com/tapxpay"

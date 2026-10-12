@@ -271,6 +271,7 @@ export const Hero: React.FC = () => {
             <div className="hero-action-buttons">
               <a
                 href={APK_DOWNLOAD_URL}
+                download="TapPay.apk"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hero-btn-primary"

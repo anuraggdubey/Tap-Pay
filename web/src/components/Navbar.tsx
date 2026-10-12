@@ -142,6 +142,7 @@ export const Navbar: React.FC = () => {
           >
             <a
               href={APK_DOWNLOAD_URL}
+              download="TapPay.apk"
               target="_blank"
               rel="noopener noreferrer"
               className="nav-download-join"
@@ -215,6 +216,7 @@ export const Navbar: React.FC = () => {
           </Link>
           <a
             href={APK_DOWNLOAD_URL}
+            download="TapPay.apk"
             target="_blank"
             rel="noopener noreferrer"
             className="nav-download-join"

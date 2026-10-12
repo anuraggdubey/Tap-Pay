@@ -52,6 +52,7 @@ export default function DownloadPage() {
           <div className="download-split-divider" aria-hidden />
           <a
             href={APK_DOWNLOAD_URL}
+            download="TapPay.apk"
             target="_blank"
             rel="noopener noreferrer"
             className="download-split-right"

@@ -16,6 +16,7 @@ dist-ssr/
 .vite/
 *.local
 *.tsbuildinfo
+vite.config.*.timestamp*
 
 # Editor & OS files
 .vscode/*
@@ -41,6 +42,6 @@ Thumbs.db
 .env.production
 !.env.example
 
-# APK (allow if serving directly from public directory)
+# APK
 *.apk
-!public/*.apk
+!public/TapPay.apk

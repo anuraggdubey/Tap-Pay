@@ -61,7 +61,7 @@ export const Footer: React.FC = () => {
               <Link to="/#watch-demo" className="footer-editorial-link">Product film</Link>
               <Link to="/#demo" className="footer-editorial-link">NFC Simulator</Link>
               <Link to="/download" className="footer-editorial-link">Download</Link>
-              <a href={APK_DOWNLOAD_URL} download="TapPay.apk" target="_blank" rel="noopener noreferrer" className="footer-editorial-link">
+              <a href={APK_DOWNLOAD_URL} download="TapPay.apk" className="footer-editorial-link">
                 Download APK
               </a>
             </nav>

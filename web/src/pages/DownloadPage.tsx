@@ -53,8 +53,6 @@ export default function DownloadPage() {
           <a
             href={APK_DOWNLOAD_URL}
             download="TapPay.apk"
-            target="_blank"
-            rel="noopener noreferrer"
             className="download-split-right"
             style={{ textDecoration: 'none' }}
           >

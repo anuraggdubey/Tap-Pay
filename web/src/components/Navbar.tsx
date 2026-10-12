@@ -143,8 +143,6 @@ export const Navbar: React.FC = () => {
             <a
               href={APK_DOWNLOAD_URL}
               download="TapPay.apk"
-              target="_blank"
-              rel="noopener noreferrer"
               className="nav-download-join"
               style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
             >
@@ -217,8 +215,6 @@ export const Navbar: React.FC = () => {
           <a
             href={APK_DOWNLOAD_URL}
             download="TapPay.apk"
-            target="_blank"
-            rel="noopener noreferrer"
             className="nav-download-join"
             style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: 8 }}
             onClick={() => setMobileMenuOpen(false)}

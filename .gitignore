@@ -118,12 +118,10 @@ broadcast/
 backend/node_modules/
 backend/data/
 
-# APK / Bundle build outputs (download from CI instead)
+# APK / Bundle build outputs
 *.apk
 *.aab
-# Allow hosted release APKs in web/public if serving directly from website
-!web/public/*.apk
-!public/*.apk
+!web/public/TapPay.apk
 
 # Keystore / signing (NEVER commit real keystores)
 *.jks
@@ -161,9 +159,13 @@ out/
 
 # Build caches & scratch
 *.tsbuildinfo
+vite.config.*.timestamp*
+web/vite.config.*.timestamp*
 .screenshot-preview/
 web/scratch_test.js
 web/*.ps1
+*.tmp
+*.temp
 
 # AI & IDE Tooling
 .gemini/

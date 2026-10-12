@@ -1,9 +1,7 @@
 /**
  * TapPay Global Configuration
  * 
- * Direct APK download link for TapPay Android.
- * File ID: 1ctudU2Ps1qlLcq1onEIPri1eYg-9i_1Y
- * Bypasses Google Drive viewer and triggers direct file download.
+ * Direct APK download served directly from web/public/TapPay.apk.
+ * Initiates instant direct download on the user's device with zero redirects.
  */
-export const APK_DOWNLOAD_URL =
-  'https://drive.usercontent.google.com/download?id=1ctudU2Ps1qlLcq1onEIPri1eYg-9i_1Y&export=download&confirm=t';
+export const APK_DOWNLOAD_URL = '/TapPay.apk';

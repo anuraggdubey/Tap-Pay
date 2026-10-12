@@ -143,8 +143,6 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
         <a
           href={APK_DOWNLOAD_URL}
           download="TapPay.apk"
-          target="_blank"
-          rel="noopener noreferrer"
           className="phantom-btn-pill"
           style={{
             width: '100%',

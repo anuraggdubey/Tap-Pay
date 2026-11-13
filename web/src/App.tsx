@@ -4,6 +4,7 @@ import LandingPage from './pages/LandingPage';
 import DownloadPage from './pages/DownloadPage';
 import DocsPage from './pages/DocsPage';
 import { MotionProvider } from './motion/MotionProvider';
+import { MotionFx } from './components/effects/MotionFx';
 
 function AppRoutes() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
   return (
     <MotionProvider>
       <BrowserRouter>
+        <MotionFx />
         <AppRoutes />
       </BrowserRouter>
     </MotionProvider>

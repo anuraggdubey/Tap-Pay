@@ -84,7 +84,7 @@ export const HackathonStory: React.FC = () => {
                   marginBottom: '24px',
                 }}
               >
-                TapPay was conceived and built during the Monad India Blitz V4 hackathon. In under 24 hours, the team engineered low-level Android Host Card Emulation to bridge physical device touch with on-chain parallelized Monad blocks.
+                TapPay was conceived and built during the Monad India Blitz V4 hackathon. In under 24 hours, the team engineered low-level Android Host Card Emulation to bridge physical device touch with on-chain multi-chain settlement.
               </p>
 
               <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', marginBottom: '32px' }}>
@@ -178,7 +178,7 @@ export const HackathonStory: React.FC = () => {
                 </div>
                 <div style={{ fontSize: '17px', fontWeight: 800, marginBottom: '6px' }}>Phone-to-Phone Tap in Real Life</div>
                 <p style={{ fontSize: '13px', color: '#9ea0b2', marginBottom: '20px' }}>
-                  Watch two real Android devices held back-to-back exchanging keys and settling on Monad Mainnet (chain ID 143).
+                  Watch two real Android devices held back-to-back exchanging keys and settling on-chain across multiple networks.
                 </p>
                 <a
                   href="https://drive.google.com/file/d/1f8ZO1ian1y1d4o98g1C-SuV6wPYAysDC/view?usp=sharing"

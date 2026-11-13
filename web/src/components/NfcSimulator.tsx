@@ -351,7 +351,7 @@ export const NfcSimulator: React.FC = () => {
               { id: 'home' as DemoPhase, num: '1', title: '1. Home (Send & Receive NFC)' },
               { id: 'setup' as DemoPhase, num: '2', title: `2. Sender Enters ${amount} MON` },
               { id: 'approaching' as DemoPhase, num: '3', title: '3. Tap Phones: Bring Close (<4cm)' },
-              { id: 'broadcasting' as DemoPhase, num: '4', title: '4. Transmitting & Monad Consensus' },
+              { id: 'broadcasting' as DemoPhase, num: '4', title: '4. Transmitting & Chain Consensus' },
               { id: 'settled' as DemoPhase, num: '5', title: '5. Payment Successful (Dual GPay)' },
             ].map((stepItem) => {
               const isCurrent = phase === stepItem.id;
@@ -401,7 +401,7 @@ export const NfcSimulator: React.FC = () => {
                     <span>9:41</span>
                     <div className="status-chip">
                       <span className="chip-dot" />
-                      <span>Monad Mainnet</span>
+                      <span>Multi-Chain</span>
                     </div>
                     <div className="status-icons">
                       <Wifi size={12} />
@@ -447,7 +447,7 @@ export const NfcSimulator: React.FC = () => {
                         peerLetter="M"
                         statusLine={
                           phase === 'broadcasting'
-                            ? 'Broadcasting to Monad Mainnet…'
+                            ? 'Broadcasting to network…'
                             : 'Exchanging NFC session…'
                         }
                       />
@@ -543,7 +543,7 @@ export const NfcSimulator: React.FC = () => {
                     <span>9:41</span>
                     <div className="status-chip">
                       <span className="chip-dot" />
-                      <span>Monad Mainnet</span>
+                      <span>Multi-Chain</span>
                     </div>
                     <div className="status-icons">
                       <Wifi size={12} />
@@ -580,7 +580,7 @@ export const NfcSimulator: React.FC = () => {
                         peerLetter="A"
                         statusLine={
                           phase === 'broadcasting'
-                            ? 'Confirming on Monad Mainnet…'
+                            ? 'Confirming on-chain…'
                             : 'Reading tap session…'
                         }
                       />
@@ -655,7 +655,7 @@ export const NfcSimulator: React.FC = () => {
                 </div>
                 <div>
                   <div style={{ fontSize: '14px', fontWeight: 700, color: '#166534' }}>
-                    Atomic Settlement Confirmed on Monad (~0.82s)
+                    Atomic Settlement Confirmed (~0.82s)
                   </div>
                   <div style={{ fontSize: '11px', color: '#15803D', fontFamily: 'monospace' }}>
                     TxHash: {txHash} · Gas: ~0.0004 MON · Chain ID: 143
@@ -680,7 +680,7 @@ export const NfcSimulator: React.FC = () => {
                   borderRadius: '9999px',
                 }}
               >
-                <span>MonadScan</span>
+                <span>Explorer</span>
                 <ExternalLink size={13} />
               </a>
             </div>

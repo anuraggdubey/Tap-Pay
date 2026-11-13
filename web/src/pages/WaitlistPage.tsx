@@ -9,7 +9,7 @@ import '../styles/waitlist.css';
 const MARQUEE_ITEMS = [
   'EARLY ACCESS',
   'NFC TAP PAY',
-  'MONAD TESTNET',
+  'MULTI-CHAIN',
   'ANDROID BUILD',
   'NO APK YET',
   'JOIN THE QUEUE',
@@ -74,7 +74,7 @@ export default function WaitlistPage() {
               <em>Waitlist</em>
               Be first to tap
               <br />
-              on Monad.
+              on every chain.
             </h1>
             <p className="waitlist-lede">
               The APK isn&apos;t public yet. Drop your name and email — we&apos;ll send you the download link and launch

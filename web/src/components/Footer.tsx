@@ -14,7 +14,6 @@ function GitHubIcon({ size = 16 }: { size?: number }) {
   );
 }
 
-import { APK_DOWNLOAD_URL } from '../config';
 
 function ExtLink({
   href,
@@ -60,10 +59,7 @@ export const Footer: React.FC = () => {
               <Link to="/#how-it-works" className="footer-editorial-link">Features</Link>
               <Link to="/#watch-demo" className="footer-editorial-link">Product film</Link>
               <Link to="/#demo" className="footer-editorial-link">NFC Simulator</Link>
-              <Link to="/download" className="footer-editorial-link">Download</Link>
-              <a href={APK_DOWNLOAD_URL} download="TapPay.apk" className="footer-editorial-link">
-                Download APK
-              </a>
+              <Link to="/download" className="footer-editorial-link">APK Coming Soon</Link>
             </nav>
           </div>
 
@@ -96,13 +92,13 @@ export const Footer: React.FC = () => {
               </a>
             </nav>
             <p className="footer-editorial-tagline">
-              Phone-to-phone NFC tap payments on Monad — non-custodial, sub-second settlement.
+              Phone-to-phone NFC tap payments across Monad, Stellar, Solana, Base and more — non-custodial, fast settlement.
             </p>
           </div>
 
           <div className="footer-editorial-col footer-editorial-col--mobile-hide">
             <h3 className="footer-editorial-col-title">Network</h3>
-            <p className="footer-editorial-meta">Monad Mainnet · Chain 143</p>
+            <p className="footer-editorial-meta">Multi-Chain · Monad · Stellar · Solana · Base</p>
             <p className="footer-editorial-locales">
               NFC HCE · ISO-DEP · @username sends · Android 10+ · ~0.8s finality · hardware keystore
             </p>
@@ -144,11 +140,11 @@ export const Footer: React.FC = () => {
         <div className="footer-legal-bar">
           <div>
             <p className="footer-legal-copy">
-              © {year} TapPay. Contactless decentralized payments on Monad.
+              © {year} TapPay. Contactless decentralized payments, multi-chain.
             </p>
             <div className="footer-status-pill">
               <span className="footer-status-dot" />
-              <span>Monad Mainnet 143 operational</span>
+              <span>All chains operational</span>
             </div>
           </div>
           <div className="footer-legal-actions">

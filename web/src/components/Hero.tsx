@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import { HeroMeshCanvas } from './effects/HeroMeshCanvas';
 import {
@@ -32,7 +33,6 @@ import {
   TapPayMockTxDetail,
 } from './tappay-mock/TapPayMockScreens';
 
-import { APK_DOWNLOAD_URL } from '../config';
 
 type FlowStep = 'home' | 'amount' | 'nfc_search' | 'success' | 'history' | 'tx_detail' | 'settings';
 
@@ -263,22 +263,21 @@ export const Hero: React.FC = () => {
             {/* Description */}
             <p className="hero-description">
               The first non-custodial Android wallet for instant phone-to-phone contactless NFC tap payments.
-              Hold devices within <strong>4cm</strong> and execute an atomic Monad transfer.
+              Hold devices within <strong>4cm</strong> and execute an atomic multi-chain transfer.
               No QR codes. No seed phrase stress.
             </p>
 
             {/* Action Buttons */}
             <div className="hero-action-buttons">
-              <a
-                href={APK_DOWNLOAD_URL}
-                download="TapPay.apk"
+              <Link
+                to="/download"
                 className="hero-btn-primary"
                 style={{ textDecoration: 'none' }}
               >
                 <Smartphone size={18} />
-                <span>Download APK</span>
+                <span>Multi-Chain APK — Coming Soon</span>
                 <span className="btn-version-badge">Android</span>
-              </a>
+              </Link>
 
               <a
                 href="https://x.com/tapxpay"
@@ -295,7 +294,7 @@ export const Hero: React.FC = () => {
             <div className="hero-metrics-bar">
               <div className="metric-item">
                 <div className="metric-value">~0.8s</div>
-                <div className="metric-label">Monad Finality</div>
+                <div className="metric-label">Fast Finality</div>
               </div>
 
               <div className="metric-divider" />
@@ -370,7 +369,7 @@ export const Hero: React.FC = () => {
                   <span className="sim-status-time">9:41</span>
                   <div className="sim-status-chip">
                     <span className="sim-chip-dot" />
-                    <span>Monad 143</span>
+                    <span>Multi-Chain</span>
                   </div>
                   <div className="sim-status-icons">
                     <Wifi size={12} />
@@ -412,7 +411,7 @@ export const Hero: React.FC = () => {
                       peerName="@misbah (Receiver)"
                       peerAddr="0x8F21…4E29"
                       peerLetter="M"
-                      statusLine="NFC session active on Monad…"
+                      statusLine="NFC session active…"
                     />
                   )}
 

@@ -1,7 +1,7 @@
 /**
  * TapPay Global Configuration
- * 
- * Direct APK download served directly from web/public/TapPay.apk.
- * Initiates instant direct download on the user's device with zero redirects.
+ *
+ * The APK is not publicly available yet — the website routes every
+ * "Download" action to the /download "Multi-chain APK coming soon" page.
  */
-export const APK_DOWNLOAD_URL = '/TapPay.apk';
+export const APK_COMING_SOON_PATH = '/download';

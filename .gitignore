@@ -121,7 +121,7 @@ backend/data/
 # APK / Bundle build outputs
 *.apk
 *.aab
-!web/public/TapPay.apk
+web/public/*.apk
 
 # Keystore / signing (NEVER commit real keystores)
 *.jks
@@ -172,3 +172,12 @@ web/*.ps1
 .agents/
 .claude/
 .cursor/
+
+# Website: never ship APK binaries from the public folder (APK is "coming soon")
+web/public/*.apk
+web/public/*.aab
+
+# Local tooling / scratch
+*.bak
+.claude/
+.scratchpad/

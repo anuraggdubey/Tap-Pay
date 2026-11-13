@@ -5,16 +5,14 @@
 <h1 align="center">TapPay</h1>
 
 <p align="center">
-  <strong>Phone-to-phone contactless payments on Monad — NFC tap or <code>@username</code> send, settled on-chain in ~1 second.</strong>
+  <strong>Multi-chain phone-to-phone contactless payments — NFC tap or <code>@username</code> send across Monad, Stellar, Solana, Base and more.</strong>
 </p>
 
 <p align="center">
   <a href="https://monadscan.com/address/0x03907aE845E016f5F1605BAE4e6392C3491e03f1">
-    <img src="https://img.shields.io/badge/Monad_Mainnet-Live-7B3FE4?style=for-the-badge&logo=ethereum&logoColor=white" alt="Monad Mainnet" />
+    <img src="https://img.shields.io/badge/Multi--Chain-Monad_%C2%B7_Stellar_%C2%B7_Solana_%C2%B7_Base-7B3FE4?style=for-the-badge&logo=ethereum&logoColor=white" alt="Monad Mainnet" />
   </a>
-  <a href="https://drive.google.com/file/d/1w3K3PTeqvt250qMJne4azXeU4D35dC8P/view?usp=drivesdk">
-    <img src="https://img.shields.io/badge/Download-APK-34A853?style=for-the-badge&logo=android&logoColor=white" alt="Download APK" />
-  </a>
+  <img src="https://img.shields.io/badge/Multi--Chain_APK-Coming_Soon-F59E0B?style=for-the-badge&logo=android&logoColor=white" alt="Multi-chain APK coming soon" />
   <a href="https://drive.google.com/file/d/1f8ZO1ian1y1d4o98g1C-SuV6wPYAysDC/view?usp=sharing">
     <img src="https://img.shields.io/badge/Watch-Demo_Video-FF0000?style=for-the-badge&logo=googledrive&logoColor=white" alt="Demo Video" />
   </a>
@@ -61,7 +59,7 @@ Cross-border payments are **slow**, **expensive**, and **complex**. Traditional 
 
 ## 💡 The Solution
 
-**TapPay** is a non-custodial mobile wallet that makes on-chain payments feel as effortless as tapping a contactless card. Built on **Monad Mainnet** (Chain ID `143`), it harnesses ~1-second finality to deliver instant settlement across two intuitive payment modes:
+**TapPay** is a non-custodial mobile wallet that makes on-chain payments feel as effortless as tapping a contactless card. Designed to be **multi-chain** — Monad, Stellar, Solana, Base and more — it harnesses fast finality to deliver near-instant settlement across two intuitive payment modes:
 
 | Mode | How It Works |
 |:-----|:-------------|
@@ -341,13 +339,19 @@ TapPay/
 
 ---
 
+## 📱 APK Status
+
+> The multi-chain Android APK is **coming soon**. The website no longer offers a direct download; follow [@tapxpay](https://x.com/tapxpay) for the launch.
+
+---
+
 ## 📡 NFC Testing Guide
 
 > ⚠️ NFC Host Card Emulation requires **two physical Android phones**. Emulators cannot test phone-to-phone tap.
 
 | Step | Sender Phone | Receiver Phone |
 |:-----|:-------------|:---------------|
-| **1** | Install APK, enable NFC | Install APK, enable NFC |
+| **1** | Install APK (coming soon), enable NFC | Install APK (coming soon), enable NFC |
 | **2** | Enter amount → tap "Ready to Tap" | Open **Receive Tap** (broadcasts wallet address via HCE) |
 | **3** | Hold phones together (~4cm) | — |
 | **4** | Reads address, signs, broadcasts `payWithLog` on `TapPayLedger` | — |
@@ -387,5 +391,5 @@ Built at **Monad Metropolis** hackathon by:
 ---
 
 <p align="center">
-  <strong>MIT License</strong> · Built with 💜 on Monad
+  <strong>MIT License</strong> · Built with 💜 for a multi-chain world
 </p>

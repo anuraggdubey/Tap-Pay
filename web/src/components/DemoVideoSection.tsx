@@ -6,7 +6,7 @@ const DEMO_SRC = '/videos/tappay-demo.mp4';
 const POSTER = '/screenshots/home.jpg';
 
 const MARQUEE =
-  'NFC TAP · MONAD MAINNET · CHAIN 143 · ~1S FINALITY · NON-CUSTODIAL · @USERNAME PAY · ';
+  'NFC TAP · MULTI-CHAIN · MONAD · STELLAR · SOLANA · BASE · FAST FINALITY · NON-CUSTODIAL · @USERNAME PAY · ';
 
 const STEPS = [
   { n: '01', title: 'Tap', body: 'Hold two Android phones together — backs aligned.' },
@@ -27,7 +27,7 @@ export const DemoVideoSection: React.FC = () => {
           <h2 id="watch-demo-title" className="demo-cinema-title">
             One tap.
             <br />
-            <em>One second.</em> On Monad.
+            <em>One tap.</em> Every chain.
           </h2>
           <p className="demo-cinema-sub">
             Real NFC, real devices — phone-to-phone signing and mainnet settlement in a single take.
@@ -59,7 +59,7 @@ export const DemoVideoSection: React.FC = () => {
                         playsInline
                         preload="metadata"
                         poster={POSTER}
-                        aria-label="TapPay demo: NFC tap payment on Monad Mainnet"
+                        aria-label="TapPay demo: multi-chain NFC tap payment"
                       >
                         <source src={DEMO_SRC} type="video/mp4" />
                       </video>

@@ -5,7 +5,6 @@ import { PlayBentoGrid } from '../components/PlayBentoGrid';
 import { runWaitlistPageMotion } from '../motion/initScrollAnimations';
 import '../styles/waitlist.css';
 
-import { APK_DOWNLOAD_URL } from '../config';
 
 export default function DownloadPage() {
   useEffect(() => runWaitlistPageMotion(), []);
@@ -34,11 +33,11 @@ export default function DownloadPage() {
         </header>
 
         <h1 className="waitlist-headline" style={{ marginBottom: 20 }}>
-          <em>Download</em>
-          TapPay for Android.
+          <em>Coming soon</em>
+          Multi-chain APK.
         </h1>
         <p className="waitlist-lede" style={{ marginBottom: 32 }}>
-          Get the TapPay APK and start making instant NFC tap-to-pay transactions on Monad Mainnet.
+          The TapPay Android APK is coming soon. Get ready for instant NFC tap-to-pay transactions across Monad, Stellar, Solana, Base and more.
         </p>
 
         <div className="download-split-bar">
@@ -46,17 +45,18 @@ export default function DownloadPage() {
             <Smartphone size={20} />
             <div>
               <div className="download-split-label">Android APK</div>
-              <div className="download-split-value">Ready to install</div>
+              <div className="download-split-value">Multi-chain APK — coming soon</div>
             </div>
           </div>
           <div className="download-split-divider" aria-hidden />
           <a
-            href={APK_DOWNLOAD_URL}
-            download="TapPay.apk"
+            href="https://x.com/tapxpay"
+            target="_blank"
+            rel="noopener noreferrer"
             className="download-split-right"
             style={{ textDecoration: 'none' }}
           >
-            <span>Download APK</span>
+            <span>Follow @tapxpay for launch</span>
             <ArrowUpRight size={18} />
           </a>
         </div>

@@ -79,7 +79,7 @@ export function TapPayMockHome({
             <div className="tp-mock-card-user">{username}</div>
           </div>
           <div className="tp-mock-card-actions">
-            <span>MONAD</span>
+            <span>MULTI-CHAIN</span>
             <span>Copy</span>
             <span>NFC PAY</span>
           </div>
@@ -332,7 +332,7 @@ export function TapPayMockHistory({
         </div>
         <div className="tp-mock-history-monad">
           <span className="tp-mock-nfc-dot" />
-          Monad
+          Multi-Chain
         </div>
       </div>
 
@@ -409,8 +409,8 @@ export function TapPayMockSettings({ compact }: { compact?: boolean }) {
       <div className="tp-mock-network-card">
         <span className="tp-mock-nfc-dot" />
         <div style={{ flex: 1 }}>
-          <div className="tp-mock-network-name">Monad Mainnet</div>
-          <div className="tp-mock-network-sub">Chain ID 143 · ~1s Finality</div>
+          <div className="tp-mock-network-name">Multi-Chain</div>
+          <div className="tp-mock-network-sub">Monad · Stellar · Solana · Base</div>
         </div>
         <span className="tp-mock-active-pill">Active</span>
       </div>
@@ -469,7 +469,7 @@ export function TapPayMockTxDetail({ compact }: { compact?: boolean }) {
         </div>
         <div className="tp-mock-tx-detail-amt">-12.5 MON</div>
         <div className="tp-mock-tx-detail-sub">Paid @misbah · NFC Tap</div>
-        <span className="tp-mock-confirmed-pill">Confirmed on Monad</span>
+        <span className="tp-mock-confirmed-pill">Confirmed on-chain</span>
       </div>
       <div className="tp-mock-tx-detail-meta">
         <div><span>To</span><strong>@misbah</strong></div>

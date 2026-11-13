@@ -67,7 +67,7 @@ const InteractivePhone: React.FC<PhoneProps> = ({ val, setVal, paid, onPay, isMo
                 marginTop: '4px',
               }}
             >
-              <span>Monad Mainnet</span>
+              <span>Multi-Chain</span>
               <ChevronDown size={14} />
             </div>
           </div>
@@ -89,7 +89,7 @@ const InteractivePhone: React.FC<PhoneProps> = ({ val, setVal, paid, onPay, isMo
             >
               <Check size={24} style={{ margin: '0 auto 4px' }} />
               <div style={{ fontSize: '14px', fontWeight: 700 }}>Sent {val} MON</div>
-              <div style={{ fontSize: '11px', opacity: 0.8 }}>Settled in ~0.9s on Monad</div>
+              <div style={{ fontSize: '11px', opacity: 0.8 }}>Settled in seconds, on any chain</div>
             </div>
           ) : (
             <button
@@ -200,7 +200,7 @@ export const CenterPhoneShowcase: React.FC = () => {
               }}
             >
               <h3 style={{ fontSize: '24px', fontWeight: 700, lineHeight: 1.25, maxWidth: '240px' }}>
-                Earn &amp; Transact with Monad TapPay
+                Earn &amp; Transact with Multi-Chain TapPay
               </h3>
               <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                 <Coins size={52} color="#A78BFA" strokeWidth={1.8} className="phantom-floating" />
@@ -322,7 +322,7 @@ export const CenterPhoneShowcase: React.FC = () => {
               }}
             >
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#836EF9' }} />
-              <span>Interactive Monad Prototype</span>
+              <span>Interactive Multi-Chain Prototype</span>
             </div>
             <h2 style={{ fontSize: '28px', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text-dark)' }}>
               Touch &amp; Transact
@@ -356,11 +356,11 @@ export const CenterPhoneShowcase: React.FC = () => {
                 <span style={{ fontSize: '12px', opacity: 0.6 }}>01 / 04</span>
               </div>
               <h3 style={{ fontSize: '22px', fontWeight: 700, lineHeight: 1.25, margin: '14px 0' }}>
-                Earn &amp; Transact with Monad TapPay
+                Earn &amp; Transact with Multi-Chain TapPay
               </h3>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                 <p style={{ fontSize: '13px', color: 'rgba(255,253,248,0.7)', maxWidth: '200px', lineHeight: 1.4 }}>
-                  Instant touch payments with liquid Monad staking returns.
+                  Instant touch payments with liquid staking returns across chains.
                 </p>
                 <Coins size={44} color="#A78BFA" strokeWidth={1.8} className="phantom-floating" />
               </div>

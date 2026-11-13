@@ -1,0 +1,116 @@
+/* Multi-chain motion polish — additive layer (website only) */
+
+:root {
+  --mc-accent: 16, 185, 129;
+  --mc-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Aurora ambient drift */
+.ambient-orb { animation: mc-orb-drift 18s ease-in-out infinite alternate; will-change: transform; }
+.ambient-orb-b { animation-duration: 24s; animation-delay: -6s; }
+.ambient-orb-c { animation-duration: 30s; animation-delay: -12s; }
+@keyframes mc-orb-drift {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  50%  { transform: translate3d(5vw, -4vh, 0) scale(1.12); }
+  100% { transform: translate3d(-4vw, 5vh, 0) scale(0.94); }
+}
+
+/* Flowing gradient on the hero headline */
+.hero-headline-line2 {
+  background: linear-gradient(100deg, #1a1a1a 0%, #10b981 30%, #6366f1 55%, #0ea5e9 75%, #1a1a1a 100%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: mc-text-flow 9s linear infinite;
+}
+@keyframes mc-text-flow { to { background-position: -250% 0; } }
+
+/* Button sheen sweep + press */
+.phantom-btn-pill, .btn-phantom-purple {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.35s var(--mc-ease), box-shadow 0.35s var(--mc-ease);
+}
+.phantom-btn-pill::after, .btn-phantom-purple::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, 0.45) 50%, transparent 65%);
+  transform: translateX(-120%);
+  pointer-events: none;
+}
+.phantom-btn-pill:hover::after, .btn-phantom-purple:hover::after {
+  transform: translateX(120%);
+  transition: transform 0.8s var(--mc-ease);
+}
+.phantom-btn-pill:hover, .btn-phantom-purple:hover {
+  transform: translateY(-3px) scale(1.03);
+  box-shadow: 0 14px 34px -10px rgba(var(--mc-accent), 0.55);
+}
+.phantom-btn-pill:active, .btn-phantom-purple:active { transform: scale(0.97); }
+
+/* Cards: 3D tilt (vars set by MotionFx) + glow that follows cursor */
+.phantom-card-main, .play-bento-card, .hero-floating-card, .tp-mock-network-card {
+  --rx: 0deg; --ry: 0deg; --mx: 50%; --my: 50%;
+  position: relative;
+  transform: perspective(900px) rotateX(var(--rx)) rotateY(var(--ry));
+  transition: transform 0.45s var(--mc-ease), box-shadow 0.45s var(--mc-ease);
+  transform-style: preserve-3d;
+}
+.phantom-card-main::before, .play-bento-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(280px circle at var(--mx) var(--my), rgba(var(--mc-accent), 0.16), transparent 65%);
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  pointer-events: none;
+  z-index: 0;
+}
+.phantom-card-main:hover::before, .play-bento-card:hover::before { opacity: 1; }
+.phantom-card-main:hover, .play-bento-card:hover {
+  box-shadow: 0 30px 60px -28px rgba(26, 26, 26, 0.32);
+}
+.tilt-live { transition: transform 0.08s linear, box-shadow 0.45s var(--mc-ease); }
+
+/* Idle float on hero cards & bento icons */
+.hero-floating-card { animation: mc-float 6s ease-in-out infinite; }
+.hero-floating-card:nth-of-type(2n) { animation-delay: -3s; }
+.play-bento-icon { animation: mc-float 5s ease-in-out infinite; }
+@keyframes mc-float {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -10px; }
+}
+
+/* Marquee: glow chain tokens, pause on hover */
+.brand-marquee-band:hover .brand-marquee-track { animation-play-state: paused; }
+.brand-marquee-dot { animation: mc-pulse 2.4s ease-in-out infinite; }
+@keyframes mc-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(var(--mc-accent), 0.55); }
+  50% { box-shadow: 0 0 0 8px rgba(var(--mc-accent), 0); }
+}
+
+/* Scroll progress beam shimmer */
+.scroll-progress-beam {
+  background: linear-gradient(90deg, #10b981, #6366f1, #0ea5e9, #10b981) !important;
+  background-size: 300% 100% !important;
+  animation: mc-text-flow 6s linear infinite;
+}
+
+/* Footer & nav links: animated underline */
+.footer-editorial a, .docs-content a { background-image: linear-gradient(currentColor, currentColor); background-size: 0 1px; background-repeat: no-repeat; background-position: 0 100%; transition: background-size 0.35s var(--mc-ease); }
+.footer-editorial a:hover, .docs-content a:hover { background-size: 100% 1px; }
+
+/* Phone mock: soft breathing glow */
+.tp-mock-nfc-dot, .sim-chip-dot { animation: mc-pulse 2s ease-in-out infinite; }
+
+/* Entrance polish for revealed blocks */
+.scroll-reveal, .scroll-reveal-scale { will-change: transform, opacity; }
+
+@media (prefers-reduced-motion: reduce), (hover: none) {
+  .ambient-orb, .hero-headline-line2, .hero-floating-card, .play-bento-icon,
+  .brand-marquee-dot, .scroll-progress-beam, .tp-mock-nfc-dot, .sim-chip-dot { animation: none; }
+  .phantom-card-main, .play-bento-card, .hero-floating-card, .tp-mock-network-card { transform: none; }
+}

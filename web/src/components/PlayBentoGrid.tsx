@@ -46,7 +46,7 @@ export const PlayBentoGrid: React.FC<PlayBentoGridProps> = ({ variant = 'waitlis
           <ShieldCheck size={44} color="#34D399" strokeWidth={1.8} className="play-bento-icon" />
         </div>
         <div className="play-bento-card play-bento-card--coral">
-          <h3>Built on Monad — sub-second finality</h3>
+          <h3>Multi-chain — fast finality</h3>
           <Zap size={42} color="#DC2626" strokeWidth={1.8} className="play-bento-icon" />
         </div>
       </div>

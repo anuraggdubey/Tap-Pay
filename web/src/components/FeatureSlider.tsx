@@ -254,7 +254,7 @@ export const FeatureSlider: React.FC = () => {
             </div>
           </div>
 
-          {/* Card 3: Monad Settlement (Soft Sky Blue) */}
+          {/* Card 3: Multi-Chain Settlement (Soft Sky Blue) */}
           <div className="phantom-card-wrapper scroll-reveal scroll-delay-3" data-parallax="0.04">
             <div className="phantom-card-shadow-layer" style={{ background: '#0D0D12' }} />
             <div
@@ -285,7 +285,7 @@ export const FeatureSlider: React.FC = () => {
                     marginBottom: '20px',
                   }}
                 >
-                  Settled on Monad in ~1 second.
+                  Settled on any chain in seconds.
                 </h3>
               </div>
 

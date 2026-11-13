@@ -19,9 +19,9 @@ export const HowItWorks: React.FC = () => {
     },
     {
       num: '03',
-      title: 'Fund on Monad Mainnet',
-      desc: 'Fund your wallet with MON and stablecoins on Monad Mainnet (chain ID 143). Send real AUSD, USDC, USDT, and MON with ~1s finality.',
-      tag: 'MONAD MAINNET · 143',
+      title: 'Fund on Any Chain',
+      desc: 'Fund your wallet on Monad, Stellar, Solana, Base and more. Send native tokens and stablecoins like USDC and USDT with fast finality.',
+      tag: 'MULTI-CHAIN',
       icon: Droplets,
     },
     {

@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { X, Smartphone, ArrowUpRight } from 'lucide-react';
 import { stopSmoothScroll, startSmoothScroll } from '../motion/lenisStore';
 
-import { APK_DOWNLOAD_URL } from '../config';
 
 interface DownloadModalProps {
   isOpen: boolean;
@@ -100,10 +100,10 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
             <Smartphone size={28} />
           </div>
           <h3 style={{ fontSize: '26px', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: '6px' }}>
-            Download TapPay for Android
+            Multi-Chain APK Coming Soon
           </h3>
           <p style={{ color: 'var(--text-dark-muted)', fontSize: '15px', lineHeight: 1.55, maxWidth: '360px', margin: '0 auto' }}>
-            Get the TapPay APK and start making instant NFC tap-to-pay transactions on Monad Mainnet.
+            The TapPay APK is on the way. Soon you will make instant NFC tap-to-pay transactions across Monad, Stellar, Solana, Base and more.
           </p>
         </div>
 
@@ -133,16 +133,14 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
             }}
           >
             <Smartphone size={16} color="#10B981" />
-            <span>Android APK</span>
+            <span>Android APK · Coming Soon</span>
           </div>
           <p style={{ fontSize: '13px', color: 'var(--text-dark-muted)', lineHeight: 1.5, margin: 0 }}>
-            Android 10+ · NFC required · Monad Mainnet
+            Android 10+ · NFC required · Multi-Chain
           </p>
         </div>
 
-        <a
-          href={APK_DOWNLOAD_URL}
-          download="TapPay.apk"
+        <Link to="/download" onClick={onClose}
           className="phantom-btn-pill"
           style={{
             width: '100%',
@@ -162,9 +160,9 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
             textDecoration: 'none',
           }}
         >
-          <span>Download APK</span>
+          <span>Multi-Chain APK — Coming Soon</span>
           <ArrowUpRight size={18} />
-        </a>
+        </Link>
         <a
           href="https://x.com/tapxpay"
           target="_blank"

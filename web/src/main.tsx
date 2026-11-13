@@ -7,6 +7,7 @@ import './styles/premium-motion.css';
 import './styles/responsive.css';
 import './styles/footer-editorial.css';
 import './styles/waitlist.css';
+import './styles/multichain-motion.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

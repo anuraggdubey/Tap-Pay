@@ -207,7 +207,7 @@ export const SecurityBento: React.FC = () => {
                     marginBottom: '12px',
                   }}
                 >
-                  MONAD TESTNET
+                  MULTI-CHAIN
                 </div>
                 <h3
                   style={{

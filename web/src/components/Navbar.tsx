@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ChevronDown, Menu, X } from 'lucide-react';
 
-import { APK_DOWNLOAD_URL } from '../config';
 
 export const Navbar: React.FC = () => {
   const location = useLocation();
@@ -140,14 +139,13 @@ export const Navbar: React.FC = () => {
               gap: '10px',
             }}
           >
-            <a
-              href={APK_DOWNLOAD_URL}
-              download="TapPay.apk"
+            <Link
+              to="/download"
               className="nav-download-join"
               style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
             >
-              Download APK
-            </a>
+              APK Coming Soon
+            </Link>
 
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -212,15 +210,14 @@ export const Navbar: React.FC = () => {
           >
             Docs
           </Link>
-          <a
-            href={APK_DOWNLOAD_URL}
-            download="TapPay.apk"
+          <Link
+            to="/download"
             className="nav-download-join"
             style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: 8 }}
             onClick={() => setMobileMenuOpen(false)}
           >
-            Download APK
-          </a>
+            APK Coming Soon
+          </Link>
         </div>
       )}
 

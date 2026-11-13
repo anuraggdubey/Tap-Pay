@@ -2,8 +2,9 @@ import React from 'react';
 
 const ITEMS = [
   'NFC TAP PAY',
-  'MONAD MAINNET',
-  'SUB-SECOND FINALITY',
+  'MULTI-CHAIN',
+  'MONAD · STELLAR · SOLANA · BASE',
+  'FAST FINALITY',
   'NON-CUSTODIAL',
   'ANDROID HCE',
   'PHONE TO PHONE',

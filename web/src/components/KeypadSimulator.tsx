@@ -188,7 +188,7 @@ export const KeypadSimulator: React.FC = () => {
                   <CheckCircle2 size={36} style={{ margin: '0 auto 10px' }} />
                   <div style={{ fontSize: '16px', fontWeight: 800 }}>Payment Sent!</div>
                   <div style={{ fontSize: '12px', color: '#e2e4ed', marginTop: '4px' }}>
-                    {val} MON sent to @{targetUser} on Monad
+                    {val} MON sent to @{targetUser}
                   </div>
                 </div>
               ) : (

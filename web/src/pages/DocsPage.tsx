@@ -58,9 +58,9 @@ export default function DocsPage() {
           </div>
           <h1>Everything you need to use TapPay</h1>
           <p className="docs-hero-lede">
-            TapPay is a non-custodial Android wallet for Monad. Send money with a physical NFC tap, search{' '}
+            TapPay is a non-custodial multi-chain Android wallet (Monad, Stellar, Solana, Base and more). Send money with a physical NFC tap, search{' '}
             <span className="docs-code">@username</span>, or pay a wallet address directly — with passkey onboarding,
-            on-device signing, and ~1 second settlement on Monad Mainnet.
+            on-device signing, and fast settlement across supported chains.
           </p>
           <div className="docs-hero-cta-row">
             <Link to="/#prerequisites" className="phantom-btn-pill" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
@@ -97,7 +97,7 @@ export default function DocsPage() {
               <h2>Overview</h2>
               <p>
                 TapPay combines contactless NFC with human-readable payments on{' '}
-                <strong style={{ color: 'var(--text-dark)' }}>Monad Mainnet (Chain ID 143)</strong>. You never paste seed
+                <strong style={{ color: 'var(--text-dark)' }}>multiple chains — Monad, Stellar, Solana, Base and more</strong>. You never paste seed
                 phrases in normal use — accounts are created with passkeys (Face ID / fingerprint via Mera), and private
                 keys stay in Android secure storage.
               </p>
@@ -148,7 +148,7 @@ export default function DocsPage() {
                 <h3 style={{ marginTop: 0 }}>Account setup</h3>
                 <ul>
                   <li>Create a wallet with <strong>passkey / biometric</strong> onboarding (no seed phrase required for daily use).</li>
-                  <li>Optionally <strong>claim a username</strong> (e.g. <span className="docs-code">@anurag</span>) linked to your wallet on Monad.</li>
+                  <li>Optionally <strong>claim a username</strong> (e.g. <span className="docs-code">@anurag</span>) linked to your wallet across chains.</li>
                   <li>Keep a small balance of <strong>MON</strong> for gas and/or supported stablecoins (AUSD, USDC, USDT) for sends.</li>
                   <li>Grant <strong>NFC</strong> and notification permissions when prompted.</li>
                 </ul>
@@ -156,7 +156,7 @@ export default function DocsPage() {
               <div className="docs-card docs-card--lavender">
                 <h3 style={{ marginTop: 0 }}>Network</h3>
                 <ul>
-                  <li>App is configured for <strong>Monad Mainnet</strong> — Chain ID <span className="docs-code">143</span>, RPC <span className="docs-code">https://rpc.monad.xyz</span>.</li>
+                  <li>App supports <strong>multiple chains</strong> — Monad, Stellar, Solana, Base and more.</li>
                   <li>Transactions confirm in about <strong>one second</strong> under normal conditions.</li>
                 </ul>
               </div>
@@ -240,7 +240,7 @@ export default function DocsPage() {
 
             <section id="tokens" className="docs-section">
               <h2>Tokens &amp; amounts</h2>
-              <p>TapPay supports native MON and major stablecoins on Monad Mainnet for username and address sends. NFC tap flows use the same token picker before tapping.</p>
+              <p>TapPay supports native tokens and major stablecoins across supported chains for username and address sends. NFC tap flows use the same token picker before tapping.</p>
               <div className="docs-table-wrap">
                 <table className="docs-table">
                   <thead>
@@ -289,19 +289,19 @@ export default function DocsPage() {
                 <table className="docs-table">
                   <tbody>
                     <tr>
-                      <th>Network</th>
-                      <td>Monad Mainnet</td>
+                      <th>Supported chains</th>
+                      <td>Monad, Stellar, Solana, Base and more</td>
                     </tr>
                     <tr>
-                      <th>Chain ID</th>
+                      <th>Monad chain ID</th>
                       <td><span className="docs-code">143</span></td>
                     </tr>
                     <tr>
-                      <th>RPC</th>
+                      <th>Monad RPC</th>
                       <td><span className="docs-code">https://rpc.monad.xyz</span></td>
                     </tr>
                     <tr>
-                      <th>Finality</th>
+                      <th>Finality (Monad)</th>
                       <td>~1 second (typical)</td>
                     </tr>
                     <tr>
@@ -366,8 +366,8 @@ export default function DocsPage() {
             <section id="testing" className="docs-section">
               <h2>Get the app</h2>
               <p>
-                TapPay for Android is available for installation. Download the APK directly from the official{' '}
-                <Link to="/download">Download</Link> page — no developer setup required.
+                The multi-chain TapPay APK is coming soon. Follow progress on the{' '}
+                <Link to="/download">APK page</Link> — no developer setup required once it launches.
               </p>
               <ul>
                 <li>Download and install the APK on any Android phone (Android 10+).</li>
@@ -394,7 +394,7 @@ export default function DocsPage() {
                 <h3 style={{ marginTop: 0 }}>Username not found</h3>
                 <ul>
                   <li>Check spelling; usernames are unique on-chain.</li>
-                  <li>Ensure the recipient registered on Monad Mainnet (143).</li>
+                  <li>Ensure the recipient registered a username on the selected chain.</li>
                 </ul>
               </div>
               <div className="docs-card">
@@ -420,7 +420,7 @@ export default function DocsPage() {
                 </a>
               </div>
               <p style={{ marginTop: 20 }}>
-                Questions about Monad itself? See{' '}
+                Questions about a supported chain? For Monad, see{' '}
                 <a href="https://docs.monad.xyz" target="_blank" rel="noopener noreferrer">
                   docs.monad.xyz
                 </a>

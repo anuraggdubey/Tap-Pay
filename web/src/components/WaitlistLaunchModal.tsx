@@ -61,7 +61,7 @@ export const WaitlistLaunchModal: React.FC<WaitlistLaunchModalProps> = ({ isOpen
             Get on the list.
           </h2>
           <p className="waitlist-launch-sub">
-            We&apos;re finishing phone-to-phone NFC on Monad. Join the waitlist — we&apos;ll email you the moment the
+            We&apos;re finishing multi-chain phone-to-phone NFC. Join the waitlist — we&apos;ll email you the moment the
             Android build goes live.
           </p>
           <div className="waitlist-launch-actions">
@@ -78,7 +78,7 @@ export const WaitlistLaunchModal: React.FC<WaitlistLaunchModalProps> = ({ isOpen
           <div className="waitlist-launch-nfc">)))</div>
           <div className="waitlist-launch-stack">
             <div>4cm tap range · HCE native</div>
-            <div>Non-custodial · Monad Mainnet</div>
+            <div>Non-custodial · Multi-Chain</div>
             <div>Launch email · one tap install</div>
           </div>
         </div>

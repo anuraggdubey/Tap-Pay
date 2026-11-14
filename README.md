@@ -26,7 +26,7 @@
   <img src="https://img.shields.io/badge/Solidity-^0.8-363636?style=flat-square&logo=solidity&logoColor=white" alt="Solidity" />
   <img src="https://img.shields.io/badge/TypeScript-6.0-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/Hardhat-2.29-FFF100?style=flat-square&logo=hardhat&logoColor=black" alt="Hardhat" />
-  <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="MIT License" />
+  <img src="https://img.shields.io/badge/License-All%20Rights%20Reserved-red?style=flat-square" alt="All Rights Reserved" />
 </p>
 
 ---
@@ -391,5 +391,5 @@ Built at **Monad Metropolis** hackathon by:
 ---
 
 <p align="center">
-  <strong>MIT License</strong> · Built with 💜 for a multi-chain world
+  <strong>© 2026 Anurag Dubey. All Rights Reserved.</strong> · Built with 💜 for a multi-chain world
 </p>

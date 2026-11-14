@@ -1,0 +1,36 @@
+name: Protect license files
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  protect:
+    # Only the owner may change these files; every other pusher is reverted.
+    if: github.actor != 'anuraggdubey' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Revert unauthorized changes to protected files
+        run: |
+          PROTECTED="LICENSE COPYRIGHT.md .github/CODEOWNERS .github/workflows/protect-license.yml"
+          BEFORE="${{ github.event.before }}"
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then exit 0; fi
+          CHANGED=$(git diff --name-only "$BEFORE" HEAD -- $PROTECTED)
+          if [ -z "$CHANGED" ]; then echo "No protected files changed."; exit 0; fi
+          echo "Reverting: $CHANGED"
+          git checkout "$BEFORE" -- $PROTECTED 2>/dev/null || true
+          for f in $CHANGED; do
+            git cat-file -e "$BEFORE:$f" 2>/dev/null || git rm -q --ignore-unmatch "$f"
+          done
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "Revert unauthorized change to protected license/copyright files" || exit 0
+          git push origin HEAD:main
+          echo "::error::LICENSE/COPYRIGHT files are owner-only. Your change to them was reverted."
+          exit 1

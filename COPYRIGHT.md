@@ -11,6 +11,12 @@ smart contracts, designs, documentation, and related assets.
 Aditya Nishad (GitHub: [@Aditya-linux](https://github.com/Aditya-linux)) is
 the co-founder of the project and has also contributed to it.
 
+## Contributors
+
+Misbah Ansari (GitHub: [@MisbahAnsar](https://github.com/MisbahAnsar)) is a
+contributor and the UI/UX designer for the APK. Contributors are credited for
+their work but hold no ownership of, or rights to, this project.
+
 The repository was created on 2026-09-08. The commit history in this
 repository is the record of authorship.
 

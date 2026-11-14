@@ -352,9 +352,9 @@ TapPay is built and maintained by:
 
 | | Name | X |
 |:--|:-----|:--|
-| 🎨 | **Misbah Ansari** — UI/UX designer & contributor | [@Misbahtwts](https://x.com/Misbahtwts) |
 | 🧑‍💻 | **Anurag Dubey** — Founder & owner | [@anuraggdubeyy](https://x.com/anuraggdubeyy) |
 | 🧑‍💻 | **Aditya Nishad** — Co-founder | [@AdityaNishad987](https://x.com/AdityaNishad987) |
+| 🎨 | **Misbah Ansari** — UI/UX designer & contributor | [@Misbahtwts](https://x.com/Misbahtwts) |
 
 <p align="center">
   <a href="https://x.com/tapxpay">

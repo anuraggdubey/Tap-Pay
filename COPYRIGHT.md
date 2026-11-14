@@ -1,12 +1,15 @@
 # Copyright Notice
 
-**Tap-Pay** — Copyright (c) 2026 Anurag Dubey. All Rights Reserved.
+**Tap-Pay** — Copyright (c) 2026 Anurag Dubey and Aditya Nishad. All Rights Reserved.
 
 ## Ownership
 
 Anurag Dubey (GitHub: [@anuraggdubey](https://github.com/anuraggdubey)) is the
 owner and copyright holder of this project, including its source code,
 smart contracts, designs, documentation, and related assets.
+
+Aditya Nishad (GitHub: [@Aditya-linux](https://github.com/Aditya-linux)) is
+the co-founder of the project and has also contributed to it.
 
 The repository was created on 2026-09-08. The commit history in this
 repository is the record of authorship.

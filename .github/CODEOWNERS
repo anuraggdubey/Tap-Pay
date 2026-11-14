@@ -1,0 +1,4 @@
+# Only the owner may change the license and copyright files
+/LICENSE @anuraggdubey
+/COPYRIGHT.md @anuraggdubey
+/.github/CODEOWNERS @anuraggdubey

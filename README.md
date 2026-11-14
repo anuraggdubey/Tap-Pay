@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/screenshots/social/logo.png" alt="TapPay" width="200" />
+  <img src="docs/screenshots/social/logo.png" alt="TapPay" width="120" />
 </p>
 
 <h1 align="center">TapPay</h1>
@@ -76,15 +76,13 @@ Cross-border payments are **slow**, **expensive**, and **complex**. Traditional 
 ## 📸 App Screenshots
 
 <p align="center">
-  <img src="docs/screenshots/social/Home.jpg" alt="TapPay Home — balance, tap pay, and quick actions" width="46%" />
+  <img src="docs/screenshots/social/Home.jpg" alt="TapPay Home — balance, tap pay, and quick actions" width="180" />
   &nbsp;
-  <img src="docs/screenshots/social/payment%20screen.jpg" alt="TapPay Pay — username search and amount keypad" width="46%" />
-</p>
-
-<p align="center">
-  <img src="docs/screenshots/social/history.jpg" alt="TapPay History — sent and received activity" width="46%" />
+  <img src="docs/screenshots/social/payment%20screen.jpg" alt="TapPay Pay — username search and amount keypad" width="180" />
   &nbsp;
-  <img src="docs/screenshots/social/settings.jpg" alt="TapPay Settings — network, account, and security" width="46%" />
+  <img src="docs/screenshots/social/history.jpg" alt="TapPay History — sent and received activity" width="180" />
+  &nbsp;
+  <img src="docs/screenshots/social/settings.jpg" alt="TapPay Settings — network, account, and security" width="180" />
 </p>
 
 <p align="center">

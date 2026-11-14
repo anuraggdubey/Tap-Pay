@@ -5,12 +5,12 @@
 <h1 align="center">TapPay</h1>
 
 <p align="center">
-  <strong>Multi-chain phone-to-phone contactless payments — NFC tap or <code>@username</code> send across Monad, Stellar, Solana, Base and more.</strong>
+  <strong>Multi-chain phone-to-phone contactless payments — NFC tap or <code>@username</code> send across multiple blockchains — Stellar, Solana, Base and more.</strong>
 </p>
 
 <p align="center">
-  <a href="https://monadscan.com/address/0x03907aE845E016f5F1605BAE4e6392C3491e03f1">
-    <img src="https://img.shields.io/badge/Multi--Chain-Monad_%C2%B7_Stellar_%C2%B7_Solana_%C2%B7_Base-7B3FE4?style=for-the-badge&logo=ethereum&logoColor=white" alt="Monad Mainnet" />
+  <a href="https://x.com/tapxpay">
+    <img src="https://img.shields.io/badge/Multi--Chain-EVM_%C2%B7_Stellar_%C2%B7_Solana_%C2%B7_Base-7B3FE4?style=for-the-badge&logo=ethereum&logoColor=white" alt="Multi-chain" />
   </a>
   <img src="https://img.shields.io/badge/Multi--Chain_APK-Coming_Soon-F59E0B?style=for-the-badge&logo=android&logoColor=white" alt="Multi-chain APK coming soon" />
   <a href="https://drive.google.com/file/d/1f8ZO1ian1y1d4o98g1C-SuV6wPYAysDC/view?usp=sharing">
@@ -38,8 +38,7 @@
 - [App Screenshots](#-app-screenshots)
 - [How It Works](#-how-it-works)
 - [Architecture](#-architecture)
-- [Sponsor Bounty: Agora — Cross-Border Payments](#-sponsor-bounty-agora--cross-border-payments)
-- [Deployed Contracts (Monad Mainnet)](#-deployed-contracts-monad-mainnet)
+- [Deployed Contracts](#-deployed-contracts)
 - [Tech Stack](#-tech-stack)
 - [Quick Start](#-quick-start)
 - [Project Structure](#-project-structure)
@@ -59,7 +58,7 @@ Cross-border payments are **slow**, **expensive**, and **complex**. Traditional 
 
 ## 💡 The Solution
 
-**TapPay** is a non-custodial mobile wallet that makes on-chain payments feel as effortless as tapping a contactless card. Designed to be **multi-chain** — Monad, Stellar, Solana, Base and more — it harnesses fast finality to deliver near-instant settlement across two intuitive payment modes:
+**TapPay** is a non-custodial mobile wallet that makes on-chain payments feel as effortless as tapping a contactless card. Built to be **multi-chain** — EVM chains, Stellar, Solana, Base and more — it harnesses fast-finality networks to deliver near-instant settlement across two intuitive payment modes:
 
 | Mode | How It Works |
 |:-----|:-------------|
@@ -70,7 +69,7 @@ Cross-border payments are **slow**, **expensive**, and **complex**. Traditional 
 - 🔐 **No seed phrases** — Passkey onboarding via Mera (Face ID / Fingerprint)
 - 🏦 **Non-custodial** — Keys stay on-device (Android Keystore via `react-native-keychain`)
 - 🌍 **Cross-border** — Send AUSD, USDC, USDT stablecoins to anyone with a `@username`
-- ⚡ **Instant** — ~1s Monad finality means payment confirms before the UI animation ends
+- ⚡ **Instant** — fast-finality chains mean payment confirms before the UI animation ends
 
 ---
 
@@ -113,7 +112,7 @@ Receiver's address read via HCE (HostApduService)
 Sender signs tx locally (Android Keystore)
             │
             ▼
-TapPayLedger.payWithLog() broadcasts on Monad
+TapPayLedger.payWithLog() broadcasts on-chain
             │
             ▼
 ~1s finality → Both phones show Sent / Received receipt
@@ -122,7 +121,7 @@ TapPayLedger.payWithLog() broadcasts on Monad
 ### Username Pay Flow
 
 ```
-User taps "Pay" → Searches @username → Selects token (AUSD/USDC/USDT/MON)
+User taps "Pay" → Searches @username → Selects token (AUSD/USDC/USDT/native)
                                         │
                                         ▼
                          Enter amount on keypad → Confirm
@@ -153,7 +152,7 @@ graph TB
         D -->|Sign & Broadcast| H["ethers.js v6"]
     end
 
-    subgraph "Monad Mainnet (Chain ID 143)"
+    subgraph "Blockchain Layer (multi-chain)"
         I["TapPayLedger\n(NFC Payments)"]
         J["MultiTokenLedger\n(Cross-Border / ERC-20)"]
         K["UsernameRegistry\n(@username ↔ address)"]
@@ -173,37 +172,16 @@ graph TB
 
 ---
 
-## 🏆 Sponsor Bounty: Agora — Cross-Border Payments
 
-> **Track:** Best Cross-Border Payments App on Monad
+## 📜 Deployed Contracts
 
-TapPay directly addresses the Agora bounty by enabling **instant, cross-border stablecoin payments** with a consumer-grade UX:
-
-| Requirement | Implementation |
-|:------------|:---------------|
-| **Agora Dollar (AUSD)** | Integrated as a first-class token in the Pay tab. Users send AUSD cross-border via `@username` resolution → `MultiTokenLedger.payERC20WithLog()`. |
-| **Passkey Onboarding (Mera)** | Zero seed phrases. Account creation and transaction signing via Face ID / Fingerprint using `@category-labs/mera`. |
-| **Instant Settlement** | Monad's ~1s finality ensures payment confirms instantly — faster than traditional payment rails by orders of magnitude. |
-| **Non-Custodial** | `MultiTokenLedger` routes ERC-20 `transferFrom` deposits atomically to recipients. No funds are ever held by the contract. |
-
-**Code references:**
-- Smart contract: [`contracts/AgoraBounty/MultiTokenLedger.sol`](./contracts/AgoraBounty/MultiTokenLedger.sol)
-- Token service: [`src/services/tokens/`](./src/services/tokens/)
-- Cross-border service: [`src/services/crossBorder/`](./src/services/crossBorder/)
-- Mera integration: [`src/services/mera/`](./src/services/mera/)
-- Full bounty write-up: [`docs/AGORA_BOUNTY_SUBMISSION.md`](./docs/AGORA_BOUNTY_SUBMISSION.md)
-
----
-
-## 📜 Deployed Contracts (Monad Mainnet)
-
-> **Network:** Monad Mainnet · Chain ID `143` · RPC `https://rpc.monad.xyz` · ~1s finality
+> **Current deployment:** EVM mainnet (Chain ID `143`) · ~1s finality · more chains rolling out
 
 | Contract | Address | Explorer |
 |:---------|:--------|:---------|
-| **UsernameRegistry** | `0x458DD61Db411ec1feFC069B7B094a983E3a3E265` | [View on Monadscan ↗](https://monadscan.com/address/0x458DD61Db411ec1feFC069B7B094a983E3a3E265) |
-| **TapPayLedger** | `0x03907aE845E016f5F1605BAE4e6392C3491e03f1` | [View on Monadscan ↗](https://monadscan.com/address/0x03907aE845E016f5F1605BAE4e6392C3491e03f1) |
-| **MultiTokenLedger** | `0x15319f757FC0e600E681bC0bffD69541916F8860` | [View on Monadscan ↗](https://monadscan.com/address/0x15319f757FC0e600E681bC0bffD69541916F8860) |
+| **UsernameRegistry** | `0x458DD61Db411ec1feFC069B7B094a983E3a3E265` | [View on explorer ↗](https://monadscan.com/address/0x458DD61Db411ec1feFC069B7B094a983E3a3E265) |
+| **TapPayLedger** | `0x03907aE845E016f5F1605BAE4e6392C3491e03f1` | [View on explorer ↗](https://monadscan.com/address/0x03907aE845E016f5F1605BAE4e6392C3491e03f1) |
+| **MultiTokenLedger** | `0x15319f757FC0e600E681bC0bffD69541916F8860` | [View on explorer ↗](https://monadscan.com/address/0x15319f757FC0e600E681bC0bffD69541916F8860) |
 
 **Deployer:** [`0x1406Fe936D971A0dAE9a19DD3354b900B08Fa002`](https://monadscan.com/address/0x1406Fe936D971A0dAE9a19DD3354b900B08Fa002)
 
@@ -232,10 +210,10 @@ TapPay directly addresses the Agora bounty by enabling **instant, cross-border s
 <details>
 <summary><strong>MultiTokenLedger</strong> — Cross-border ERC-20 payment rail</summary>
 
-- Supports native MON via `payWithLog` and ERC-20 tokens via `payERC20WithLog`
+- Supports the native token via `payWithLog` and ERC-20 tokens via `payERC20WithLog`
 - Routes standard ERC-20 `transferFrom` deposits atomically to the recipient
 - Extended `PaymentLogged` event includes the token address
-- Built specifically for the Agora bounty's cross-border use case
+- Built for cross-border stablecoin payments
 
 </details>
 
@@ -259,7 +237,7 @@ TapPay directly addresses the Agora bounty by enabling **instant, cross-border s
 | **NFC Reader** | `react-native-nfc-manager` |
 | **Wallet** | `ethers.js` v6 + Android Keystore (`react-native-keychain`) |
 | **Passkeys** | `@category-labs/mera` + `react-native-passkey` |
-| **Blockchain** | Monad Mainnet (Chain ID `143`, ~1s blocks) |
+| **Blockchain** | Multi-chain — EVM mainnet (Chain ID `143`) live; Stellar, Solana, Base and more |
 | **Smart Contracts** | Solidity (Hardhat), OpenZeppelin |
 | **Identity** | Supabase `@username` → address resolution |
 | **CI/CD** | GitHub Actions → debug APK artifact |
@@ -299,7 +277,7 @@ npx react-native run-android
 
 ```bash
 cp .env.example .env
-# Add DEPLOYER_PRIVATE_KEY (fund with MON for gas)
+# Add DEPLOYER_PRIVATE_KEY (fund with the native token for gas)
 npm run deploy:mainnet
 ```
 
@@ -364,8 +342,6 @@ TapPay/
 | Document | Description |
 |:---------|:------------|
 | [`TapPay-Technical-Spec.md`](./docs/TapPay-Technical-Spec.md) | Full product & architecture spec |
-| [`AGORA_BOUNTY_SUBMISSION.md`](./docs/AGORA_BOUNTY_SUBMISSION.md) | Agora cross-border bounty write-up |
-| [`BOUNTY_RULES.md`](./docs/BOUNTY_RULES.md) | Contributor territory & safety rules |
 | [`SUPABASE_MAINNET.md`](./docs/SUPABASE_MAINNET.md) | `@username` DB migration guide (chain 143) |
 | [`requirement.txt`](./docs/requirement.txt) | Full dev environment prerequisites |
 | [`docs/screenshots/social/`](./docs/screenshots/social/) | App UI captures, README `logo.png`, product demo MP4 |
@@ -374,13 +350,13 @@ TapPay/
 
 ## 👥 Team
 
-Built at **Monad Metropolis** hackathon by:
+TapPay is built and maintained by:
 
 | | Name | X |
 |:--|:-----|:--|
-| 🧑‍💻 | **Misbah** | [@Misbahtwts](https://x.com/Misbahtwts) |
-| 🧑‍💻 | **Anurag Dubey** | [@anuraggdubeyy](https://x.com/anuraggdubeyy) |
-| 🧑‍💻 | **Aditya** | [@AdityaNishad987](https://x.com/AdityaNishad987) |
+| 🎨 | **Misbah Ansari** — UI/UX designer & contributor | [@Misbahtwts](https://x.com/Misbahtwts) |
+| 🧑‍💻 | **Anurag Dubey** — Founder & owner | [@anuraggdubeyy](https://x.com/anuraggdubeyy) |
+| 🧑‍💻 | **Aditya Nishad** — Co-founder | [@AdityaNishad987](https://x.com/AdityaNishad987) |
 
 <p align="center">
   <a href="https://x.com/tapxpay">

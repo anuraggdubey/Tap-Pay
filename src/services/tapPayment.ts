@@ -13,20 +13,40 @@ import {
   cancelNfcRead,
   stopContinuousHceScan,
 } from './nfcReader';
-import {getBalance, sendPayment, withRpcFailover} from './wallet';
+import {sendPayment, withRpcFailover} from './wallet';
 import {reverseResolveAddress} from './registry';
 import {createSessionIdHash} from '../utils/paymentSession';
+import {SUPPORTED_TOKENS} from '../config/tokens';
 
-const PAYMENT_LOGGED_ABI = [
+// TapPayLedger logs native MON payments; MultiTokenLedger logs native + ERC-20 payments.
+const TAPPAY_LEDGER_EVENT_ABI = [
   'event PaymentLogged(address indexed from, address indexed to, uint256 amount, bytes32 sessionId, uint256 timestamp)',
+];
+const MULTI_LEDGER_EVENT_ABI = [
+  'event PaymentLogged(address indexed from, address indexed to, address indexed token, uint256 amount, bytes32 sessionIdHash)',
 ];
 
 export type IncomingPaymentInfo = {
   detected: boolean;
   senderAddress?: string;
+  /** Raw amount in the token's smallest unit (wei for MON). */
   amountWei?: bigint;
+  /** Human-readable amount string (token-decimals aware). */
+  amountDisplay?: string;
+  tokenSymbol?: string;
   txHash?: string;
 };
+
+/** Resolve a PaymentLogged token address to its symbol and decimals. */
+function describeToken(tokenAddress?: string): {symbol: string; decimals: number} {
+  if (!tokenAddress || tokenAddress === ethers.ZeroAddress) {
+    return {symbol: 'MON', decimals: 18};
+  }
+  const token = Object.values(SUPPORTED_TOKENS).find(
+    t => t.contractAddress && t.contractAddress.toLowerCase() === tokenAddress.toLowerCase(),
+  );
+  return token ? {symbol: token.symbol, decimals: token.decimals} : {symbol: 'TOKEN', decimals: 18};
+}
 
 export type TapSenderPhase =
   | 'idle'
@@ -129,106 +149,129 @@ function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+export type IncomingPaymentMatch = {
+  senderAddress: string;
+  amountWei: bigint;
+  amountDisplay: string;
+  tokenSymbol: string;
+  txHash: string;
+  blockNumber: number;
+};
+
 /**
- * Look up the latest PaymentLogged event for a recipient on TapPayLedger.
- * Used by the receiver after a balance increase to recover the sender address.
+ * Scan both ledgers for a confirmed PaymentLogged event paying `recipientAddress`, in blocks
+ * [fromBlock, head]. Returns the newest one whose transaction receipt is confirmed (status === 1),
+ * or null. This is the ONLY evidence the receiver trusts: a bare balance increase (an unrelated
+ * deposit, a dust transfer) is never treated as a TapPay payment.
  */
-export async function lookupIncomingPayment(
+export async function scanForIncomingTapPayment(
   recipientAddress: string,
-  expectedAmountWei?: bigint | null,
-): Promise<{senderAddress?: string; amountWei?: bigint; txHash?: string}> {
-  const ledgerAddress = MONAD_CONFIG.contracts.tapPayLedger;
-  if (!ledgerAddress) {
-    return {};
-  }
+  fromBlock: number,
+): Promise<IncomingPaymentMatch | null> {
+  const tapLedger = MONAD_CONFIG.contracts.tapPayLedger;
+  const multiLedger = MONAD_CONFIG.contracts.multiTokenLedger;
 
   try {
     return await withRpcFailover(async provider => {
-      const contract = new ethers.Contract(
-        ledgerAddress,
-        PAYMENT_LOGGED_ABI,
-        provider,
-      );
-      const currentBlock = await provider.getBlockNumber();
-      const fromBlock = Math.max(0, currentBlock - 64);
-      const filter = contract.filters.PaymentLogged(null, recipientAddress);
-      const events = await contract.queryFilter(filter, fromBlock, currentBlock);
+      const head = await provider.getBlockNumber();
+      const start = Math.max(0, fromBlock);
 
-      if (!events.length) {
-        return {};
-      }
+      const found: {event: ethers.EventLog; tokenAddress?: string}[] = [];
 
-      let match = events[events.length - 1];
-      if (expectedAmountWei != null && expectedAmountWei > 0n) {
-        const amountMatch = [...events].reverse().find(event => {
-          const args = (event as ethers.EventLog).args;
-          return args?.amount === expectedAmountWei;
-        });
-        if (amountMatch) {
-          match = amountMatch;
+      if (tapLedger) {
+        const c = new ethers.Contract(tapLedger, TAPPAY_LEDGER_EVENT_ABI, provider);
+        const events = await c.queryFilter(
+          c.filters.PaymentLogged(null, recipientAddress),
+          start,
+          head,
+        );
+        for (const e of events) {
+          found.push({event: e as ethers.EventLog});
         }
       }
 
-      const args = (match as ethers.EventLog).args;
-      if (!args?.from) {
-        return {};
+      if (multiLedger && ethers.isAddress(multiLedger)) {
+        const c = new ethers.Contract(multiLedger, MULTI_LEDGER_EVENT_ABI, provider);
+        const events = await c.queryFilter(
+          c.filters.PaymentLogged(null, recipientAddress),
+          start,
+          head,
+        );
+        for (const e of events) {
+          const evt = e as ethers.EventLog;
+          found.push({event: evt, tokenAddress: evt.args?.token as string});
+        }
       }
 
-      return {
-        senderAddress: args.from as string,
-        amountWei: args.amount as bigint,
-        txHash: match.transactionHash,
-      };
+      if (!found.length) {
+        return null;
+      }
+
+      // Newest first by (block, logIndex).
+      found.sort(
+        (a, b) => a.event.blockNumber - b.event.blockNumber || a.event.index - b.event.index,
+      );
+
+      // Walk newest→oldest and return the first with a confirmed (status === 1) receipt.
+      for (let i = found.length - 1; i >= 0; i--) {
+        const {event, tokenAddress} = found[i];
+        const args = event.args;
+        if (!args?.from) {
+          continue;
+        }
+        const receipt = await provider.getTransactionReceipt(event.transactionHash);
+        if (!receipt || receipt.status !== 1) {
+          continue;
+        }
+        const {symbol, decimals} = describeToken(tokenAddress);
+        const amountWei = args.amount as bigint;
+        return {
+          senderAddress: args.from as string,
+          amountWei,
+          amountDisplay: ethers.formatUnits(amountWei, decimals),
+          tokenSymbol: symbol,
+          txHash: event.transactionHash,
+          blockNumber: event.blockNumber,
+        };
+      }
+
+      return null;
     });
   } catch {
-    return {};
+    return null;
   }
 }
 
+/**
+ * Wait for a confirmed incoming TapPay payment to `address`. Detection is driven entirely by a
+ * confirmed ledger PaymentLogged event emitted at or after the block where we started listening —
+ * never by a raw balance delta — and it reports the real sender, amount and token from that event.
+ */
 export async function waitForIncomingPayment(
   address: string,
-  previousBalance: bigint,
-  amountWei: bigint | null,
   timeoutMs = 60_000,
 ): Promise<IncomingPaymentInfo> {
+  let startBlock = 0;
+  try {
+    startBlock = await withRpcFailover(p => p.getBlockNumber());
+  } catch {
+    startBlock = 0;
+  }
+
   const deadline = Date.now() + timeoutMs;
-  // fast aggressive polling every 500ms
   while (Date.now() < deadline) {
-    try {
-      const balance = await getBalance(address);
-      const received =
-        amountWei != null
-          ? balance >= previousBalance + amountWei
-          : balance > previousBalance;
-
-      if (received) {
-        const delta = balance - previousBalance;
-        // Event index can lag the balance update briefly — retry a few times
-        for (let attempt = 0; attempt < 5; attempt++) {
-          const info = await lookupIncomingPayment(
-            address,
-            amountWei ?? (delta > 0n ? delta : null),
-          );
-          if (info.senderAddress) {
-            return {
-              detected: true,
-              senderAddress: info.senderAddress,
-              amountWei: info.amountWei ?? (delta > 0n ? delta : undefined),
-              txHash: info.txHash,
-            };
-          }
-          await sleep(400);
-        }
-
-        return {
-          detected: true,
-          amountWei: delta > 0n ? delta : undefined,
-        };
-      }
-    } catch {
-      // Keep polling
+    const match = await scanForIncomingTapPayment(address, startBlock);
+    if (match) {
+      return {
+        detected: true,
+        senderAddress: match.senderAddress,
+        amountWei: match.amountWei,
+        amountDisplay: match.amountDisplay,
+        tokenSymbol: match.tokenSymbol,
+        txHash: match.txHash,
+      };
     }
-    await sleep(500);
+    await sleep(1000);
   }
 
   return {detected: false};

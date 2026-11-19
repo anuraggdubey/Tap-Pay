@@ -14,6 +14,7 @@ import {
   stopContinuousHceScan,
 } from './nfcReader';
 import {getBalance, sendPayment, withRpcFailover} from './wallet';
+import {reverseResolveAddress} from './registry';
 import {createSessionIdHash} from '../utils/paymentSession';
 
 const PAYMENT_LOGGED_ABI = [
@@ -30,76 +31,82 @@ export type IncomingPaymentInfo = {
 export type TapSenderPhase =
   | 'idle'
   | 'reading'
+  | 'confirming'
   | 'broadcasting'
   | 'completed'
   | 'failed';
 
+export type TapRecipient = {
+  receiverAddress: string;
+  receiverUsername?: string;
+};
+
 export {createSessionId, createSessionIdHash} from '../utils/paymentSession';
 
 /**
- * Sender: wait for receiver address, then broadcast payment.
+ * Step 1 — read the receiver's address over NFC. Does NOT sign or broadcast anything.
+ * The caller MUST show this recipient to the user and get explicit confirmation before
+ * calling broadcastTapPayment(). A stray NFC tag or relay can answer the read, so the
+ * user confirming the exact address they see is the protection against paying the wrong
+ * party.
  */
-export async function completeSenderTap(
+export async function readTapRecipient(
   senderAddress: string,
-  amountWei: bigint,
-  onPhaseChange?: (phase: TapSenderPhase) => void,
-): Promise<{txHash: string | null; receiverAddress: string | null; error?: string}> {
-  onPhaseChange?.('reading');
-
+): Promise<{recipient?: TapRecipient; error?: string}> {
   const readResult = await readReceiverAddress();
-  
+
   if (readResult.status !== 'SUCCESS' || !readResult.receiverAddress) {
-    onPhaseChange?.('failed');
     await stopContinuousHceScan();
-    return {
-      txHash: null,
-      receiverAddress: null,
-      error: readResult.errorMessage || 'Failed to read receiver address.',
-    };
+    return {error: readResult.errorMessage || 'Failed to read receiver address.'};
   }
 
-  const receiverAddress = readResult.receiverAddress;
+  // Normalise + checksum; reject anything that is not a valid EVM address.
+  let receiverAddress: string;
+  try {
+    receiverAddress = ethers.getAddress(readResult.receiverAddress);
+  } catch {
+    await stopContinuousHceScan();
+    return {error: 'The other device sent an invalid address. Please try again.'};
+  }
+
+  await stopContinuousHceScan(); // Stop reading once we have a candidate address.
 
   if (receiverAddress.toLowerCase() === senderAddress.toLowerCase()) {
-    onPhaseChange?.('failed');
-    await stopContinuousHceScan();
-    return {
-      txHash: null,
-      receiverAddress: null,
-      error: 'Cannot send payment to your own address.',
-    };
+    return {error: 'Cannot send payment to your own address.'};
   }
 
-  onPhaseChange?.('broadcasting');
-  await stopContinuousHceScan(); // Stop reading after success
+  let receiverUsername: string | undefined;
+  try {
+    receiverUsername = (await reverseResolveAddress(receiverAddress)) || undefined;
+  } catch {
+    // Username is optional; the address is what the user confirms.
+  }
 
-  // In the one-way architecture, we don't necessarily have a sessionId for the signature 
-  // since we just read the address directly. We can just generate a random one for logging/history
-  // or use a dummy hash if sendPayment requires it.
+  return {recipient: {receiverAddress, receiverUsername}};
+}
+
+/**
+ * Step 2 — sign and broadcast to a recipient the user has ALREADY confirmed on screen.
+ * Signing triggers the device biometric / screen-lock prompt inside sendPayment().
+ */
+export async function broadcastTapPayment(
+  receiverAddress: string,
+  amountWei: bigint,
+): Promise<{txHash: string | null; error?: string}> {
   const sessionIdHash = createSessionIdHash();
 
   const result = await sendPayment(
     receiverAddress,
     amountWei,
     sessionIdHash,
-    'Confirm Biometrics to Complete Tap Payment',
+    'Confirm to send this payment',
   );
 
   if (!result.txHash) {
-    onPhaseChange?.('failed');
-    return {
-      txHash: null,
-      receiverAddress: receiverAddress,
-      error: result.error || 'Transaction could not be broadcast.',
-    };
+    return {txHash: null, error: result.error || 'Transaction could not be broadcast.'};
   }
 
-  onPhaseChange?.('completed');
-
-  return {
-    txHash: result.txHash,
-    receiverAddress: receiverAddress,
-  };
+  return {txHash: result.txHash};
 }
 
 export async function startReceiverBroadcast(

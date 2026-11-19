@@ -68,7 +68,7 @@ describe("TapPayLedger", function () {
       await ledger.connect(sender)["payWithLog(address,bytes32)"](receiver.address, SESSION_ID_1, {
         value: ONE_MON,
       });
-      expect(await ledger.isSessionUsed(SESSION_ID_1)).to.be.true;
+      expect(await ledger.isSessionUsed(sender.address, SESSION_ID_1)).to.be.true;
     });
 
     it("should allow multiple payments with different session IDs", async function () {
@@ -78,12 +78,12 @@ describe("TapPayLedger", function () {
       await ledger.connect(sender)["payWithLog(address,bytes32)"](receiver.address, SESSION_ID_2, {
         value: FIVE_MON,
       });
-      expect(await ledger.isSessionUsed(SESSION_ID_1)).to.be.true;
-      expect(await ledger.isSessionUsed(SESSION_ID_2)).to.be.true;
+      expect(await ledger.isSessionUsed(sender.address, SESSION_ID_1)).to.be.true;
+      expect(await ledger.isSessionUsed(sender.address, SESSION_ID_2)).to.be.true;
     });
 
     it("should report unused sessions correctly", async function () {
-      expect(await ledger.isSessionUsed(SESSION_ID_1)).to.be.false;
+      expect(await ledger.isSessionUsed(sender.address, SESSION_ID_1)).to.be.false;
     });
 
     it("should not hold any funds (pass-through)", async function () {
@@ -173,7 +173,7 @@ describe("TapPayLedger", function () {
       await ledger.connect(sender)["payWithLog(address,bytes32)"](receiver.address, SESSION_ID_1, {
         value: MIN_PAYMENT,
       });
-      expect(await ledger.isSessionUsed(SESSION_ID_1)).to.be.true;
+      expect(await ledger.isSessionUsed(sender.address, SESSION_ID_1)).to.be.true;
     });
 
     it("should allow owner to update limits", async function () {
@@ -230,7 +230,7 @@ describe("TapPayLedger", function () {
       await ledger.connect(sender)["payWithLog(address,bytes32,uint256)"](
         receiver.address, SESSION_ID_1, 0, { value: ONE_MON }
       );
-      expect(await ledger.isSessionUsed(SESSION_ID_1)).to.be.true;
+      expect(await ledger.isSessionUsed(sender.address, SESSION_ID_1)).to.be.true;
     });
   });
 
@@ -273,10 +273,53 @@ describe("TapPayLedger", function () {
         { value: ONE_MON + FIVE_MON + ONE_MON }
       );
 
-      expect(await ledger.isSessionUsed(sessionA)).to.be.true;
-      expect(await ledger.isSessionUsed(sessionB)).to.be.true;
-      expect(await ledger.isSessionUsed(sessionC)).to.be.true;
+      expect(await ledger.isSessionUsed(sender.address, sessionA)).to.be.true;
+      expect(await ledger.isSessionUsed(sender.address, sessionB)).to.be.true;
+      expect(await ledger.isSessionUsed(sender.address, sessionC)).to.be.true;
       expect(await ledger.totalPayments()).to.equal(3);
+    });
+
+    it("should reject duplicate sessions within a batch and roll back all payments", async function () {
+      const balanceBefore = await ethers.provider.getBalance(receiver.address);
+      await expect(
+        ledger.connect(sender).payMultiple(
+          [receiver.address, receiver.address],
+          [ONE_MON, ONE_MON],
+          [SESSION_ID_1, SESSION_ID_1],
+          { value: ONE_MON * 2n }
+        )
+      ).to.be.revertedWithCustomError(ledger, "SessionAlreadyUsed")
+        .withArgs(SESSION_ID_1);
+
+      expect(await ledger.usedSessionIds(sender.address, SESSION_ID_1)).to.be.false;
+      expect(await ledger.isSessionUsed(sender.address, SESSION_ID_1)).to.be.false;
+      expect(await ledger.totalPayments()).to.equal(0);
+      expect(await ethers.provider.getBalance(receiver.address)).to.equal(balanceBefore);
+    });
+
+    it("should allow different payers to use the same batch session IDs", async function () {
+      const sessions = [SESSION_ID_1, SESSION_ID_2];
+      await ledger.connect(attacker).payMultiple(
+        [receiver.address, receiver.address],
+        [MIN_PAYMENT, MIN_PAYMENT],
+        sessions,
+        { value: MIN_PAYMENT * 2n }
+      );
+      for (const session of sessions) {
+        expect(await ledger.usedSessionIds(attacker.address, session)).to.be.true;
+        expect(await ledger.usedSessionIds(sender.address, session)).to.be.false;
+      }
+
+      await ledger.connect(sender).payMultiple(
+        [receiver.address, receiver.address],
+        [ONE_MON, ONE_MON],
+        sessions,
+        { value: ONE_MON * 2n }
+      );
+      for (const session of sessions) {
+        expect(await ledger.usedSessionIds(sender.address, session)).to.be.true;
+      }
+      expect(await ledger.totalPayments()).to.equal(4);
     });
 
     it("should reject empty batch", async function () {
@@ -324,15 +367,22 @@ describe("TapPayLedger", function () {
         .withArgs(SESSION_ID_1);
     });
 
-    it("should reject reused session ID even from different sender", async function () {
-      await ledger.connect(sender)["payWithLog(address,bytes32)"](receiver.address, SESSION_ID_1, {
-        value: ONE_MON,
+    it("should allow a victim's payment after another payer front-runs its session ID", async function () {
+      expect(await ledger.usedSessionIds(sender.address, SESSION_ID_1)).to.be.false;
+      await ledger.connect(attacker)["payWithLog(address,bytes32)"](receiver.address, SESSION_ID_1, {
+        value: MIN_PAYMENT,
       });
+      expect(await ledger.usedSessionIds(attacker.address, SESSION_ID_1)).to.be.true;
+      expect(await ledger.isSessionUsed(attacker.address, SESSION_ID_1)).to.be.true;
+      expect(await ledger.usedSessionIds(sender.address, SESSION_ID_1)).to.be.false;
+      expect(await ledger.isSessionUsed(sender.address, SESSION_ID_1)).to.be.false;
+
       await expect(
-        ledger.connect(attacker)["payWithLog(address,bytes32)"](receiver.address, SESSION_ID_1, { value: ONE_MON })
-      )
-        .to.be.revertedWithCustomError(ledger, "SessionAlreadyUsed")
-        .withArgs(SESSION_ID_1);
+        ledger.connect(sender)["payWithLog(address,bytes32,uint256)"](receiver.address, SESSION_ID_1, 0, { value: ONE_MON })
+      ).to.emit(ledger, "PaymentLogged")
+        .withArgs(sender.address, receiver.address, ONE_MON, SESSION_ID_1, () => true);
+      expect(await ledger.usedSessionIds(sender.address, SESSION_ID_1)).to.be.true;
+      expect(await ledger.isSessionUsed(sender.address, SESSION_ID_1)).to.be.true;
     });
   });
 
@@ -380,7 +430,7 @@ describe("TapPayLedger", function () {
       await ledger.connect(sender)["payWithLog(address,bytes32)"](receiver.address, SESSION_ID_1, {
         value: ONE_MON,
       });
-      expect(await ledger.isSessionUsed(SESSION_ID_1)).to.be.true;
+      expect(await ledger.isSessionUsed(sender.address, SESSION_ID_1)).to.be.true;
     });
 
     it("should only allow owner to pause", async function () {

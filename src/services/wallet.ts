@@ -517,6 +517,8 @@ export async function sendPayment(
       if (MONAD_CONFIG.contracts.tapPayLedger && sessionIdHash) {
         const ledgerAbi = [
           'function payWithLog(address to, bytes32 sessionIdHash) external payable',
+          'function usedSessionIds(address payer, bytes32 sessionId) view returns (bool)',
+          'function isSessionUsed(address payer, bytes32 sessionId) view returns (bool)',
         ];
         const ledgerContract = new ethers.Contract(
           MONAD_CONFIG.contracts.tapPayLedger,

@@ -27,9 +27,8 @@ contract MultiTokenLedger is Ownable2Step, Pausable, ReentrancyGuard {
 
     // ─── State Variables ──────────────────────────────────────────────
 
-    // Replay protection: tracks which sessions have already been processed
-    // Maps a hashed session ID to a boolean (true = processed)
-    mapping(bytes32 => bool) public processedSessions;
+    // Replay protection: tracks processed session hashes separately for each payer.
+    mapping(address => mapping(bytes32 => bool)) public processedSessions;
 
     // Optional whitelist for supported tokens. If false, any ERC-20 is allowed.
     // We default to true to only allow specific stablecoins (AUSD, USDC, USDT) for safety.
@@ -70,7 +69,7 @@ contract MultiTokenLedger is Ownable2Step, Pausable, ReentrancyGuard {
      * Inherits behavior from the original TapPayLedger.
      *
      * @param to The recipient address
-     * @param sessionIdHash The SHA-256 hash of the NFC session ID for replay protection
+     * @param sessionIdHash The SHA-256 hash of the NFC session ID for per-payer replay protection
      */
     function payWithLog(address to, bytes32 sessionIdHash) 
         external 
@@ -80,8 +79,8 @@ contract MultiTokenLedger is Ownable2Step, Pausable, ReentrancyGuard {
     {
         _validatePaymentParams(to, msg.value, sessionIdHash);
 
-        // Mark session as processed
-        processedSessions[sessionIdHash] = true;
+        // Mark this payer's session as processed
+        processedSessions[msg.sender][sessionIdHash] = true;
 
         // Execute native transfer
         (bool success, ) = to.call{value: msg.value}("");
@@ -99,7 +98,7 @@ contract MultiTokenLedger is Ownable2Step, Pausable, ReentrancyGuard {
      * @param token The ERC-20 token contract address (e.g., AUSD)
      * @param to The recipient address
      * @param amount The amount of tokens to transfer
-     * @param sessionIdHash The SHA-256 hash of the NFC session ID for replay protection
+     * @param sessionIdHash The SHA-256 hash of the NFC session ID for per-payer replay protection
      */
     function payERC20WithLog(
         address token,
@@ -117,8 +116,8 @@ contract MultiTokenLedger is Ownable2Step, Pausable, ReentrancyGuard {
 
         _validatePaymentParams(to, amount, sessionIdHash);
 
-        // Mark session as processed
-        processedSessions[sessionIdHash] = true;
+        // Mark this payer's session as processed
+        processedSessions[msg.sender][sessionIdHash] = true;
 
         // Execute ERC-20 transfer using transferFrom
         // Requires prior approval from the sender
@@ -150,7 +149,7 @@ contract MultiTokenLedger is Ownable2Step, Pausable, ReentrancyGuard {
         if (amount == 0) {
             revert ZeroAmount();
         }
-        if (processedSessions[sessionIdHash]) {
+        if (processedSessions[msg.sender][sessionIdHash]) {
             revert SessionAlreadyProcessed(sessionIdHash);
         }
     }

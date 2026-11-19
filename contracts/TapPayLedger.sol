@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/access/Ownable2Step.sol";
 
 /**
  * @title TapPayLedger
- * @notice Hardened payment logging contract with session-based replay protection for TapPay on Monad.
+ * @notice Hardened payment logging contract with per-payer session replay protection for TapPay on Monad.
  * @dev The actual payment rail. Sender calls payWithLog() with msg.value; it forwards
  *      to receiver and logs the tap-pay event with a sessionId linking back to the
  *      off-chain NFC handshake.
@@ -74,9 +74,9 @@ contract TapPayLedger is ReentrancyGuard, Pausable, Ownable2Step {
     uint256 public totalVolume;
 
     // ──────────────────────────────────────────────
-    // Storage — replay protection
+    // Storage — replay protection per payer
     // ──────────────────────────────────────────────
-    mapping(bytes32 => bool) public usedSessionIds;
+    mapping(address => mapping(bytes32 => bool)) public usedSessionIds;
 
     // ──────────────────────────────────────────────
     // Constructor — OZ v5 pattern
@@ -94,7 +94,7 @@ contract TapPayLedger is ReentrancyGuard, Pausable, Ownable2Step {
     /**
      * @notice Pay a recipient with an on-chain event log and session replay protection
      * @param to The recipient wallet address
-     * @param sessionId Session identifier from the NFC handshake (prevents replay)
+     * @param sessionId Session identifier from the NFC handshake (prevents replay by this payer)
      * @param deadline Unix timestamp after which the session is expired (0 = no deadline)
      * @dev Checks-effects-interactions: usedSessionIds marked BEFORE external .call
      */
@@ -110,7 +110,7 @@ contract TapPayLedger is ReentrancyGuard, Pausable, Ownable2Step {
     /**
      * @notice Backward-compatible payWithLog without deadline (deadline = 0 = no expiry)
      * @param to The recipient wallet address
-     * @param sessionId Session identifier from the NFC handshake (prevents replay)
+     * @param sessionId Session identifier from the NFC handshake (prevents replay by this payer)
      */
     function payWithLog(address to, bytes32 sessionId)
         external
@@ -125,7 +125,7 @@ contract TapPayLedger is ReentrancyGuard, Pausable, Ownable2Step {
      * @notice Batch payment — pay multiple recipients in a single transaction
      * @param recipients Array of recipient addresses
      * @param amounts Array of payment amounts (must match recipients length)
-     * @param sessionIds Array of session IDs (must match recipients length)
+     * @param sessionIds Array of session IDs unique to this payer (must match recipients length)
      * @dev Total msg.value must equal sum of amounts. Gas-efficient for multi-tap flows.
      */
     function payMultiple(
@@ -157,13 +157,14 @@ contract TapPayLedger is ReentrancyGuard, Pausable, Ownable2Step {
     }
 
     /**
-     * @notice Check if a session ID has already been used
+     * @notice Check if a session ID has already been used by a payer
+     * @param payer The paying wallet address
      * @param sessionId Session identifier to check
-     * @return Whether the session has been used
+     * @return Whether the payer has used the session
      * @dev Useful for client-side pre-checks to avoid wasted gas on a guaranteed revert
      */
-    function isSessionUsed(bytes32 sessionId) external view returns (bool) {
-        return usedSessionIds[sessionId];
+    function isSessionUsed(address payer, bytes32 sessionId) external view returns (bool) {
+        return usedSessionIds[payer][sessionId];
     }
 
     // ──────────────────────────────────────────────
@@ -209,7 +210,7 @@ contract TapPayLedger is ReentrancyGuard, Pausable, Ownable2Step {
      * @dev Core payment logic — shared by single and batch payment functions
      * @param to Recipient address
      * @param amount Payment amount in wei
-     * @param sessionId Session identifier for replay protection
+     * @param sessionId Session identifier for replay protection scoped to msg.sender
      * @param deadline Unix timestamp for session expiry (0 = no deadline)
      */
     function _validateAndPay(address to, uint256 amount, bytes32 sessionId, uint256 deadline) internal {
@@ -218,11 +219,11 @@ contract TapPayLedger is ReentrancyGuard, Pausable, Ownable2Step {
         if (amount == 0) revert ZeroAmount();
         if (amount < minPayment) revert BelowMinPayment(amount, minPayment);
         if (maxPayment != 0 && amount > maxPayment) revert AboveMaxPayment(amount, maxPayment);
-        if (usedSessionIds[sessionId]) revert SessionAlreadyUsed(sessionId);
+        if (usedSessionIds[msg.sender][sessionId]) revert SessionAlreadyUsed(sessionId);
         if (deadline != 0 && block.timestamp > deadline) revert SessionExpired(sessionId, deadline);
 
-        // Effects: mark session as used BEFORE external call (CEI pattern)
-        usedSessionIds[sessionId] = true;
+        // Effects: mark this payer's session as used BEFORE external call (CEI pattern)
+        usedSessionIds[msg.sender][sessionId] = true;
 
         // Analytics
         unchecked {

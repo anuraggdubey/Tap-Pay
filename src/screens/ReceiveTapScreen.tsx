@@ -25,13 +25,12 @@ import {
   stopReceiverBroadcast,
   waitForIncomingPayment,
 } from '../services/tapPayment';
-import {getBalance} from '../services/wallet';
 import {reverseResolveAddress} from '../services/registry';
 import {recordTransaction} from '../services/history';
 import NfcNotAvailableModal from '../components/NfcNotAvailableModal';
 import NfcWaitingCard from '../components/NfcWaitingCard';
 import {triggerHaptic} from '../utils/haptics';
-import {formatMon, truncateAddress} from '../utils/format';
+import {truncateAddress} from '../utils/format';
 import type {AppColors} from '../theme';
 
 type Props = {
@@ -93,35 +92,15 @@ export default function ReceiveTapScreen({navigation}: Props) {
            return;
         }
 
-        // Snapshot balance at the time we start waiting
-        const previousBalance = balanceRef.current;
-        const payment = await waitForIncomingPayment(
-          address,
-          previousBalance,
-          null, // Any amount
-        );
+        // Detection is driven by a confirmed on-chain ledger event, not by any balance change.
+        const payment = await waitForIncomingPayment(address);
 
         if (payment.detected && isMountedRef.current) {
           setIsReceiving(false);
           await stopReceiverBroadcast();
 
-          // Prefer on-chain amount from PaymentLogged; fall back to balance delta
-          let amountStr = 'Unknown';
-          if (payment.amountWei != null && payment.amountWei > 0n) {
-            amountStr = formatMon(payment.amountWei).replace(/ MON$/, '');
-          } else {
-            try {
-              const currentBalance = await getBalance(address);
-              if (currentBalance > previousBalance) {
-                amountStr = formatMon(currentBalance - previousBalance).replace(
-                  / MON$/,
-                  '',
-                );
-              }
-            } catch {
-              // Keep Unknown if RPC fails; payment was already detected
-            }
-          }
+          const tokenSymbol = payment.tokenSymbol || 'MON';
+          const amountStr = payment.amountDisplay ?? 'Unknown';
 
           const senderAddress = payment.senderAddress || '';
           let senderUsername: string | undefined;
@@ -144,7 +123,7 @@ export default function ReceiveTapScreen({navigation}: Props) {
             counterparty: counterpartyLabel,
             counterpartyUsername: senderUsername,
             amount: amountStr,
-            tokenSymbol: 'MON',
+            tokenSymbol,
             status: 'confirmed',
             txHash: payment.txHash || 'tap-payment',
           });
@@ -157,7 +136,7 @@ export default function ReceiveTapScreen({navigation}: Props) {
             counterpartyUsername: senderUsername,
             waitForBalance: false,
             expectedAmountWei: '0',
-            tokenSymbol: 'MON',
+            tokenSymbol,
           });
         }
       }

@@ -13,7 +13,25 @@ react {
 /**
  * Set this to true to Run Proguard on Release builds to minify the Java bytecode.
  */
-def enableProguardInReleaseBuilds = false
+def enableProguardInReleaseBuilds = true
+
+/**
+ * Release signing inputs (all required, see docs/RELEASE_SIGNING.md):
+ * TAPPAY_KEYSTORE_FILE, TAPPAY_KEYSTORE_PASSWORD, TAPPAY_KEY_ALIAS, TAPPAY_KEY_PASSWORD
+ */
+def releaseSigningConfigured = ["TAPPAY_KEYSTORE_FILE", "TAPPAY_KEYSTORE_PASSWORD", "TAPPAY_KEY_ALIAS", "TAPPAY_KEY_PASSWORD"].every {
+    !(System.getenv(it) ?: "").trim().isEmpty()
+}
+
+gradle.taskGraph.whenReady { graph ->
+    def wantsRelease = graph.allTasks.any { it.name ==~ /^(assemble|bundle|package|install)Release.*/ }
+    if (wantsRelease && !releaseSigningConfigured) {
+        throw new GradleException(
+            "Release builds must be signed with the TapPay release key. Set TAPPAY_KEYSTORE_FILE, " +
+            "TAPPAY_KEYSTORE_PASSWORD, TAPPAY_KEY_ALIAS and TAPPAY_KEY_PASSWORD (see docs/RELEASE_SIGNING.md). " +
+            "Release builds are never signed with the debug key.")
+    }
+}
 
 /**
  * The preferred build flavor of JavaScriptCore (JSC)
@@ -34,11 +52,21 @@ android {
         versionName "1.0"
     }
     signingConfigs {
+        // Debug builds only. This keystore is public (committed) and must never sign a release.
         debug {
             storeFile file('debug.keystore')
             storePassword 'android'
             keyAlias 'androiddebugkey'
             keyPassword 'android'
+        }
+        // Release signing comes only from the environment. There is no fallback to the debug key.
+        release {
+            if (releaseSigningConfigured) {
+                storeFile file(System.getenv("TAPPAY_KEYSTORE_FILE"))
+                storePassword System.getenv("TAPPAY_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("TAPPAY_KEY_ALIAS")
+                keyPassword System.getenv("TAPPAY_KEY_PASSWORD")
+            }
         }
     }
     buildTypes {
@@ -46,14 +74,14 @@ android {
             signingConfig signingConfigs.debug
         }
         release {
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }
     }
     lint {
-        checkReleaseBuilds false
-        abortOnError false
+        checkReleaseBuilds true
+        abortOnError true
     }
 }
 

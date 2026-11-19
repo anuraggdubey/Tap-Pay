@@ -1,101 +1,129 @@
 /**
- * Registry Service — Supabase Architecture
+ * Registry Service — Supabase is the single source of truth for usernames.
  *
- * Handles username registration, resolution, and reverse lookup
- * securely over Supabase.
+ * Usernames live in the Supabase `usernames` table (one row per wallet, mainnet chain 143).
+ * Registration and release require a wallet signature verified by the register-username Edge
+ * Function; resolution and reverse-resolution are public reads normalized the same way as
+ * registration. The on-chain UsernameRegistry contract exists but is intentionally NOT used by
+ * the app — do not add a second, divergent lookup path.
  */
 
 import {ethers} from 'ethers';
 import {loadPrivateKey} from './wallet';
 import {supabase} from '../config/supabase';
 import {MONAD_CONFIG} from '../config/monad';
-import {TAPPAY_CHAIN_ID} from '../config/networkGuard';
+import {buildUsernameAuthMessage, normalizeUsername, UsernameAction} from './usernameAuth';
 
 const ACTIVE_CHAIN_ID = MONAD_CONFIG.chainId;
 
-function normalizeUsername(username: string): string {
-  return username.replace(/0/g, 'o').replace(/1/g, 'l').toLowerCase();
+/**
+ * Sign an ownership proof with `wallet` and send it to the register-username Edge Function.
+ * The wallet key never leaves the device; only the signature is sent. The server recovers the
+ * signer and refuses to write or delete a row for any wallet the caller cannot sign for.
+ */
+async function invokeUsernameAction(
+  action: UsernameAction,
+  username: string,
+  wallet: ethers.Wallet,
+): Promise<{data?: any; error?: string}> {
+  const walletAddress = wallet.address.toLowerCase();
+  const issuedAt = new Date().toISOString();
+  const message = buildUsernameAuthMessage({
+    action,
+    username,
+    walletAddress,
+    chainId: ACTIVE_CHAIN_ID,
+    issuedAt,
+  });
+  const signature = await wallet.signMessage(message);
+
+  const {data, error} = await supabase.functions.invoke('register-username', {
+    body: {
+      action,
+      username: username.toLowerCase(),
+      walletAddress,
+      chainId: ACTIVE_CHAIN_ID,
+      issuedAt,
+      signature,
+    },
+  });
+
+  if (error) {
+    // supabase-js exposes the function's JSON body on error.context for non-2xx responses.
+    let body: any;
+    try {
+      body = await error.context?.json?.();
+    } catch {
+      body = undefined;
+    }
+    return {error: body?.error || error.message || 'Request failed', data: body};
+  }
+  return {data};
 }
 
 /**
- * Register a username on Supabase
+ * Register a username, proving ownership of the wallet with a signature.
  * @returns Object with username on success, or error/suggestions on failure
  */
 export async function registerUsername(
   username: string,
 ): Promise<{username?: string; address?: string; error?: string; suggestions?: string[]}> {
   try {
-    const key = await loadPrivateKey();
+    const key = await loadPrivateKey('Authenticate to claim this username');
     if (!key) {
-      return {error: 'Wallet not found'};
+      return {error: 'Authentication cancelled or wallet not found'};
     }
-    
-    // Create wallet instance just to derive the public address securely
     const wallet = new ethers.Wallet(key);
-    const address = wallet.address.toLowerCase();
-    const normalized = normalizeUsername(username);
-
-    // 1. Check if wallet already registered
-    const { data: existingAddress } = await supabase
-      .from('usernames')
-      .select('username')
-      .eq('wallet_address', address)
-      .eq('chain_id', ACTIVE_CHAIN_ID)
-      .maybeSingle();
-
-    if (existingAddress) {
-      return { error: 'This address already has a registered username' };
-    }
-
-    // 2. Insert into Supabase
-    const { error } = await supabase.from('usernames').insert([
-      {
-        username,
-        normalized_username: normalized,
-        wallet_address: address,
-        chain_id: TAPPAY_CHAIN_ID,
-      },
-    ]);
-
-    if (error) {
-      // 23505 is the Postgres error code for unique_violation
-      if (error.code === '23505') { 
-        // Generate 3 suggestions
-        const suggestions: string[] = [];
-        let counter = 1;
-        while (suggestions.length < 3 && counter < 50) {
-          const suffix = Math.floor(Math.random() * 1000).toString();
-          const suggestedName = `${username}${suffix}`.slice(0, 20);
-          const suggestedNormalized = normalizeUsername(suggestedName);
-          
-          const { data: exists } = await supabase
-            .from('usernames')
-            .select('username')
-            .eq('normalized_username', suggestedNormalized)
-            .eq('chain_id', ACTIVE_CHAIN_ID)
-            .maybeSingle();
-            
-          if (!exists && !suggestions.includes(suggestedName)) {
-            suggestions.push(suggestedName);
-          }
-          counter++;
-        }
-        return { error: 'Username taken', suggestions };
+    const result = await invokeUsernameAction('register', username, wallet);
+    if (result.error) {
+      if (result.data?.reason === 'taken') {
+        return {error: 'Username taken', suggestions: await suggestUsernames(username)};
       }
-      return { error: error.message };
+      if (result.data?.reason === 'wallet_taken') {
+        return {error: 'This address already has a registered username'};
+      }
+      return {error: result.error};
     }
-
-    return { username, address };
+    return {username, address: wallet.address.toLowerCase()};
   } catch (error: any) {
-    return { error: error.message || 'Network error' };
+    return {error: error?.message || 'Network error'};
   }
 }
 
+/** Suggest up to 3 available variants of a taken username (public reads only). */
+async function suggestUsernames(username: string): Promise<string[]> {
+  const suggestions: string[] = [];
+  let counter = 0;
+  while (suggestions.length < 3 && counter < 50) {
+    const suffix = Math.floor(Math.random() * 1000).toString();
+    const candidate = `${username}${suffix}`.slice(0, 20).toLowerCase();
+    counter++;
+    if (!suggestions.includes(candidate) && !(await resolveUsername(candidate))) {
+      suggestions.push(candidate);
+    }
+  }
+  return suggestions;
+}
+
 /**
- * Release your current username (Mocked - needs auth support if desired later)
+ * Release the username held by the current wallet (signature-proved).
  */
 export async function releaseUsername(): Promise<{error?: string}> {
-  return {error: 'Releasing usernames is not currently supported'};
+  try {
+    const key = await loadPrivateKey('Authenticate to release your username');
+    if (!key) {
+      return {error: 'Authentication cancelled or wallet not found'};
+    }
+    const wallet = new ethers.Wallet(key);
+    const current = await reverseResolveAddress(wallet.address);
+    if (!current) {
+      return {error: 'This wallet has no registered username'};
+    }
+    const result = await invokeUsernameAction('release', current, wallet);
+    return result.error ? {error: result.error} : {};
+  } catch (error: any) {
+    return {error: error?.message || 'Network error'};
+  }
 }
 
 /**
@@ -107,7 +135,7 @@ export async function resolveUsername(username: string): Promise<string | null> 
     const { data } = await supabase
       .from('usernames')
       .select('wallet_address')
-      .eq('username', username)
+      .eq('normalized_username', normalizeUsername(username))
       .eq('chain_id', ACTIVE_CHAIN_ID)
       .maybeSingle();
     

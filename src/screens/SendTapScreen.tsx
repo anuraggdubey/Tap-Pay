@@ -25,14 +25,16 @@ import {
   estimateGasCost,
   BalanceCheckResult,
 } from '../services/wallet';
-import {reverseResolveAddress} from '../services/registry';
 import {isNfcSupported, isNfcEnabled, openNfcSettings} from '../services/nfcReader';
 import {
   cancelTapSession,
-  completeSenderTap,
+  readTapRecipient,
+  broadcastTapPayment,
+  TapRecipient,
   TapSenderPhase,
 } from '../services/tapPayment';
 import {recordTransaction} from '../services/history';
+import ConfirmPaymentModal from '../components/ConfirmPaymentModal';
 import InsufficientBalanceModal from '../components/InsufficientBalanceModal';
 import NfcNotAvailableModal from '../components/NfcNotAvailableModal';
 import NfcWaitingCard from '../components/NfcWaitingCard';
@@ -54,26 +56,6 @@ const KEYS = [
   ['.', '0', '⌫'],
 ] as const;
 
-const PHASE_COPY: Record<TapSenderPhase, {title: string; subtitle: string}> = {
-  idle: {title: '', subtitle: ''},
-  reading: {
-    title: 'Hold phones together',
-    subtitle: 'Keep backs touching until the address is read.',
-  },
-  broadcasting: {
-    title: 'Sending payment',
-    subtitle: 'Broadcasting to Monad Mainnet…',
-  },
-  completed: {
-    title: 'Payment sent',
-    subtitle: 'Transaction submitted successfully.',
-  },
-  failed: {
-    title: 'Payment failed',
-    subtitle: 'The tap session could not be completed.',
-  },
-};
-
 export default function SendTapScreen({navigation}: Props) {
   const {address, balance, refreshBalance} = useWallet();
   const {colors} = useTheme();
@@ -89,6 +71,10 @@ export default function SendTapScreen({navigation}: Props) {
   const [balanceModalVisible, setBalanceModalVisible] = useState(false);
   const [balanceCheckData, setBalanceCheckData] = useState<BalanceCheckResult | null>(null);
   const [nfcModalVisible, setNfcModalVisible] = useState(false);
+  // Recipient read over NFC, awaiting the user's explicit confirmation before any signing.
+  const [pendingRecipient, setPendingRecipient] = useState<TapRecipient | null>(null);
+  const [confirmVisible, setConfirmVisible] = useState(false);
+  const [confirming, setConfirming] = useState(false);
 
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isMountedRef = useRef(true);
@@ -140,8 +126,74 @@ export default function SendTapScreen({navigation}: Props) {
   const handleCancel = async () => {
     clearCountdown();
     await cancelTapSession();
+    setConfirmVisible(false);
+    setConfirming(false);
+    setPendingRecipient(null);
     setPhase('idle');
     setActiveAmount('');
+  };
+
+  // Step 2: user confirmed the on-screen recipient — now sign and broadcast.
+  const handleConfirmSend = async () => {
+    if (!pendingRecipient || !address) {
+      return;
+    }
+    const recipient = pendingRecipient;
+    let amountWei: bigint;
+    try {
+      amountWei = ethers.parseEther(activeAmount || amount);
+    } catch {
+      Alert.alert('Invalid Amount', 'Could not read the payment amount.');
+      await handleCancel();
+      return;
+    }
+
+    setConfirming(true);
+    setPhase('broadcasting');
+    triggerHaptic.impactMedium();
+
+    const result = await broadcastTapPayment(recipient.receiverAddress, amountWei);
+
+    if (!isMountedRef.current) {
+      return;
+    }
+    clearCountdown();
+    setConfirming(false);
+    setConfirmVisible(false);
+
+    if (!result.txHash) {
+      triggerHaptic.notificationError();
+      setPhase('failed');
+      Alert.alert(
+        'Payment Failed',
+        result.error || 'Could not broadcast the payment.',
+        [{text: 'OK', onPress: () => handleCancel()}],
+      );
+      return;
+    }
+
+    triggerHaptic.notificationSuccess();
+    refreshBalance();
+    setPendingRecipient(null);
+
+    recordTransaction({
+      direction: 'sent',
+      counterparty: recipient.receiverAddress,
+      counterpartyUsername: recipient.receiverUsername,
+      amount: amount,
+      tokenSymbol: 'MON',
+      status: 'pending',
+      txHash: result.txHash,
+    });
+
+    navigation.replace('TransactionStatus', {
+      txHash: result.txHash,
+      amount: amount,
+      recipient: recipient.receiverAddress,
+      direction: 'sent',
+      counterpartyUsername: recipient.receiverUsername,
+      tokenSymbol: 'MON',
+    });
   };
 
   const onKeyPress = (key: string) => {
@@ -237,58 +289,28 @@ export default function SendTapScreen({navigation}: Props) {
         });
       }, 1000);
 
-      completeSenderTap(address, amountWei, nextPhase => {
-        if (isMountedRef.current) {
-          setPhase(nextPhase);
-        }
-      }).then(async result => {
+      // Step 1: read the recipient. This does NOT sign or broadcast anything.
+      readTapRecipient(address).then(result => {
         if (!isMountedRef.current) {
           return;
         }
 
-        clearCountdown();
-
-        if (result.txHash && result.receiverAddress) {
-          triggerHaptic.notificationSuccess();
-          refreshBalance();
-
-          let receiverUsername: string | undefined;
-          try {
-            receiverUsername =
-              (await reverseResolveAddress(result.receiverAddress)) ||
-              undefined;
-          } catch {
-            // Optional
-          }
-
-          recordTransaction({
-            direction: 'sent',
-            counterparty: result.receiverAddress,
-            counterpartyUsername: receiverUsername,
-            amount: amount,
-            tokenSymbol: 'MON',
-            status: 'pending',
-            txHash: result.txHash,
-          });
-
-          navigation.replace('TransactionStatus', {
-            txHash: result.txHash,
-            amount: amount,
-            recipient: result.receiverAddress,
-            direction: 'sent',
-            counterpartyUsername: receiverUsername,
-            tokenSymbol: 'MON',
-          });
+        if (!result.recipient) {
+          triggerHaptic.notificationError();
+          setPhase('failed');
+          Alert.alert(
+            'Tap Failed',
+            result.error || 'Could not read the other device.',
+            [{text: 'OK', onPress: () => handleCancel()}],
+          );
           return;
         }
 
-        triggerHaptic.notificationError();
-        setPhase('failed');
-        Alert.alert(
-          'Tap Payment Failed',
-          result.error || 'Could not complete the NFC payment.',
-          [{text: 'OK', onPress: () => handleCancel()}],
-        );
+        // Step 2: show the recipient and wait for explicit confirmation before signing.
+        triggerHaptic.notificationSuccess();
+        setPendingRecipient(result.recipient);
+        setPhase('confirming');
+        setConfirmVisible(true);
       });
     } catch (err: any) {
       triggerHaptic.notificationError();
@@ -304,7 +326,7 @@ export default function SendTapScreen({navigation}: Props) {
 
     // Map TapSenderPhase to NfcWaitingCard visual phase
     let visualPhase: 'searching' | 'broadcasting' | 'success' | 'failed';
-    if (phase === 'reading') {
+    if (phase === 'reading' || phase === 'confirming') {
       visualPhase = 'searching';
     } else if (phase === 'broadcasting') {
       visualPhase = 'broadcasting';
@@ -318,26 +340,46 @@ export default function SendTapScreen({navigation}: Props) {
       ? formatMon(estimatedGasWei).replace(/ MON$/, '')
       : '0.0004';
 
+    let confirmAmountWei = 0n;
+    try {
+      confirmAmountWei = ethers.parseEther(activeAmount || amount || '0');
+    } catch {
+      confirmAmountWei = 0n;
+    }
+
     return (
+      <>
         <NfcWaitingCard
-        accent="blue"
-        phase={visualPhase}
-        direction="send"
-        amount={activeAmount || amount}
-        timeLeft={timeLeft}
-        gasEstimate={gasDisplay}
-        onClose={isBusy ? undefined : handleCancel}
-        footer={
-          !isBusy && !isCompleted ? (
-            <TouchableOpacity
-              style={styles.cancelLink}
-              onPress={handleCancel}
-              activeOpacity={0.7}>
-              <Text style={styles.cancelLinkText}>Cancel</Text>
-            </TouchableOpacity>
-          ) : null
-        }
-      />
+          accent="blue"
+          phase={visualPhase}
+          direction="send"
+          amount={activeAmount || amount}
+          timeLeft={timeLeft}
+          gasEstimate={gasDisplay}
+          onClose={isBusy ? undefined : handleCancel}
+          footer={
+            !isBusy && !isCompleted ? (
+              <TouchableOpacity
+                style={styles.cancelLink}
+                onPress={handleCancel}
+                activeOpacity={0.7}>
+                <Text style={styles.cancelLinkText}>Cancel</Text>
+              </TouchableOpacity>
+            ) : null
+          }
+        />
+        <ConfirmPaymentModal
+          visible={confirmVisible && !!pendingRecipient}
+          recipient={pendingRecipient?.receiverAddress ?? ''}
+          recipientUsername={pendingRecipient?.receiverUsername}
+          amountWei={confirmAmountWei}
+          gasCostWei={estimatedGasWei ?? 0n}
+          loading={confirming}
+          tokenSymbol="MON"
+          onConfirm={handleConfirmSend}
+          onCancel={handleCancel}
+        />
+      </>
     );
   }
 

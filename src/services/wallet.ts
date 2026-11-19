@@ -443,7 +443,6 @@ export async function checkSufficientBalance(
   toAddress: string,
   amountWei: bigint,
 ): Promise<BalanceCheckResult> {
-  const provider = getProvider();
   const balance = await getBalance(fromAddress);
 
   // Estimate gas or use safe fallback
@@ -498,71 +497,73 @@ export async function sendPayment(
   sessionIdHash?: string,
   authPromptTitle = 'Confirm Biometric Authorization to Send Payment',
 ): Promise<{txHash: string | null; error?: string}> {
+  const key = await loadPrivateKey(authPromptTitle);
+  if (!key) {
+    return {txHash: null, error: 'Authentication cancelled or wallet not found'};
+  }
+
+  // Payments go only through the TapPayLedger. We never silently fall back to a plain transfer
+  // (that would skip the on-chain log and replay protection the receiver relies on).
+  const ledgerAddress = MONAD_CONFIG.contracts.tapPayLedger;
+  if (!ledgerAddress || !sessionIdHash) {
+    return {
+      txHash: null,
+      error: 'Payment ledger is not configured on this build. Please update the app before sending.',
+    };
+  }
+
   try {
-    const key = await loadPrivateKey(authPromptTitle);
-    if (!key) {
-      return {txHash: null, error: 'Authentication cancelled or wallet not found'};
+    const provider = getProvider();
+    const wallet = new ethers.Wallet(key, provider);
+    const ledgerAbi = [
+      'function payWithLog(address to, bytes32 sessionIdHash) external payable',
+    ];
+    const ledger = new ethers.Contract(ledgerAddress, ledgerAbi, wallet);
+
+    // Read-only pre-flight — safe to retry across RPC endpoints.
+    const balance = await withRpcFailover(p => p.getBalance(wallet.address));
+    if (balance < amountWei) {
+      return {txHash: null, error: 'Insufficient MON balance'};
+    }
+    const nonce = await withRpcFailover(p => p.getTransactionCount(wallet.address, 'pending'));
+    const feeData = await withRpcFailover(p => p.getFeeData());
+
+    const txRequest = await ledger.payWithLog.populateTransaction(to, sessionIdHash, {
+      value: amountWei,
+    });
+
+    let gasLimit: bigint;
+    try {
+      const estimate = await withRpcFailover(p =>
+        p.estimateGas({...txRequest, from: wallet.address}),
+      );
+      gasLimit = (estimate * 120n) / 100n;
+    } catch {
+      gasLimit = GAS_LIMIT_FALLBACK;
     }
 
-    return await withRpcFailover(async provider => {
-      const wallet = new ethers.Wallet(key, provider);
+    // Prefer EIP-1559 fees; fall back to legacy gasPrice only if the node reports no 1559 data.
+    const feeFields =
+      feeData.maxFeePerGas && feeData.maxPriorityFeePerGas
+        ? {
+            maxFeePerGas: feeData.maxFeePerGas,
+            maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
+          }
+        : {gasPrice: feeData.gasPrice ?? ethers.parseUnits('50', 'gwei')};
 
-      // Pre-check balance before sending
-      const balance = await provider.getBalance(wallet.address);
-      if (balance < amountWei) {
-        return {txHash: null, error: 'Insufficient MON balance'};
-      }
-
-      // If TapPayLedger contract is configured, call payWithLog
-      if (MONAD_CONFIG.contracts.tapPayLedger && sessionIdHash) {
-        const ledgerAbi = [
-          'function payWithLog(address to, bytes32 sessionIdHash) external payable',
-        ];
-        const ledgerContract = new ethers.Contract(
-          MONAD_CONFIG.contracts.tapPayLedger,
-          ledgerAbi,
-          wallet,
-        );
-        const tx = await ledgerContract.payWithLog(to, sessionIdHash, {
-          value: amountWei,
-        });
-        return {txHash: tx.hash};
-      }
-
-      // Estimate gas with 20% safety margin
-      let gasLimit: bigint;
-      try {
-        const estimate = await provider.estimateGas({
-          from: wallet.address,
-          to,
-          value: amountWei,
-        });
-        gasLimit = (estimate * 120n) / 100n;
-      } catch {
-        gasLimit = GAS_LIMIT_FALLBACK;
-      }
-
-      // Get nonce (pending to avoid collisions)
-      const nonce = await provider.getTransactionCount(wallet.address, 'pending');
-
-      // Fetch fee data
-      const feeData = await provider.getFeeData();
-
-      // Build and broadcast transaction
-      const tx = await wallet.sendTransaction({
-        to,
-        value: amountWei,
-        gasLimit,
-        nonce,
-        gasPrice: feeData.gasPrice,
-        chainId: MONAD_CONFIG.chainId,
-      });
-
-      return {txHash: tx.hash};
+    // Sign and broadcast exactly once. A broadcast is NOT retried across endpoints: a timeout or
+    // transient error after the node accepted the tx must never cause a second, double-spending send.
+    const tx = await wallet.sendTransaction({
+      ...txRequest,
+      nonce,
+      gasLimit,
+      chainId: MONAD_CONFIG.chainId,
+      ...feeFields,
     });
+
+    return {txHash: tx.hash};
   } catch (error: any) {
-    const parsedError = parseContractError(error);
-    return {txHash: null, error: parsedError};
+    return {txHash: null, error: parseContractError(error)};
   }
 }
 
@@ -615,9 +616,13 @@ export async function estimateGasCost(
       }
 
       const feeData = await provider.getFeeData();
-      const gasPrice = feeData.gasPrice && feeData.gasPrice > 0n
-        ? feeData.gasPrice
-        : ethers.parseUnits('50', 'gwei');
+      // Prefer the EIP-1559 max fee for the displayed estimate so it matches what is broadcast.
+      const gasPrice =
+        feeData.maxFeePerGas && feeData.maxFeePerGas > 0n
+          ? feeData.maxFeePerGas
+          : feeData.gasPrice && feeData.gasPrice > 0n
+          ? feeData.gasPrice
+          : ethers.parseUnits('50', 'gwei');
 
       const gasCostWei = estimate * gasPrice;
 

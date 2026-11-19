@@ -30,9 +30,6 @@ export const MONAD_CONFIG = {
   },
 };
 
-// AID for NFC HCE — hex for "TapPay" with 0xF0 prefix (proprietary AID)
-export const TAPPAY_AID = 'F0546170506179';
-
 // APDU protocol version
 export const APDU_VERSION = 0x01;
 

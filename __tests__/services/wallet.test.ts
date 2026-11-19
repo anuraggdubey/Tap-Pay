@@ -45,6 +45,7 @@ import {
   hasWallet,
   loadPrivateKey,
   loadRecoveryPhrase,
+  sendPayment,
   storeWallet,
 } from '../../src/services/wallet';
 import {walletFromRecoveryPhrase} from '../../src/utils/recovery';
@@ -214,6 +215,24 @@ describe('wallet storage', () => {
 
     const n = generateWallet();
     await expect(storeWallet({privateKey: n.privateKey, mnemonic: n.mnemonic})).resolves.toBe(n.address);
+  });
+
+  it('refuses to send without a ledger session instead of silently doing a plain transfer', async () => {
+    const w = generateWallet();
+    await storeWallet({privateKey: w.privateKey, mnemonic: w.mnemonic});
+    // No sessionIdHash → must not fall back to a bare value transfer that skips the ledger.
+    const result = await sendPayment('0x2222222222222222222222222222222222222222', 1000n, undefined);
+    expect(result.txHash).toBeNull();
+    expect(result.error).toMatch(/ledger is not configured/i);
+  });
+
+  it('returns an auth error (and never sends) when the wallet is locked', async () => {
+    const w = generateWallet();
+    await storeWallet({privateKey: w.privateKey, mnemonic: w.mnemonic});
+    kc.getGenericPassword.mockRejectedValueOnce(new Error('user canceled'));
+    const result = await sendPayment('0x2222222222222222222222222222222222222222', 1000n, '0xdead');
+    expect(result.txHash).toBeNull();
+    expect(result.error).toMatch(/cancelled|not found/i);
   });
 
   it('WalletError carries a stable code', () => {

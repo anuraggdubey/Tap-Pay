@@ -1,0 +1,144 @@
+import {buildUsernameAuthMessage, normalizeUsername} from './message.ts';
+import {validateUsernameRequest} from './validation.ts';
+
+export type Config = {
+  origins: string[];
+  supabaseUrl: string;
+  serviceKey: string;
+};
+
+// Recovers the EIP-191 signer of `message` for `signature`. Injected so tests can stub it.
+export type VerifySignature = (message: string, signature: string) => string | null;
+
+const GENERIC = {error: 'Unable to complete the request. Please try again.'};
+
+export function createHandler(
+  config: Config | null,
+  verify: VerifySignature,
+  fetcher: typeof fetch = fetch,
+  log: (message: string) => void = console.error,
+) {
+  return async (request: Request): Promise<Response> => {
+    const origin = request.headers.get('origin') || '';
+    const allowOrigin = config?.origins.includes(origin) ?? false;
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-store',
+      Vary: 'Origin',
+    };
+    // App (no browser Origin) is allowed; browsers are restricted to configured origins.
+    if (origin && allowOrigin) {
+      headers['Access-Control-Allow-Origin'] = origin;
+      headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS';
+      headers['Access-Control-Allow-Headers'] = 'authorization, apikey, content-type, x-client-info';
+    }
+    const reply = (status: number, body: Record<string, unknown> = GENERIC) =>
+      new Response(JSON.stringify(body), {status, headers});
+
+    if (!config) {
+      log('register-username: missing configuration');
+      return reply(503);
+    }
+    if (request.method === 'OPTIONS') {
+      return new Response(null, {status: 204, headers});
+    }
+    if (origin && !allowOrigin) {
+      return reply(403);
+    }
+    if (request.method !== 'POST') {
+      return reply(405);
+    }
+    if (!request.headers.get('content-type')?.toLowerCase().startsWith('application/json')) {
+      return reply(400);
+    }
+
+    let req;
+    try {
+      req = validateUsernameRequest(await request.json());
+    } catch {
+      return reply(400);
+    }
+    if (!req) {
+      return reply(400);
+    }
+
+    // Verify wallet ownership: the recovered signer must equal the claimed wallet.
+    const message = buildUsernameAuthMessage({
+      action: req.action,
+      username: req.username,
+      walletAddress: req.walletAddress,
+      chainId: req.chainId,
+      issuedAt: req.issuedAt,
+    });
+    let recovered: string | null;
+    try {
+      recovered = verify(message, req.signature);
+    } catch {
+      recovered = null;
+    }
+    if (!recovered || recovered.toLowerCase() !== req.walletAddress) {
+      return reply(401, {error: 'Signature does not match the wallet.'});
+    }
+
+    const api = {
+      apikey: config.serviceKey,
+      Authorization: `Bearer ${config.serviceKey}`,
+      'Content-Type': 'application/json',
+    };
+    const rest = (path: string, init: RequestInit) =>
+      fetcher(`${config.supabaseUrl}/rest/v1/${path}`, {
+        ...init,
+        headers: {...api, ...(init.headers as Record<string, string>)},
+        signal: AbortSignal.timeout(10000),
+      });
+
+    try {
+      if (req.action === 'release') {
+        const del = await rest(
+          `usernames?wallet_address=eq.${req.walletAddress}&chain_id=eq.143`,
+          {method: 'DELETE', headers: {Prefer: 'return=minimal'}},
+        );
+        if (!del.ok) {
+          log(`register-username: release failed (${del.status})`);
+          return reply(503);
+        }
+        return reply(200, {ok: true});
+      }
+
+      // register: refuse if this wallet already holds a username, or the name is taken.
+      const walletRows = await rest(
+        `usernames?select=username&wallet_address=eq.${req.walletAddress}&chain_id=eq.143`,
+        {method: 'GET'},
+      );
+      if (walletRows.ok && Array.isArray(await walletRows.clone().json()) &&
+          (await walletRows.json()).length > 0) {
+        return reply(409, {error: 'This wallet already has a username.', reason: 'wallet_taken'});
+      }
+
+      const normalized = normalizeUsername(req.username);
+      const insert = await rest('usernames', {
+        method: 'POST',
+        headers: {Prefer: 'return=minimal'},
+        body: JSON.stringify({
+          username: req.username,
+          normalized_username: normalized,
+          wallet_address: req.walletAddress,
+          chain_id: 143,
+        }),
+      });
+      if (insert.ok) {
+        return reply(200, {ok: true, walletAddress: req.walletAddress});
+      }
+      const body = await insert.json().catch(() => ({}));
+      if (insert.status === 409 || body.code === '23505') {
+        const reason = String(body.message || '').includes('wallet') ? 'wallet_taken' : 'taken';
+        return reply(409, {error: 'Already registered.', reason});
+      }
+      log(`register-username: insert failed (${insert.status})`);
+      return reply(503);
+    } catch {
+      log('register-username: upstream request failed');
+      return reply(503);
+    }
+  };
+}

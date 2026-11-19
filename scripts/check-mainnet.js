@@ -42,13 +42,11 @@ async function main() {
   console.log('\n=== MultiTokenLedger ===');
   const multiABI = [
     'function owner() view returns (address)',
-    'function enforceTokenWhitelist() view returns (bool)',
     'function supportedTokens(address) view returns (bool)',
     'function paused() view returns (bool)',
   ];
   const multi = new ethers.Contract('0x15319f757FC0e600E681bC0bffD69541916F8860', multiABI, provider);
   console.log('  Owner:', await multi.owner());
-  console.log('  Whitelist enforced:', await multi.enforceTokenWhitelist());
   console.log('  AUSD whitelisted:', await multi.supportedTokens('0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a'));
   console.log('  USDC whitelisted:', await multi.supportedTokens('0x754704Bc059F8C67012fEd69BC8A327a5aafb603'));
   console.log('  USDT whitelisted:', await multi.supportedTokens('0xe7cd86e13AC4309349F30B3435a9d337750fC82D'));

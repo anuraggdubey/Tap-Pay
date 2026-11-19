@@ -2,45 +2,39 @@ import { supabase } from '../lib/supabase';
 
 export type JoinWaitlistResult =
   | { ok: true }
-  | { ok: false; error: 'invalid' | 'duplicate' | 'network' | 'unknown'; message: string };
+  | { ok: false; error: 'invalid' | 'network'; message: string };
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export async function joinWaitlist(name: string, email: string): Promise<JoinWaitlistResult> {
+export async function joinWaitlist(name: string, email: string, token: string): Promise<JoinWaitlistResult> {
   const trimmedName = name.trim();
   const trimmedEmail = email.trim().toLowerCase();
 
-  if (trimmedName.length < 2) {
-    return { ok: false, error: 'invalid', message: 'Please enter your name.' };
+  if (Array.from(trimmedName).length < 2 || Array.from(trimmedName).length > 100) {
+    return { ok: false, error: 'invalid', message: 'Please enter a name between 2 and 100 characters.' };
   }
-  if (!EMAIL_RE.test(trimmedEmail)) {
+  if (trimmedEmail.length > 254 || !EMAIL_RE.test(trimmedEmail)) {
     return { ok: false, error: 'invalid', message: 'Please enter a valid email address.' };
   }
 
-  const { error } = await supabase.from('waitlist').insert([
-    {
-      name: trimmedName,
-      email: trimmedEmail,
-      source: 'web',
-    },
-  ]);
-
-  if (error) {
-    if (error.code === '23505') {
-      return {
-        ok: false,
-        error: 'duplicate',
-        message: 'This email is already on the waitlist. We’ll notify you at launch.',
-      };
+  if (!token) {
+    return { ok: false, error: 'invalid', message: 'Please complete the verification.' };
+  }
+  const failure: JoinWaitlistResult = {
+    ok: false, error: 'network', message: 'Unable to join the waitlist. Please try again later.',
+  };
+  if (!supabase) {
+    return failure;
+  }
+  try {
+    const {data, error} = await supabase.functions.invoke('waitlist-signup', {
+      body: {name: trimmedName, email: trimmedEmail, token},
+    });
+    if (error || data?.ok !== true) {
+      return failure;
     }
-    if (error.message?.includes('waitlist') && error.code === '42P01') {
-      return {
-        ok: false,
-        error: 'unknown',
-        message: 'Waitlist is not configured yet. Please try again shortly.',
-      };
-    }
-    return { ok: false, error: 'network', message: error.message || 'Something went wrong. Try again.' };
+  } catch {
+    return failure;
   }
 
   try {

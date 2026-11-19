@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.24;
 
-import "./interfaces/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -15,6 +16,8 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
  * Designed for the Agora Bounty to support AUSD, USDC, USDT alongside native MON.
  */
 contract MultiTokenLedger is Ownable2Step, Pausable, ReentrancyGuard {
+    using SafeERC20 for IERC20;
+
     // ─── Custom Errors ────────────────────────────────────────────────
 
     error InvalidRecipient();
@@ -22,7 +25,7 @@ contract MultiTokenLedger is Ownable2Step, Pausable, ReentrancyGuard {
     error ZeroAmount();
     error SessionAlreadyProcessed(bytes32 sessionIdHash);
     error TransferFailed();
-    error TokenTransferFailed();
+    error ZeroReceivedAmount();
     error UnsupportedToken();
 
     // ─── State Variables ──────────────────────────────────────────────
@@ -30,9 +33,7 @@ contract MultiTokenLedger is Ownable2Step, Pausable, ReentrancyGuard {
     // Replay protection: tracks processed session hashes separately for each payer.
     mapping(address => mapping(bytes32 => bool)) public processedSessions;
 
-    // Optional whitelist for supported tokens. If false, any ERC-20 is allowed.
-    // We default to true to only allow specific stablecoins (AUSD, USDC, USDT) for safety.
-    bool public enforceTokenWhitelist = true;
+    // Only explicitly supported tokens may be used for payments.
     mapping(address => bool) public supportedTokens;
 
     // ─── Events ───────────────────────────────────────────────────────
@@ -42,7 +43,7 @@ contract MultiTokenLedger is Ownable2Step, Pausable, ReentrancyGuard {
      * @param from Sender address
      * @param to Recipient address
      * @param token Token address (address(0) for native MON)
-     * @param amount Amount transferred
+     * @param amount Amount received by the recipient
      * @param sessionIdHash Hash of the NFC session ID
      */
     event PaymentLogged(
@@ -54,7 +55,6 @@ contract MultiTokenLedger is Ownable2Step, Pausable, ReentrancyGuard {
     );
 
     event TokenWhitelistUpdated(address indexed token, bool isSupported);
-    event WhitelistEnforcementUpdated(bool isEnforced);
 
     // ─── Constructor ──────────────────────────────────────────────────
 
@@ -110,7 +110,7 @@ contract MultiTokenLedger is Ownable2Step, Pausable, ReentrancyGuard {
         whenNotPaused 
         nonReentrant 
     {
-        if (enforceTokenWhitelist && !supportedTokens[token]) {
+        if (!supportedTokens[token]) {
             revert UnsupportedToken();
         }
 
@@ -119,18 +119,15 @@ contract MultiTokenLedger is Ownable2Step, Pausable, ReentrancyGuard {
         // Mark this payer's session as processed
         processedSessions[msg.sender][sessionIdHash] = true;
 
-        // Execute ERC-20 transfer using transferFrom
-        // Requires prior approval from the sender
         IERC20 erc20 = IERC20(token);
-        
-        // We use a low-level call or check the boolean return value for safety, 
-        // though standard ERC-20s should revert on failure anyway.
-        bool success = erc20.transferFrom(msg.sender, to, amount);
-        if (!success) {
-            revert TokenTransferFailed();
+        uint256 balanceBefore = erc20.balanceOf(to);
+        erc20.safeTransferFrom(msg.sender, to, amount);
+        uint256 received = erc20.balanceOf(to) - balanceBefore;
+        if (received == 0) {
+            revert ZeroReceivedAmount();
         }
 
-        emit PaymentLogged(msg.sender, to, token, amount, sessionIdHash);
+        emit PaymentLogged(msg.sender, to, token, received, sessionIdHash);
     }
 
     // ─── Internal Helpers ─────────────────────────────────────────────
@@ -162,11 +159,6 @@ contract MultiTokenLedger is Ownable2Step, Pausable, ReentrancyGuard {
 
     function unpause() external onlyOwner {
         _unpause();
-    }
-
-    function setTokenWhitelistEnforcement(bool enforce) external onlyOwner {
-        enforceTokenWhitelist = enforce;
-        emit WhitelistEnforcementUpdated(enforce);
     }
 
     function setSupportedToken(address token, bool isSupported) external onlyOwner {

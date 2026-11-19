@@ -11,6 +11,8 @@ export const MULTI_TOKEN_LEDGER_ABI = [
   'function payWithLog(address to, bytes32 sessionIdHash) external payable',
   'function payERC20WithLog(address token, address to, uint256 amount, bytes32 sessionIdHash) external',
   'event PaymentLogged(address indexed from, address indexed to, address indexed token, uint256 amount, bytes32 sessionIdHash)',
+  'error ZeroReceivedAmount()',
+  'error SafeERC20FailedOperation(address token)',
 ];
 
 export function getMultiTokenLedgerAddress(): string | null {

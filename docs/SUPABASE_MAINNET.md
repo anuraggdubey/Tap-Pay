@@ -9,6 +9,8 @@ TapPay uses **one** username table for **Monad Mainnet (chain ID 143)**. Wallet 
 | **`supabase/migrations/001_usernames_mainnet_only.sql`** | **Yes, safe** — idempotent (`IF NOT EXISTS`, updates `chain_id` to 143) | Paste in **Supabase Dashboard → SQL → New query → Run** |
 | `supabase/waitlist.sql` | Fresh waitlist setup | Creates the hardened waitlist and rate limiter; no direct public inserts |
 | `supabase/migrations/002_harden_anon_writes.sql` | Yes, after 001 and waitlist setup | Idempotent; tightens new writes without rejecting legacy rows |
+| `supabase/migrations/004_username_ownership_proof.sql` | Yes, after 001/002 | Idempotent; revokes direct anon writes to `usernames` so only the signed Edge Function can write |
+| `supabase functions deploy register-username` | After migration 004 | Verifies the wallet signature for register/release; set `ALLOWED_ORIGINS` and the service role is provided by Supabase |
 | `npm run deploy:mainnet` / `scripts/deploy-mainnet.js` | **No** unless redeploying contracts | Would deploy **new** contracts, not Supabase |
 | `scripts/deploy.js` (testnet) | **No** for production | Testnet-only Hardhat script |
 

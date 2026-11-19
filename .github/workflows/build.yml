@@ -94,6 +94,43 @@ jobs:
       - name: Make Gradlew executable
         run: chmod +x android/gradlew
 
+      # Release builds are never signed with the debug key.
+      # With the TAPPAY_KEYSTORE_BASE64 secret set (the real release key) the APK is a real release.
+      # Without it (pull requests, forks) a throwaway key is generated so the build is still verified;
+      # that APK must NOT be distributed.
+      - name: Prepare release signing key
+        id: signing
+        env:
+          TAPPAY_KEYSTORE_BASE64: ${{ secrets.TAPPAY_KEYSTORE_BASE64 }}
+          TAPPAY_KEYSTORE_PASSWORD_SECRET: ${{ secrets.TAPPAY_KEYSTORE_PASSWORD }}
+          TAPPAY_KEY_ALIAS_SECRET: ${{ secrets.TAPPAY_KEY_ALIAS }}
+          TAPPAY_KEY_PASSWORD_SECRET: ${{ secrets.TAPPAY_KEY_PASSWORD }}
+        run: |
+          KEYSTORE="$RUNNER_TEMP/release.jks"
+          if [ -n "$TAPPAY_KEYSTORE_BASE64" ]; then
+            echo "$TAPPAY_KEYSTORE_BASE64" | base64 -d > "$KEYSTORE"
+            STORE_PASS="$TAPPAY_KEYSTORE_PASSWORD_SECRET"
+            KEY_ALIAS="$TAPPAY_KEY_ALIAS_SECRET"
+            KEY_PASS="$TAPPAY_KEY_PASSWORD_SECRET"
+            echo "kind=release" >> "$GITHUB_OUTPUT"
+          else
+            STORE_PASS="$(openssl rand -hex 16)"
+            KEY_ALIAS="ci-throwaway"
+            KEY_PASS="$STORE_PASS"
+            keytool -genkeypair -keystore "$KEYSTORE" -storetype PKCS12 -storepass "$STORE_PASS" \
+              -keypass "$KEY_PASS" -alias "$KEY_ALIAS" -keyalg RSA -keysize 2048 -validity 2 \
+              -dname "CN=TapPay CI throwaway"
+            echo "kind=ci-throwaway" >> "$GITHUB_OUTPUT"
+          fi
+          echo "::add-mask::$STORE_PASS"
+          echo "::add-mask::$KEY_PASS"
+          {
+            echo "TAPPAY_KEYSTORE_FILE=$KEYSTORE"
+            echo "TAPPAY_KEYSTORE_PASSWORD=$STORE_PASS"
+            echo "TAPPAY_KEY_ALIAS=$KEY_ALIAS"
+            echo "TAPPAY_KEY_PASSWORD=$KEY_PASS"
+          } >> "$GITHUB_ENV"
+
       - name: Build Release APK
         working-directory: android
         env:
@@ -105,6 +142,6 @@ jobs:
       - name: Upload Release APK
         uses: actions/upload-artifact@v4
         with:
-          name: tappay-release-apk
+          name: ${{ steps.signing.outputs.kind == 'release' && 'tappay-release-apk' || 'tappay-ci-apk-NOT-FOR-DISTRIBUTION' }}
           path: android/app/build/outputs/apk/release/*.apk
           retention-days: 14

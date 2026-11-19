@@ -10,7 +10,6 @@ import {createSessionIdHash} from '../utils/paymentSession';
 export const MULTI_TOKEN_LEDGER_ABI = [
   'function payWithLog(address to, bytes32 sessionIdHash) external payable',
   'function payERC20WithLog(address token, address to, uint256 amount, bytes32 sessionIdHash) external',
-  'function processedSessions(address payer, bytes32 sessionIdHash) view returns (bool)',
   'event PaymentLogged(address indexed from, address indexed to, address indexed token, uint256 amount, bytes32 sessionIdHash)',
 ];
 

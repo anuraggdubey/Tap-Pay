@@ -9,9 +9,30 @@ import 'react-native-get-random-values';
 import '@ethersproject/shims';
 import {ethers} from 'ethers';
 import * as Keychain from 'react-native-keychain';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {normalizeMnemonic, walletFromRecoveryPhrase} from '../utils/recovery';
 import {MONAD_CONFIG, GAS_LIMIT_FALLBACK, TX_POLL_INTERVAL_MS, TX_MAX_WAIT_MS} from '../config/monad';
 
 const KEYCHAIN_SERVICE = 'com.tappay.wallet';
+const PHRASE_SERVICE = 'com.tappay.wallet.phrase';
+const ADDRESS_STORAGE_KEY = '@tappay_wallet_address';
+
+export type WalletErrorCode =
+  | 'WALLET_EXISTS'
+  | 'NO_DEVICE_AUTH'
+  | 'NO_SECURE_HARDWARE'
+  | 'INVALID_SECRET'
+  | 'STORAGE_FAILED';
+
+/** Error with a stable code so the UI can show an exact, honest message. */
+export class WalletError extends Error {
+  code: WalletErrorCode;
+  constructor(code: WalletErrorCode, message: string) {
+    super(message);
+    this.name = 'WalletError';
+    this.code = code;
+  }
+}
 
 // List of Monad RPC endpoints for automatic failover rotation
 const RPC_ENDPOINTS = [
@@ -77,14 +98,19 @@ export async function withRpcFailover<T>(action: (provider: ethers.JsonRpcProvid
 }
 
 /**
- * Generate a new random wallet
- * @returns The wallet's address and private key (key should be saved immediately)
+ * Generate a new random wallet with a BIP-39 recovery phrase.
+ * The caller must persist it with storeWallet() and show the phrase exactly once.
  */
-export function generateWallet(): {address: string; privateKey: string} {
+export function generateWallet(): {address: string; privateKey: string; mnemonic: string} {
   const wallet = ethers.Wallet.createRandom();
+  const phrase = wallet.mnemonic?.phrase;
+  if (!phrase) {
+    throw new WalletError('STORAGE_FAILED', 'Could not generate a recovery phrase.');
+  }
   return {
     address: wallet.address,
     privateKey: wallet.privateKey,
+    mnemonic: phrase,
   };
 }
 
@@ -101,74 +127,208 @@ export async function isBiometricsAvailable(): Promise<boolean> {
 }
 
 /**
- * Save a private key to Android Keystore via react-native-keychain
+ * The wallet requires the phone's own authentication (fingerprint, face or screen lock).
+ * There is no fallback: if the phone has none set up, wallet creation is refused.
  */
-export async function savePrivateKey(privateKey: string): Promise<boolean> {
+async function assertDeviceAuthReady(): Promise<void> {
+  let ready = false;
   try {
-    const wallet = new ethers.Wallet(privateKey);
-    await Keychain.setGenericPassword(wallet.address, privateKey, {
-      service: KEYCHAIN_SERVICE,
-      accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_ANY_OR_DEVICE_PASSCODE,
-      securityLevel: Keychain.SECURITY_LEVEL.SECURE_HARDWARE,
-      storage: Keychain.STORAGE_TYPE.AES_GCM,
+    ready = await Keychain.canImplyAuthentication({
+      authenticationType: Keychain.AUTHENTICATION_TYPE.DEVICE_PASSCODE_OR_BIOMETRICS,
     });
-    return true;
-  } catch (error) {
-    console.error('Failed to save private key:', error);
-    return false;
+  } catch {
+    ready = false;
+  }
+  if (!ready) {
+    throw new WalletError(
+      'NO_DEVICE_AUTH',
+      'Set up a screen lock, fingerprint or face unlock in your phone settings, then try again.',
+    );
   }
 }
 
-/**
- * Load the private key from Android Keystore with biometric authorization
- * @param promptTitle Optional prompt title to display in Android BiometricPrompt
- * @returns The private key string, or null if cancelled or not found
- */
-export async function loadPrivateKey(promptTitle?: string): Promise<string | null> {
-  try {
-    const options: Keychain.GetOptions = {
-      service: KEYCHAIN_SERVICE,
-    };
+let _storeInFlight = false;
 
-    if (promptTitle) {
-      options.authenticationPrompt = {
-        title: promptTitle,
-        subtitle: 'TapPay Authorization',
-        description: 'Confirm your identity using biometrics to proceed',
-        cancel: 'Cancel',
-      };
+/**
+ * Save a new wallet to the Android Keystore. Strict rules, no fallbacks:
+ *  - One wallet per device: refuses if a wallet already exists (delete it first).
+ *  - The phone must have a screen lock / biometrics enrolled.
+ *  - The key must live in secure hardware (TEE/StrongBox); otherwise creation fails.
+ *  - Every later read of the key requires phone authentication.
+ *  - The key and (if given) recovery phrase are stored atomically; on any failure
+ *    nothing is left behind.
+ * Returns the wallet address.
+ */
+export async function storeWallet(secret: {
+  privateKey: string;
+  mnemonic?: string;
+}): Promise<string> {
+  if (_storeInFlight) {
+    throw new WalletError('STORAGE_FAILED', 'A wallet operation is already in progress.');
+  }
+  _storeInFlight = true;
+  try {
+    if (await hasWallet()) {
+      throw new WalletError(
+        'WALLET_EXISTS',
+        'A wallet is already set up on this device. Reset it in Settings before creating or restoring another one.',
+      );
     }
 
-    const credentials = await Keychain.getGenericPassword(options);
-    if (credentials) {
+    let wallet: ethers.Wallet;
+    try {
+      wallet = new ethers.Wallet(secret.privateKey);
+    } catch {
+      throw new WalletError('INVALID_SECRET', 'Invalid private key.');
+    }
+    if (secret.mnemonic) {
+      let fromPhrase: ethers.HDNodeWallet;
+      try {
+        fromPhrase = walletFromRecoveryPhrase(secret.mnemonic);
+      } catch {
+        throw new WalletError('INVALID_SECRET', 'Invalid recovery phrase.');
+      }
+      if (fromPhrase.address !== wallet.address) {
+        throw new WalletError('INVALID_SECRET', 'Recovery phrase does not match the key.');
+      }
+    }
+
+    await assertDeviceAuthReady();
+
+    const secureOptions = {
+      accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_ANY_OR_DEVICE_PASSCODE,
+      securityLevel: Keychain.SECURITY_LEVEL.SECURE_HARDWARE,
+      storage: Keychain.STORAGE_TYPE.AES_GCM,
+    } as const;
+
+    try {
+      const savedKey = await Keychain.setGenericPassword(wallet.address, secret.privateKey, {
+        service: KEYCHAIN_SERVICE,
+        ...secureOptions,
+      });
+      if (!savedKey) {
+        throw new Error('key not saved');
+      }
+      if (secret.mnemonic) {
+        const savedPhrase = await Keychain.setGenericPassword(
+          wallet.address,
+          normalizeMnemonic(secret.mnemonic),
+          {service: PHRASE_SERVICE, ...secureOptions},
+        );
+        if (!savedPhrase) {
+          throw new Error('phrase not saved');
+        }
+      }
+      await AsyncStorage.setItem(ADDRESS_STORAGE_KEY, wallet.address);
+    } catch {
+      // Roll back so a half-written wallet can never exist.
+      try {
+        await Keychain.resetGenericPassword({service: KEYCHAIN_SERVICE});
+        await Keychain.resetGenericPassword({service: PHRASE_SERVICE});
+        await AsyncStorage.removeItem(ADDRESS_STORAGE_KEY);
+      } catch {
+        // nothing more we can do
+      }
+      throw new WalletError(
+        'NO_SECURE_HARDWARE',
+        'This phone cannot store the wallet key in secure hardware, so TapPay cannot create a wallet here.',
+      );
+    }
+
+    return wallet.address;
+  } finally {
+    _storeInFlight = false;
+  }
+}
+
+const AUTH_PROMPT_SUBTITLE = 'TapPay Authorization';
+
+function authPrompt(title: string): Keychain.AuthenticationPrompt {
+  return {
+    title,
+    subtitle: AUTH_PROMPT_SUBTITLE,
+    description: 'Confirm with your fingerprint, face or screen lock to continue',
+    cancel: 'Cancel',
+  };
+}
+
+/**
+ * Load the private key from the Android Keystore. This always prompts for the phone's
+ * authentication (fingerprint / face / screen lock).
+ * @returns The private key string, or null if cancelled, failed or not found
+ */
+export async function loadPrivateKey(
+  promptTitle = 'Confirm your identity',
+): Promise<string | null> {
+  try {
+    const credentials = await Keychain.getGenericPassword({
+      service: KEYCHAIN_SERVICE,
+      authenticationPrompt: authPrompt(promptTitle),
+    });
+    if (credentials && credentials.password) {
       return credentials.password;
     }
     return null;
   } catch (error: any) {
-    console.warn('Biometric/Keystore authentication cancelled or failed:', error?.message || error);
+    console.warn('Device authentication cancelled or failed:', error?.message || error);
     return null;
   }
 }
 
 /**
- * Check if a wallet exists in secure storage without prompting for biometrics
+ * Load the recovery phrase (phone authentication required). Returns null if cancelled,
+ * or if this wallet has no phrase (it was imported from a raw private key).
+ */
+export async function loadRecoveryPhrase(
+  promptTitle = 'Confirm to view recovery phrase',
+): Promise<string | null> {
+  try {
+    const credentials = await Keychain.getGenericPassword({
+      service: PHRASE_SERVICE,
+      authenticationPrompt: authPrompt(promptTitle),
+    });
+    if (credentials && credentials.password) {
+      return credentials.password;
+    }
+    return null;
+  } catch (error: any) {
+    console.warn('Device authentication cancelled or failed:', error?.message || error);
+    return null;
+  }
+}
+
+/**
+ * Check if a wallet exists in secure storage. Does not prompt for authentication.
  */
 export async function hasWallet(): Promise<boolean> {
   try {
-    const credentials = await Keychain.getGenericPassword({service: KEYCHAIN_SERVICE});
-    return credentials !== false && !!credentials;
+    return await Keychain.hasGenericPassword({service: KEYCHAIN_SERVICE});
   } catch {
     return false;
   }
 }
 
 /**
- * Delete the stored wallet (for reset/testing)
+ * Check if a recovery phrase is stored for this wallet. Does not prompt.
+ */
+export async function hasRecoveryPhrase(): Promise<boolean> {
+  try {
+    return await Keychain.hasGenericPassword({service: PHRASE_SERVICE});
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Delete the stored wallet, recovery phrase and cached address from this device.
+ * Returns true only if everything was removed.
  */
 export async function deleteWallet(): Promise<boolean> {
   try {
-    await Keychain.resetGenericPassword({service: KEYCHAIN_SERVICE});
-    return true;
+    const keyRemoved = await Keychain.resetGenericPassword({service: KEYCHAIN_SERVICE});
+    const phraseRemoved = await Keychain.resetGenericPassword({service: PHRASE_SERVICE});
+    await AsyncStorage.removeItem(ADDRESS_STORAGE_KEY);
+    return keyRemoved !== false && phraseRemoved !== false;
   } catch (error) {
     console.error('Failed to delete wallet:', error);
     return false;
@@ -176,20 +336,27 @@ export async function deleteWallet(): Promise<boolean> {
 }
 
 /**
- * Get the wallet address from stored credentials
+ * Get the wallet's public address. The address is public, so it is cached unprotected to avoid
+ * a phone-authentication prompt on every app start. If the cache is missing (older installs),
+ * it is recovered once from the key with phone authentication.
  */
 export async function getWalletAddress(): Promise<string | null> {
   try {
-    const credentials = await Keychain.getGenericPassword({service: KEYCHAIN_SERVICE});
-    if (!credentials) {
+    if (!(await hasWallet())) {
+      await AsyncStorage.removeItem(ADDRESS_STORAGE_KEY);
       return null;
     }
-    // If username stores the address, return it immediately
-    if (credentials.username && credentials.username.startsWith('0x')) {
-      return credentials.username;
+    const cached = await AsyncStorage.getItem(ADDRESS_STORAGE_KEY);
+    if (cached && ethers.isAddress(cached)) {
+      return cached;
     }
-    const wallet = new ethers.Wallet(credentials.password);
-    return wallet.address;
+    const key = await loadPrivateKey('Confirm to unlock your wallet');
+    if (!key) {
+      return null;
+    }
+    const address = new ethers.Wallet(key).address;
+    await AsyncStorage.setItem(ADDRESS_STORAGE_KEY, address);
+    return address;
   } catch {
     return null;
   }

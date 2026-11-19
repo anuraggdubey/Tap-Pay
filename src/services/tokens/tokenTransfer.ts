@@ -13,7 +13,6 @@
 import {ethers} from 'ethers';
 import {getProvider, withRpcFailover, loadPrivateKey} from '../wallet';
 import {SUPPORTED_TOKENS, ERC20_ABI, parseTokenAmount} from '../../config/tokens';
-import {getMeraSigner, hasMeraSigner} from '../mera/meraSigner';
 import {
   isMultiTokenLedgerEnabled,
   sendErc20ViaMultiTokenLedger,
@@ -42,8 +41,6 @@ export interface TransferParams {
   amount: string;
   /** Token symbol (AUSD, USDC, USDT, MON) */
   tokenSymbol: string;
-  /** Optional: provide a signer directly. If not provided, uses Mera signer. */
-  signer?: ethers.Wallet;
 }
 
 // ─── Core Transfer Function ───────────────────────────────────────
@@ -108,19 +105,12 @@ export async function sendTokenTransfer(
     };
   }
 
-  // Get signer (from params, Mera, classic wallet, or fail)
-  let signer = params.signer;
-  
-  if (!signer) {
-    if (hasMeraSigner()) {
-      signer = getMeraSigner() || undefined;
-    } else {
-      // Fallback to classic wallet (this will trigger biometric prompt)
-      const pk = await loadPrivateKey('Authenticate to send payment');
-      if (pk) {
-        signer = new ethers.Wallet(pk, getProvider());
-      }
-    }
+  // The signing key is only ever obtained through phone authentication (fingerprint / face /
+  // screen lock). There is no other signer path.
+  let signer: ethers.Wallet | undefined;
+  const pk = await loadPrivateKey('Authenticate to send payment');
+  if (pk) {
+    signer = new ethers.Wallet(pk, getProvider());
   }
 
   if (!signer) {

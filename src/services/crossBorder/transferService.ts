@@ -28,8 +28,6 @@ export interface CrossBorderTransferParams {
   amount: string;
   /** Token to send (AUSD, USDC, USDT, MON) */
   tokenSymbol: string;
-  /** Optional: provide an ethers.Wallet signer directly */
-  signer?: ethers.Wallet;
 }
 
 export interface CrossBorderTransferResult extends TransferResult {
@@ -58,7 +56,7 @@ export interface CrossBorderTransferResult extends TransferResult {
 export async function executeCrossBorderTransfer(
   params: CrossBorderTransferParams,
 ): Promise<CrossBorderTransferResult> {
-  const {recipient, amount, tokenSymbol, signer} = params;
+  const {recipient, amount, tokenSymbol} = params;
 
   // Step 1: Resolve recipient
   let resolvedAddress: string;
@@ -112,7 +110,6 @@ export async function executeCrossBorderTransfer(
     to: resolvedAddress,
     amount,
     tokenSymbol,
-    signer,
   });
 
   // Step 3: Return enriched result

@@ -86,7 +86,12 @@ jest.mock('react-native-keychain', () => ({
   setGenericPassword: jest.fn().mockResolvedValue(true),
   getGenericPassword: jest.fn().mockResolvedValue(null),
   resetGenericPassword: jest.fn().mockResolvedValue(true),
+  hasGenericPassword: jest.fn().mockResolvedValue(false),
+  canImplyAuthentication: jest.fn().mockResolvedValue(true),
   getSupportedBiometryType: jest.fn().mockResolvedValue('Fingerprint'),
+  AUTHENTICATION_TYPE: {
+    DEVICE_PASSCODE_OR_BIOMETRICS: 'AuthenticationWithBiometricsDevicePasscode',
+  },
   ACCESS_CONTROL: {
     BIOMETRY_ANY_OR_DEVICE_PASSCODE: 'BIOMETRY_ANY_OR_DEVICE_PASSCODE',
     BIOMETRY_ANY: 'BIOMETRY_ANY',

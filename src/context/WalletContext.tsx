@@ -10,17 +10,26 @@ import {AppState, AppStateStatus} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   generateWallet,
-  savePrivateKey,
-  loadPrivateKey,
+  storeWallet,
+  loadRecoveryPhrase,
   getWalletAddress,
   getBalance,
   hasWallet,
+  hasRecoveryPhrase,
   deleteWallet,
+  WalletError,
 } from '../services/wallet';
+import {
+  isPrivateKeyHex,
+  isValidRecoveryPhrase,
+  normalizeMnemonic,
+  walletFromRecoveryPhrase,
+} from '../utils/recovery';
 import {reverseResolve} from '../services/registry';
 import {getTokenBalance} from '../services/tokens/tokenBalance';
 
 const USERNAME_STORAGE_KEY = '@tappay_username';
+const BACKUP_VERIFIED_KEY = '@tappay_backup_verified';
 
 interface WalletState {
   isLoading: boolean;
@@ -29,11 +38,22 @@ interface WalletState {
   balance: bigint;
   ausdBalance: bigint;
   username: string | null;
+  /** True once the user has proven they saved the recovery phrase (or no phrase exists). */
+  backupVerified: boolean;
+  /** A wallet exists on this device but could not be unlocked (auth cancelled or key invalidated). */
+  walletLocked: boolean;
+  /** Re-attempt unlocking the existing wallet (prompts for phone authentication). */
+  unlockWallet: () => Promise<void>;
   // Actions
-  createWallet: () => Promise<{address: string; privateKey: string} | null>;
-  importWallet: (privateKey: string) => Promise<boolean>;
+  /** Creates the one wallet allowed on this device. Throws WalletError. Returns the recovery phrase to show once. */
+  createWallet: () => Promise<{address: string; mnemonic: string}>;
+  /** Restores from a 12-word phrase onto a device with no wallet. Throws WalletError. */
+  restoreFromPhrase: (phrase: string) => Promise<string>;
+  /** Restores from a raw private key (advanced; no phrase backup is possible). Throws WalletError. */
+  importPrivateKey: (privateKey: string) => Promise<string>;
+  markBackupVerified: () => Promise<void>;
   refreshBalance: () => Promise<void>;
-  getPrivateKey: (promptTitle?: string) => Promise<string | null>;
+  revealRecoveryPhrase: (promptTitle?: string) => Promise<string | null>;
   resetWallet: () => Promise<boolean>;
   saveUsername: (name: string) => Promise<void>;
 }
@@ -47,6 +67,8 @@ export function WalletProvider({children}: {children: ReactNode}) {
   const [balance, setBalance] = useState<bigint>(0n);
   const [ausdBalance, setAusdBalance] = useState<bigint>(0n);
   const [username, setUsername] = useState<string | null>(null);
+  const [backupVerified, setBackupVerified] = useState(false);
+  const [walletLocked, setWalletLocked] = useState(false);
 
   // Load stored username from AsyncStorage
   const loadStoredUsername = useCallback(async (addr: string | null) => {
@@ -72,37 +94,57 @@ export function WalletProvider({children}: {children: ReactNode}) {
     }
   }, []);
 
-  // Check for existing wallet on mount
-  useEffect(() => {
-    (async () => {
-      try {
-        const exists = await hasWallet();
-        if (exists) {
-          const addr = await getWalletAddress();
-          setAddress(addr);
-          setIsInitialized(true);
-
-          // Load username
-          await loadStoredUsername(addr);
-
-          if (addr) {
-            try {
-              const bal = await getBalance(addr);
-              setBalance(bal);
-              const ausdBal = await getTokenBalance(addr, 'AUSD');
-              setAusdBalance(ausdBal.balanceRaw);
-            } catch {
-              // Network error — balance stays 0
-            }
-          }
+  // Load the wallet from secure storage (on mount, and when the user retries unlocking)
+  const initWallet = useCallback(async () => {
+    setWalletLocked(false);
+    try {
+      const exists = await hasWallet();
+      if (exists) {
+        const addr = await getWalletAddress();
+        if (!addr) {
+          // Wallet exists but could not be unlocked (cancelled / key invalidated): do not
+          // pretend it is usable. The user must authenticate again or reset the wallet.
+          setIsInitialized(false);
+          setWalletLocked(true);
+          return;
         }
-      } catch (error) {
-        console.error('Wallet init error:', error);
-      } finally {
-        setIsLoading(false);
+        setAddress(addr);
+        setIsInitialized(true);
+
+        // Backup status: wallets without a stored phrase (older key-only wallets) cannot be
+        // backed up by phrase, so they are not blocked.
+        const flag = await AsyncStorage.getItem(BACKUP_VERIFIED_KEY);
+        if (flag === '1') {
+          setBackupVerified(true);
+        } else if (!(await hasRecoveryPhrase())) {
+          await AsyncStorage.setItem(BACKUP_VERIFIED_KEY, '1');
+          setBackupVerified(true);
+        } else {
+          setBackupVerified(false);
+        }
+
+        // Load username
+        await loadStoredUsername(addr);
+
+        try {
+          const bal = await getBalance(addr);
+          setBalance(bal);
+          const ausdBal = await getTokenBalance(addr, 'AUSD');
+          setAusdBalance(ausdBal.balanceRaw);
+        } catch {
+          // Network error — balance stays 0
+        }
       }
-    })();
+    } catch (error) {
+      console.error('Wallet init error:', error);
+    } finally {
+      setIsLoading(false);
+    }
   }, [loadStoredUsername]);
+
+  useEffect(() => {
+    initWallet();
+  }, [initWallet]);
 
   // Periodic balance refresh (every 10 seconds) — pauses when app is backgrounded
   const appState = useRef(AppState.currentState);
@@ -154,43 +196,69 @@ export function WalletProvider({children}: {children: ReactNode}) {
     };
   }, [address]);
 
-  const createWallet = useCallback(async () => {
-    try {
-      const wallet = generateWallet();
-      const saved = await savePrivateKey(wallet.privateKey);
-      if (saved) {
-        setAddress(wallet.address);
-        setIsInitialized(true);
-        return wallet;
-      }
-      return null;
-    } catch (error) {
-      console.error('Create wallet error:', error);
-      return null;
-    }
+  const markBackupVerified = useCallback(async () => {
+    await AsyncStorage.setItem(BACKUP_VERIFIED_KEY, '1');
+    setBackupVerified(true);
   }, []);
 
-  const importWallet = useCallback(async (privateKey: string) => {
-    try {
-      const saved = await savePrivateKey(privateKey);
-      if (saved) {
-        const addr = await getWalletAddress();
-        setAddress(addr);
-        setIsInitialized(true);
-
-        // Recover existing username from Supabase (assigned during original wallet creation)
-        if (addr) {
-          await loadStoredUsername(addr);
-        }
-
-        return true;
+  const activateWallet = useCallback(
+    async (newAddress: string, verified: boolean) => {
+      if (verified) {
+        await AsyncStorage.setItem(BACKUP_VERIFIED_KEY, '1');
+      } else {
+        await AsyncStorage.removeItem(BACKUP_VERIFIED_KEY);
       }
-      return false;
-    } catch (error) {
-      console.error('Import wallet error:', error);
-      return false;
-    }
-  }, [loadStoredUsername]);
+      setBackupVerified(verified);
+      setAddress(newAddress);
+      setIsInitialized(true);
+    },
+    [],
+  );
+
+  const createWallet = useCallback(async () => {
+    const wallet = generateWallet();
+    const newAddress = await storeWallet({
+      privateKey: wallet.privateKey,
+      mnemonic: wallet.mnemonic,
+    });
+    await activateWallet(newAddress, false);
+    return {address: newAddress, mnemonic: wallet.mnemonic};
+  }, [activateWallet]);
+
+  const restoreFromPhrase = useCallback(
+    async (phrase: string) => {
+      if (!isValidRecoveryPhrase(phrase)) {
+        throw new WalletError(
+          'INVALID_SECRET',
+          'That is not a valid 12-word recovery phrase. Check the words and their order.',
+        );
+      }
+      const normalized = normalizeMnemonic(phrase);
+      const wallet = walletFromRecoveryPhrase(normalized);
+      const newAddress = await storeWallet({
+        privateKey: wallet.privateKey,
+        mnemonic: normalized,
+      });
+      await activateWallet(newAddress, true);
+      await loadStoredUsername(newAddress);
+      return newAddress;
+    },
+    [activateWallet, loadStoredUsername],
+  );
+
+  const importPrivateKey = useCallback(
+    async (privateKey: string) => {
+      const key = privateKey.trim();
+      if (!isPrivateKeyHex(key)) {
+        throw new WalletError('INVALID_SECRET', 'Invalid private key. It must be 0x followed by 64 hex characters.');
+      }
+      const newAddress = await storeWallet({privateKey: key});
+      await activateWallet(newAddress, true);
+      await loadStoredUsername(newAddress);
+      return newAddress;
+    },
+    [activateWallet, loadStoredUsername],
+  );
 
   const refreshBalance = useCallback(async () => {
     if (!address) {
@@ -206,8 +274,8 @@ export function WalletProvider({children}: {children: ReactNode}) {
     }
   }, [address]);
 
-  const getPrivateKeyFn = useCallback(async (promptTitle?: string) => {
-    return await loadPrivateKey(promptTitle);
+  const revealRecoveryPhrase = useCallback(async (promptTitle?: string) => {
+    return await loadRecoveryPhrase(promptTitle);
   }, []);
 
   const saveUsernameFn = useCallback(async (name: string) => {
@@ -227,9 +295,12 @@ export function WalletProvider({children}: {children: ReactNode}) {
         setBalance(0n);
         setAusdBalance(0n);
         setIsInitialized(false);
+        setBackupVerified(false);
+        setWalletLocked(false);
         setUsername(null);
-        // Clear stored username
+        // Clear stored username and backup status
         await AsyncStorage.removeItem(USERNAME_STORAGE_KEY);
+        await AsyncStorage.removeItem(BACKUP_VERIFIED_KEY);
         return true;
       }
       return false;
@@ -248,10 +319,15 @@ export function WalletProvider({children}: {children: ReactNode}) {
         balance,
         ausdBalance,
         username,
+        backupVerified,
+        walletLocked,
+        unlockWallet: initWallet,
         createWallet,
-        importWallet,
+        restoreFromPhrase,
+        importPrivateKey,
+        markBackupVerified,
         refreshBalance,
-        getPrivateKey: getPrivateKeyFn,
+        revealRecoveryPhrase,
         resetWallet,
         saveUsername: saveUsernameFn,
       }}>

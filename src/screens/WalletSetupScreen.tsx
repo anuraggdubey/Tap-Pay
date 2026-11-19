@@ -1,11 +1,18 @@
 /**
- * WalletSetupScreen — Minimalist High-End Wallet Onboarding
- * Strictly inspired by user reference Image 3 (Fuse Web3 onboarding style).
- * Features massive typography, pure obsidian canvas, freestanding logo,
- * solid white CTA pill, and clean unhighlighted backup verification.
+ * WalletSetupScreen — wallet onboarding secured by the phone's own authentication.
+ *
+ * Flow: create wallet (key stored in the Android Keystore behind fingerprint / face / screen lock)
+ *   -> write down 12-word recovery phrase -> verify 3 words -> optional @username -> enter app.
+ * Or restore from a recovery phrase (or, advanced, a raw private key).
+ *
+ * Rules enforced here and in services/wallet.ts:
+ *  - One wallet per device. Creating/restoring is refused while a wallet exists.
+ *  - No fallbacks: no screen lock / no secure hardware = clear error, no wallet.
+ *  - The recovery phrase is shown only after phone authentication, is never copyable and is
+ *    cleared from memory state once the backup is verified.
  */
 
-import React, {useState, useMemo} from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
   View,
   Text,
@@ -16,7 +23,6 @@ import {
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
-import Clipboard from '@react-native-clipboard/clipboard';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 
@@ -25,92 +31,200 @@ import {useTheme} from '../context/ThemeContext';
 import type {AppColors} from '../theme';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import {validateUsername} from '../utils/validation';
-import {resolveUsername, registerUsername, reverseResolveAddress} from '../services/registry';
+import {registerUsername} from '../services/registry';
+import {WalletError} from '../services/wallet';
+import {
+  RECOVERY_WORD_COUNT,
+  normalizeMnemonic,
+  pickVerificationIndices,
+  verifyRecoveryAnswers,
+} from '../utils/recovery';
 import {triggerHaptic} from '../utils/haptics';
 import BrandLogo from '../components/BrandLogo';
-import {register as meraRegister, login as meraLogin, getSessionPrivateKey} from '../services/mera/meraAuth';
-import {ethers} from 'ethers';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'WalletSetup'>;
 };
 
+type Step =
+  | 'welcome'
+  | 'locked'
+  | 'resume'
+  | 'phrase'
+  | 'verify'
+  | 'username'
+  | 'restore'
+  | 'import';
+
+function errorMessage(error: unknown): string {
+  if (error instanceof WalletError) {
+    return error.message;
+  }
+  return 'Something went wrong. Please try again.';
+}
+
 export default function WalletSetupScreen({navigation}: Props) {
   const insets = useSafeAreaInsets();
-  const {createWallet, importWallet, saveUsername} = useWallet();
+  const {
+    isInitialized,
+    backupVerified,
+    walletLocked,
+    createWallet,
+    restoreFromPhrase,
+    importPrivateKey,
+    markBackupVerified,
+    revealRecoveryPhrase,
+    unlockWallet,
+    resetWallet,
+    saveUsername,
+  } = useWallet();
   const {colors} = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const [step, setStep] = useState<'welcome' | 'import' | 'username' | 'backup'>('welcome');
+
+  const [step, setStep] = useState<Step>(() => {
+    if (walletLocked) {
+      return 'locked';
+    }
+    if (isInitialized && !backupVerified) {
+      return 'resume';
+    }
+    return 'welcome';
+  });
+  const [phrase, setPhrase] = useState('');
+  const [verifyIndices, setVerifyIndices] = useState<number[]>([]);
+  const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [verifyError, setVerifyError] = useState('');
+  const [restoreInput, setRestoreInput] = useState('');
   const [privateKeyInput, setPrivateKeyInput] = useState('');
-  const [newPrivateKey, setNewPrivateKey] = useState('');
-  const [newAddress, setNewAddress] = useState('');
   const [usernameInput, setUsernameInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [copiedKey, setCopiedKey] = useState(false);
-  const [copiedAddress, setCopiedAddress] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [resumeFailed, setResumeFailed] = useState(false);
 
-  // Step 1: Create New Wallet (via Passkey)
+  const words = useMemo(
+    () => (phrase ? normalizeMnemonic(phrase).split(' ') : []),
+    [phrase],
+  );
+
+  const enterApp = useCallback(() => {
+    triggerHaptic.notificationSuccess();
+    navigation.replace('MainTabs');
+  }, [navigation]);
+
+  // Resume an unfinished backup (app was closed after the wallet was created).
+  const loadPhraseForBackup = useCallback(async () => {
+    setResumeFailed(false);
+    const stored = await revealRecoveryPhrase('Confirm to back up your recovery phrase');
+    if (stored) {
+      setPhrase(stored);
+      setStep('phrase');
+    } else {
+      setResumeFailed(true);
+    }
+  }, [revealRecoveryPhrase]);
+
+  useEffect(() => {
+    if (step === 'resume') {
+      loadPhraseForBackup();
+    }
+  }, [step, loadPhraseForBackup]);
+
+  // After a successful unlock of an existing wallet, continue where the user left off.
+  useEffect(() => {
+    if (step === 'locked' && isInitialized && !walletLocked) {
+      if (backupVerified) {
+        enterApp();
+      } else {
+        setStep('resume');
+      }
+    }
+  }, [step, isInitialized, walletLocked, backupVerified, enterApp]);
+
+  // Never leave the phrase in memory state once it is no longer needed.
+  useEffect(() => {
+    if (step !== 'phrase' && step !== 'verify') {
+      setPhrase('');
+    }
+  }, [step]);
+
   const handleCreate = async () => {
+    if (loading) {
+      return;
+    }
     triggerHaptic.impactMedium();
     setLoading(true);
-
-    const result = await meraRegister('TapPay User');
-    if (result.address && !result.error) {
-      const pkBytes = getSessionPrivateKey();
-      if (pkBytes) {
-        const pkHex = ethers.hexlify(pkBytes);
-        const success = await importWallet(pkHex); // Save securely to device
-        if (success) {
-          setNewPrivateKey(pkHex);
-          setNewAddress(result.address);
-          setLoading(false);
-          setStep('username');
-          return;
-        }
-      }
+    try {
+      const created = await createWallet();
+      setPhrase(created.mnemonic);
+      setStep('phrase');
+    } catch (error) {
+      triggerHaptic.notificationError();
+      Alert.alert('Could not create wallet', errorMessage(error));
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
-    triggerHaptic.notificationError();
-    Alert.alert('Registration Failed', result.error || 'Could not create secure passkey wallet.');
   };
 
-  // Step 1 Alternate: Login (via Passkey)
-  const handleLogin = async () => {
+  const handleRestore = async () => {
+    if (loading || !restoreInput.trim()) {
+      return;
+    }
     triggerHaptic.impactMedium();
     setLoading(true);
-
-    const result = await meraLogin();
-    if (result.address && !result.error) {
-      const pkBytes = getSessionPrivateKey();
-      if (pkBytes) {
-        const pkHex = ethers.hexlify(pkBytes);
-        const success = await importWallet(pkHex);
-        if (success) {
-          // Try to recover existing username from Supabase
-          try {
-            const existingUsername = await reverseResolveAddress(result.address);
-            if (existingUsername) {
-              await saveUsername(existingUsername);
-            }
-          } catch {
-            // Ignore
-          }
-          setLoading(false);
-          triggerHaptic.notificationSuccess();
-          navigation.replace('MainTabs');
-          return;
-        }
-      }
+    try {
+      await restoreFromPhrase(restoreInput);
+      setRestoreInput('');
+      enterApp();
+    } catch (error) {
+      triggerHaptic.notificationError();
+      Alert.alert('Restore failed', errorMessage(error));
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
-    triggerHaptic.notificationError();
-    Alert.alert('Login Failed', result.error || 'Could not authenticate passkey.');
   };
 
-  // Step 2: Username Claim
+  const handleImportKey = async () => {
+    if (loading || !privateKeyInput.trim()) {
+      return;
+    }
+    triggerHaptic.impactMedium();
+    setLoading(true);
+    try {
+      await importPrivateKey(privateKeyInput);
+      setPrivateKeyInput('');
+      enterApp();
+    } catch (error) {
+      triggerHaptic.notificationError();
+      Alert.alert('Import failed', errorMessage(error));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePhraseWritten = () => {
+    triggerHaptic.selection();
+    setVerifyIndices(pickVerificationIndices(RECOVERY_WORD_COUNT));
+    setAnswers({});
+    setVerifyError('');
+    setStep('verify');
+  };
+
+  const handleVerify = async () => {
+    if (!verifyRecoveryAnswers(phrase, verifyIndices, answers)) {
+      triggerHaptic.notificationError();
+      setVerifyError('Those words do not match. Check your written phrase and try again.');
+      return;
+    }
+    try {
+      await markBackupVerified();
+      triggerHaptic.notificationSuccess();
+      setAnswers({});
+      setStep('username');
+    } catch {
+      Alert.alert('Error', 'Could not save your backup status. Please try again.');
+    }
+  };
+
   const handleClaimUsername = async () => {
     const trimmed = usernameInput.trim().toLowerCase();
     const validation = validateUsername(trimmed);
@@ -128,9 +242,7 @@ export default function WalletSetupScreen({navigation}: Props) {
       const result = await registerUsername(trimmed);
 
       if (result.error) {
-        setLoading(false);
         triggerHaptic.notificationError();
-        
         if (result.suggestions && result.suggestions.length > 0) {
           setSuggestions(result.suggestions);
           Alert.alert('Username Taken', `@${trimmed} is taken. Try one of the suggestions below.`);
@@ -140,107 +252,193 @@ export default function WalletSetupScreen({navigation}: Props) {
         return;
       }
 
-      // Always save username locally so it persists
       await saveUsername(trimmed);
-      setLoading(false);
-      triggerHaptic.notificationSuccess();
-      setStep('backup');
+      enterApp();
     } catch {
+      triggerHaptic.notificationError();
+      Alert.alert('Registration Failed', 'Could not register the username. Check your connection and try again.');
+    } finally {
       setLoading(false);
-      // Save username locally even if network failed
-      if (trimmed) {
-        await saveUsername(trimmed);
-      }
-      setStep('backup');
     }
   };
 
-  const handleSkipUsername = () => {
-    triggerHaptic.selection();
-    setStep('backup');
+  const handleResetExisting = () => {
+    triggerHaptic.notificationError();
+    Alert.alert(
+      'Reset wallet on this device?',
+      'This permanently removes the wallet from this phone. You can only get it back with your 12-word recovery phrase. Funds are lost if you do not have it.',
+      [
+        {text: 'Cancel', style: 'cancel'},
+        {
+          text: 'Reset wallet',
+          style: 'destructive',
+          onPress: async () => {
+            const done = await resetWallet();
+            if (done) {
+              setStep('welcome');
+            } else {
+              Alert.alert('Reset failed', 'Could not remove the wallet. Please try again.');
+            }
+          },
+        },
+      ],
+    );
   };
 
-  // Step 3: Copy Key & Finish Onboarding
-  const handleCopyKey = () => {
-    triggerHaptic.impactMedium();
-    Clipboard.setString(newPrivateKey);
-    setCopiedKey(true);
-    setTimeout(() => setCopiedKey(false), 2000);
-  };
+  // ── Wallet exists but could not be unlocked ──────────────────────────────
+  if (step === 'locked') {
+    return (
+      <View style={[styles.screenWrapper, {paddingTop: insets.top + 40, paddingBottom: insets.bottom + 20}]}>
+        <View style={styles.innerContent}>
+          <Text style={styles.stepIndicator}>WALLET LOCKED</Text>
+          <Text style={styles.viewTitle}>Unlock your wallet</Text>
+          <Text style={styles.viewSubtitle}>
+            A wallet is already set up on this phone, but it could not be unlocked. Confirm with your
+            fingerprint, face or screen lock. If your phone's biometrics changed, the key may be
+            permanently locked and you will need your recovery phrase.
+          </Text>
+        </View>
+        <View style={styles.bottomCtaSection}>
+          <TouchableOpacity
+            style={styles.primaryPillButton}
+            onPress={unlockWallet}
+            activeOpacity={0.85}>
+            <Text style={styles.primaryPillText}>Unlock</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.secondaryTextButton}
+            onPress={handleResetExisting}
+            activeOpacity={0.7}>
+            <Text style={styles.dangerText}>Reset wallet on this device</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
-  const handleCopyAddress = () => {
-    triggerHaptic.impactMedium();
-    Clipboard.setString(newAddress);
-    setCopiedAddress(true);
-    setTimeout(() => setCopiedAddress(false), 2000);
-  };
+  // ── Resume unfinished backup ─────────────────────────────────────────────
+  if (step === 'resume') {
+    return (
+      <View style={[styles.screenWrapper, {paddingTop: insets.top + 40, paddingBottom: insets.bottom + 20}]}>
+        <View style={styles.innerContent}>
+          <Text style={styles.stepIndicator}>FINISH SETUP</Text>
+          <Text style={styles.viewTitle}>Back up your wallet</Text>
+          <Text style={styles.viewSubtitle}>
+            You have not confirmed your recovery phrase yet. You must back it up before using TapPay.
+          </Text>
+          {!resumeFailed && <ActivityIndicator color={colors.accent} />}
+        </View>
+        {resumeFailed && (
+          <View style={styles.bottomCtaSection}>
+            <TouchableOpacity
+              style={styles.primaryPillButton}
+              onPress={loadPhraseForBackup}
+              activeOpacity={0.85}>
+              <Text style={styles.primaryPillText}>Authenticate and continue</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.secondaryTextButton}
+              onPress={handleResetExisting}
+              activeOpacity={0.7}>
+              <Text style={styles.dangerText}>Reset wallet on this device</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+    );
+  }
 
-  const handleFinishOnboarding = () => {
-    triggerHaptic.notificationSuccess();
-    navigation.replace('MainTabs');
-  };
-
-  // 1. Manual Import Key Screen
-  if (step === 'import') {
+  // ── Recovery phrase (shown once) ─────────────────────────────────────────
+  if (step === 'phrase') {
     return (
       <View style={[styles.screenWrapper, {paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20}]}>
         <ScrollView contentContainerStyle={styles.innerContent} showsVerticalScrollIndicator={false}>
-          <TouchableOpacity onPress={() => setStep('welcome')} style={styles.backButton} activeOpacity={0.7}>
-            <Text style={styles.backText}>← Back</Text>
-          </TouchableOpacity>
-          <Text style={styles.stepIndicator}>SECURE IMPORT</Text>
-          <Text style={styles.viewTitle}>Import Wallet</Text>
+          <Text style={styles.stepIndicator}>STEP 1 OF 2</Text>
+          <Text style={styles.viewTitle}>Your recovery phrase</Text>
           <Text style={styles.viewSubtitle}>
-            Paste your private key below to securely restore your existing account onto this device.
+            Write these 12 words on paper, in order. It is the only way to recover your wallet if you
+            lose or reset this phone. Never share it, never photograph it, never type it anywhere
+            except TapPay's restore screen.
           </Text>
 
-          <TextInput
-            style={styles.textInput}
-            placeholder="Enter Private Key (0x...)"
-            placeholderTextColor={colors.textSubtle}
-            value={privateKeyInput}
-            onChangeText={setPrivateKeyInput}
-            autoCapitalize="none"
-            autoCorrect={false}
-            secureTextEntry
-            underlineColorAndroid="transparent"
-          />
+          <View style={styles.wordGrid}>
+            {words.map((word, i) => (
+              <View key={`${i}-${word}`} style={styles.wordCell}>
+                <Text style={styles.wordIndex}>{i + 1}</Text>
+                <Text style={styles.wordText}>{word}</Text>
+              </View>
+            ))}
+          </View>
 
           <TouchableOpacity
             style={styles.primaryPillButton}
-            onPress={async () => {
-              if (!privateKeyInput) return;
-              triggerHaptic.impactMedium();
-              setLoading(true);
-              const success = await importWallet(privateKeyInput.trim());
-              setLoading(false);
-              if (success) {
-                triggerHaptic.notificationSuccess();
-                navigation.replace('MainTabs');
-              } else {
-                triggerHaptic.notificationError();
-                Alert.alert('Import Failed', 'Invalid private key. Please check your credentials and try again.');
-              }
-            }}
-            disabled={loading || !privateKeyInput}
+            onPress={handlePhraseWritten}
             activeOpacity={0.85}>
-            {loading ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.primaryPillText}>Import & Secure</Text>
-            )}
+            <Text style={styles.primaryPillText}>I have written it down</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
     );
   }
 
-  // 2. Username Claim Screen
+  // ── Verify 3 random words ────────────────────────────────────────────────
+  if (step === 'verify') {
+    return (
+      <View style={[styles.screenWrapper, {paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20}]}>
+        <ScrollView
+          contentContainerStyle={styles.innerContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}>
+          <TouchableOpacity onPress={() => setStep('phrase')} style={styles.backButton} activeOpacity={0.7}>
+            <Text style={styles.backText}>← Show phrase again</Text>
+          </TouchableOpacity>
+          <Text style={styles.stepIndicator}>STEP 1 OF 2</Text>
+          <Text style={styles.viewTitle}>Confirm your backup</Text>
+          <Text style={styles.viewSubtitle}>Enter the requested words from your written phrase.</Text>
+
+          {verifyIndices.map(index => (
+            <View key={index}>
+              <Text style={styles.wordPrompt}>Word #{index + 1}</Text>
+              <TextInput
+                style={styles.wordInput}
+                value={answers[index] ?? ''}
+                onChangeText={text => {
+                  setVerifyError('');
+                  setAnswers(prev => ({...prev, [index]: text}));
+                }}
+                autoCapitalize="none"
+                autoCorrect={false}
+                spellCheck={false}
+                keyboardType="visible-password"
+                importantForAutofill="no"
+                placeholderTextColor={colors.textSubtle}
+                placeholder={`word ${index + 1}`}
+                underlineColorAndroid="transparent"
+              />
+            </View>
+          ))}
+          {verifyError ? <Text style={styles.errorText}>{verifyError}</Text> : null}
+
+          <TouchableOpacity
+            style={styles.primaryPillButton}
+            onPress={handleVerify}
+            activeOpacity={0.85}>
+            <Text style={styles.primaryPillText}>Confirm</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
+    );
+  }
+
+  // ── Optional username ────────────────────────────────────────────────────
   if (step === 'username') {
     return (
       <View style={[styles.screenWrapper, {paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20}]}>
-        <ScrollView contentContainerStyle={styles.innerContent} showsVerticalScrollIndicator={false}>
-          <Text style={styles.stepIndicator}>STEP 1 OF 2</Text>
+        <ScrollView
+          contentContainerStyle={styles.innerContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}>
+          <Text style={styles.stepIndicator}>STEP 2 OF 2</Text>
           <Text style={styles.viewTitle}>Choose Username</Text>
           <Text style={styles.viewSubtitle}>
             Your unique Web3 handle on Monad. Friends can send funds directly to @username without messy hex addresses.
@@ -253,9 +451,11 @@ export default function WalletSetupScreen({navigation}: Props) {
               placeholder="alex"
               placeholderTextColor={colors.textSubtle}
               value={usernameInput}
-              onChangeText={(text) => {
+              onChangeText={text => {
                 setUsernameInput(text);
-                if (suggestions.length > 0) setSuggestions([]);
+                if (suggestions.length > 0) {
+                  setSuggestions([]);
+                }
               }}
               autoCapitalize="none"
               autoCorrect={false}
@@ -267,7 +467,7 @@ export default function WalletSetupScreen({navigation}: Props) {
             <View style={styles.suggestionsContainer}>
               <Text style={styles.suggestionsTitle}>Suggestions:</Text>
               <View style={styles.suggestionsList}>
-                {suggestions.map((suggestion) => (
+                {suggestions.map(suggestion => (
                   <TouchableOpacity
                     key={suggestion}
                     style={styles.suggestionChip}
@@ -293,7 +493,7 @@ export default function WalletSetupScreen({navigation}: Props) {
 
           <TouchableOpacity
             style={styles.secondaryTextButton}
-            onPress={handleSkipUsername}
+            onPress={enterApp}
             activeOpacity={0.7}>
             <Text style={styles.secondaryText}>Skip for now</Text>
           </TouchableOpacity>
@@ -302,71 +502,115 @@ export default function WalletSetupScreen({navigation}: Props) {
     );
   }
 
-  // 3. Private Key Backup Screen (Clean, unhighlighted, high-legibility)
-  if (step === 'backup') {
+  // ── Restore from recovery phrase ─────────────────────────────────────────
+  if (step === 'restore') {
     return (
       <View style={[styles.screenWrapper, {paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20}]}>
-        <ScrollView contentContainerStyle={styles.innerContent} showsVerticalScrollIndicator={false}>
-          <Text style={styles.stepIndicator}>STEP 2 OF 2</Text>
-          <Text style={styles.viewTitle}>Back Up Credentials</Text>
+        <ScrollView
+          contentContainerStyle={styles.innerContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}>
+          <TouchableOpacity onPress={() => setStep('welcome')} style={styles.backButton} activeOpacity={0.7}>
+            <Text style={styles.backText}>← Back</Text>
+          </TouchableOpacity>
+          <Text style={styles.stepIndicator}>RESTORE</Text>
+          <Text style={styles.viewTitle}>Recovery phrase</Text>
           <Text style={styles.viewSubtitle}>
-            Your keys are secured in Android Keystore. Save your credentials offline. If you lose access to this device, funds cannot be restored.
+            Enter your 12-word recovery phrase, separated by spaces. Your wallet key will be stored
+            securely on this phone and protected by your fingerprint, face or screen lock.
           </Text>
 
-          {newAddress ? (
-            <View style={styles.credentialCard}>
-              <View style={styles.credentialHeader}>
-                <Text style={styles.credentialLabel}>PUBLIC ADDRESS</Text>
-                <TouchableOpacity onPress={handleCopyAddress} activeOpacity={0.7}>
-                  <Text style={styles.copyActionText}>
-                    {copiedAddress ? 'COPIED' : 'COPY'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.credentialValueMono} selectable>
-                {newAddress}
-              </Text>
-            </View>
-          ) : null}
-
-          <View style={styles.credentialCard}>
-            <View style={styles.credentialHeader}>
-              <Text style={styles.credentialLabel}>PRIVATE KEY (NEVER SHARE)</Text>
-              <TouchableOpacity onPress={handleCopyKey} activeOpacity={0.7}>
-                <Text style={styles.copyActionText}>
-                  {copiedKey ? 'COPIED' : 'COPY'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.credentialValueMono} selectable>
-              {newPrivateKey}
-            </Text>
-          </View>
+          <TextInput
+            style={[styles.textInput, styles.phraseInput]}
+            placeholder="word1 word2 word3 ..."
+            placeholderTextColor={colors.textSubtle}
+            value={restoreInput}
+            onChangeText={setRestoreInput}
+            multiline
+            autoCapitalize="none"
+            autoCorrect={false}
+            spellCheck={false}
+            keyboardType="visible-password"
+            importantForAutofill="no"
+            underlineColorAndroid="transparent"
+          />
 
           <TouchableOpacity
             style={styles.primaryPillButton}
-            onPress={handleFinishOnboarding}
+            onPress={handleRestore}
+            disabled={loading || !restoreInput.trim()}
             activeOpacity={0.85}>
-            <Text style={styles.primaryPillText}>I've Saved It — Enter TapPay</Text>
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.primaryPillText}>Restore wallet</Text>
+            )}
           </TouchableOpacity>
         </ScrollView>
       </View>
     );
   }
 
-  // Step 0: Welcome Screen (Strictly matching Image 3 — Fuse style)
+  // ── Advanced: import a raw private key ───────────────────────────────────
+  if (step === 'import') {
+    return (
+      <View style={[styles.screenWrapper, {paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20}]}>
+        <ScrollView
+          contentContainerStyle={styles.innerContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}>
+          <TouchableOpacity onPress={() => setStep('welcome')} style={styles.backButton} activeOpacity={0.7}>
+            <Text style={styles.backText}>← Back</Text>
+          </TouchableOpacity>
+          <Text style={styles.stepIndicator}>ADVANCED</Text>
+          <Text style={styles.viewTitle}>Import private key</Text>
+          <Text style={styles.viewSubtitle}>
+            Paste a private key to use an existing account on this phone. A wallet imported this way
+            has no recovery phrase in TapPay, so keep your key safe elsewhere.
+          </Text>
+
+          <TextInput
+            style={styles.textInput}
+            placeholder="Private key (0x...)"
+            placeholderTextColor={colors.textSubtle}
+            value={privateKeyInput}
+            onChangeText={setPrivateKeyInput}
+            autoCapitalize="none"
+            autoCorrect={false}
+            spellCheck={false}
+            secureTextEntry
+            importantForAutofill="no"
+            underlineColorAndroid="transparent"
+          />
+
+          <TouchableOpacity
+            style={styles.primaryPillButton}
+            onPress={handleImportKey}
+            disabled={loading || !privateKeyInput.trim()}
+            activeOpacity={0.85}>
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.primaryPillText}>Import & Secure</Text>
+            )}
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
+    );
+  }
+
+  // ── Welcome ──────────────────────────────────────────────────────────────
   return (
     <View style={[styles.screenWrapper, {paddingTop: insets.top + 40, paddingBottom: insets.bottom + 20}]}>
       <View style={styles.welcomeHeroContainer}>
-        {/* Freestanding Unboxed Minimalist Brand Logo (Top Center) */}
         <BrandLogo size={56} color={colors.accent} style={{marginBottom: 30}} />
-
-        {/* Massive Fuse-style typography */}
         <Text style={styles.welcomeSubtitle}>Welcome to</Text>
         <Text style={styles.welcomeTitle}>TapPay</Text>
+        <Text style={styles.welcomeNote}>
+          Your wallet is protected by your phone's fingerprint, face or screen lock.
+        </Text>
       </View>
 
-      {/* Bottom Action Section */}
       <View style={styles.bottomCtaSection}>
         <TouchableOpacity
           style={styles.primaryPillButton}
@@ -374,18 +618,18 @@ export default function WalletSetupScreen({navigation}: Props) {
           disabled={loading}
           activeOpacity={0.85}>
           {loading ? (
-            <ActivityIndicator color={colors.accent} />
+            <ActivityIndicator color={colors.textOnAccent} />
           ) : (
-            <Text style={styles.primaryPillText}>Create Account (Passkey)</Text>
+            <Text style={styles.primaryPillText}>Create Wallet</Text>
           )}
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.secondaryPillButton}
-          onPress={handleLogin}
+          onPress={() => setStep('restore')}
           disabled={loading}
           activeOpacity={0.85}>
-          <Text style={styles.secondaryPillText}>Log In (Passkey)</Text>
+          <Text style={styles.secondaryPillText}>Restore with Recovery Phrase</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -393,7 +637,7 @@ export default function WalletSetupScreen({navigation}: Props) {
           onPress={() => setStep('import')}
           disabled={loading}
           activeOpacity={0.7}>
-          <Text style={styles.secondaryText}>Restore with Private Key</Text>
+          <Text style={styles.secondaryText}>Import private key (advanced)</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -600,6 +844,74 @@ function createStyles(colors: AppColors) {
     color: colors.text,
     fontSize: 14,
     fontWeight: '600',
+  },
+  welcomeNote: {
+    marginTop: 18,
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.textMuted,
+    textAlign: 'center',
+    paddingHorizontal: 24,
+  },
+  dangerText: {
+    color: colors.danger,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  phraseInput: {
+    minHeight: 120,
+    textAlignVertical: 'top',
+  },
+  wordGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 22,
+  },
+  wordCell: {
+    width: '48%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surfaceSolid,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.borderSubtle,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 10,
+  },
+  wordIndex: {
+    width: 24,
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  wordText: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  wordPrompt: {
+    color: colors.textMuted,
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  wordInput: {
+    backgroundColor: colors.surfaceSolid,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.borderSubtle,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    color: colors.text,
+    fontSize: 16,
+    marginBottom: 16,
+  },
+  errorText: {
+    color: colors.danger,
+    fontSize: 13,
+    marginBottom: 14,
   },
   });
 }

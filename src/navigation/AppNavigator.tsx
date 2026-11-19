@@ -179,7 +179,7 @@ function MainTabs() {
 }
 
 export default function AppNavigator() {
-  const {isInitialized, isLoading} = useWallet();
+  const {isInitialized, backupVerified, isLoading} = useWallet();
   const {colors, glass, isDark} = useTheme();
 
   const navTheme = useMemo(
@@ -204,7 +204,8 @@ export default function AppNavigator() {
   return (
     <NavigationContainer theme={navTheme}>
       <Stack.Navigator
-        initialRouteName={isInitialized ? 'MainTabs' : 'WalletSetup'}
+        // A wallet whose recovery phrase is not yet backed up must finish onboarding first.
+        initialRouteName={isInitialized && backupVerified ? 'MainTabs' : 'WalletSetup'}
         screenOptions={{
           headerStyle: {backgroundColor: colors.background},
           headerTintColor: colors.accent,

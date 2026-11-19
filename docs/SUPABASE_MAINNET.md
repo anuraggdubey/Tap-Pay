@@ -89,16 +89,16 @@ alter table public.usernames validate constraint usernames_normalized_consistenc
 1. Create a Cloudflare Turnstile site with the actual frontend hostnames allowed.
    The widget uses action `waitlist-signup`; the server verifies both that action
    and the hostname against the allowed request origin.
-2. Link the Supabase CLI to the correct project. Set secrets locally (never commit
-   the values or put the service-role key in Vite variables):
+2. Securely export the deployment variables listed under **Staged rollout helper**
+   below (never put the service-role key in Vite variables), then run:
 
    ```sh
-   supabase secrets set ALLOWED_ORIGINS=https://your-site.example TURNSTILE_SECRET_KEY=<secret> WAITLIST_IP_SALT=<random-at-least-32-characters> WAITLIST_RATE_LIMIT=5
-   supabase functions deploy waitlist-signup
+   bash scripts/supabase-rollout.sh --deploy
    ```
 
-   Replace the angle-bracket placeholders before running the command. Generate
-   the salt with a cryptographically secure generator, e.g. `openssl rand -hex 32`.
+   The helper selects `SUPABASE_PROJECT_REF` explicitly and streams secrets to
+   CLI stdin rather than exposing them as arguments. Generate the salt with a
+   cryptographically secure generator, e.g. `openssl rand -hex 32`.
    `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are provided by hosted Supabase.
    For local function serving, supply these in an ignored local env file too.
    Keep the gateway JWT check enabled; the browser invokes with the public anon key.
@@ -129,19 +129,87 @@ Duplicates and successful inserts return the same response; no confirmation emai
 is sent. Rate-limit state needs periodic administrator cleanup, for example:
 
 ```sql
-delete from public.waitlist_rate_limits
-where window_start < now() - interval '1 day';
+select public.purge_waitlist_rate_limits(); -- after applying migration 003
 ```
 
-Schedule cleanup with the project's existing job runner; this patch does not
-assume `pg_cron` is installed. Check existing policies/grants in production too:
-the migrations only replace the known policy names and revoke public insert grants.
+Migration **003_waitlist_rate_limit_cleanup.sql** provides
+`public.purge_waitlist_rate_limits()`, executable only by `service_role` (and
+administrators). It deletes windows older than the current fixed 10-minute window,
+retaining current/future windows. With `pg_cron` available/configured, it upserts
+the named job `waitlist-rate-limit-cleanup` at minute 7 of every hour. Re-run as
+the same database administrator to update that job without duplicates. Without
+usable `pg_cron`, the migration succeeds with a NOTICE: enable/configure the
+extension and re-run 003, or invoke the purge hourly from a trusted job runner.
+Check `cron.job` and `cron.job_run_details` privately to confirm actual execution.
+Check existing policies/grants in production too: the migrations only replace the
+known policy names and revoke public insert grants.
+
+### Staged rollout helper (issue #26)
+
+Run `bash scripts/supabase-rollout.sh --dry-run` to preview without credentials or
+network access. No flags selects audit → apply 002/003 → validate → deploy → smoke.
+Choose steps explicitly to pause for manual cleanup, for example:
+
+```sh
+bash scripts/supabase-rollout.sh --audit
+# Investigate/clean up legacy rows privately; the script never rewrites them.
+bash scripts/supabase-rollout.sh --apply --validate
+bash scripts/supabase-rollout.sh --deploy --smoke
+```
+
+Both tables must already exist (fresh setup: `waitlist.sql`, then 001). The script
+prints only violation counts for all five 002 checks. Validation recounts each
+check, validates only zero-violation constraints and reports the rest as
+`NOT VALIDATED`; nonzero counts do not block installing new-write protection.
+Re-run `--audit --validate` after maintainer-approved cleanup. A concurrent bad
+legacy write can make validation fail; `ON_ERROR_STOP` stops the script safely.
+
+Preflight tools: Bash, `psql` for database steps; Supabase CLI for deploy; `curl`,
+`jq` and `awk` for smoke. Supply credentials using the maintainer's secure shell/
+secret manager, not command-line assignments, shell history, or committed files:
+
+- Database steps: exported `PGHOST`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`, plus
+  optional `PGPORT`/`PGSSLMODE`/CA settings. Use the database administrator and
+  verified TLS for hosted connections; local test databases can disable TLS.
+- Deploy: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`, `ALLOWED_ORIGINS`
+  (comma-separated origins without spaces), `TURNSTILE_SECRET_KEY`,
+  `WAITLIST_IP_SALT` (32+ hex/base64 characters), optional `WAITLIST_RATE_LIMIT`
+  (1–1000, default 5).
+- Smoke: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `ALLOWED_ORIGINS`. It uses the first
+  allowed origin. Keep the gateway JWT check enabled and use the project's legacy
+  anon JWT key for these authenticated Edge Function requests.
+
+Confirm the database host, project ref and API URL all refer to the intended
+project. Secrets are streamed to CLI stdin; API keys go through curl's stdin config,
+not arguments or temporary files. Tracing is disabled. Do not wrap the script with
+credential-logging tools. Smoke checks require REST SQLSTATE `42501`, CORS HTTP
+204, and the exact generic HTTP 400 missing-token error; gateway/config/network
+failures are not mistaken for a passing smoke test. If direct insertion unexpectedly
+succeeds, the script stops; privately remove the `rollout-smoke@example.invalid`
+sentinel row after fixing privileges. Live deployment and a real Turnstile signup
+still require the maintainer's accounts.
+
+Finish the Turnstile site, Vercel env/redeploy and coordinated key rotation above.
+For the client-IP debug check, use a private staging deployment and two controlled
+networks: temporarily instrument only header-presence and comparison booleans
+against the tester's known public IP (never raw headers/IPs/tokens). Confirm
+`CF-Connecting-IP` or the leftmost `X-Forwarded-For` matches that client and that
+different clients get different rate-limit buckets. Check that spoofed headers
+are overwritten. Remove instrumentation and redeploy before accepting signups.
+Do not add a public header-echo endpoint. Turnstile remains the primary control.
 
 ### Local verification
 
 Use an isolated Postgres 16 database, never production, for
 `supabase/tests/anon_write_hardening.sql` (run as a superuser; it creates stub roles).
 It exercises fresh setup, migration reruns, legacy rows, constraints and privileges.
+`supabase/tests/rate_limit_cleanup.sql` also runs that suite, applies 003 twice,
+checks expired/current/future and empty purges, denies both public roles, and
+asserts one named job when `pg_cron` is installed. Run it as a database administrator
+on disposable Postgres 16, with and without configured `pg_cron`.
+For the rollout helper, run `shellcheck scripts/supabase-rollout.sh` and
+`node --test supabase/tests/rollout_smoke.mjs` (requires the smoke tools above).
+The latter uses only a loopback HTTP stub, never live Supabase credentials.
 For the Edge Function, no downloaded test dependencies are needed:
 
 ```sh

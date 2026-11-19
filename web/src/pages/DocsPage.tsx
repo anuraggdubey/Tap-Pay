@@ -59,7 +59,7 @@ export default function DocsPage() {
           <h1>Everything you need to use TapPay</h1>
           <p className="docs-hero-lede">
             TapPay is a non-custodial multi-chain Android wallet (Monad, Stellar, Solana, Base and more). Send money with a physical NFC tap, search{' '}
-            <span className="docs-code">@username</span>, or pay a wallet address directly — with passkey onboarding,
+            <span className="docs-code">@username</span>, or pay a wallet address directly — secured by your phone's fingerprint, face or screen lock,
             on-device signing, and fast settlement across supported chains.
           </p>
           <div className="docs-hero-cta-row">
@@ -97,9 +97,8 @@ export default function DocsPage() {
               <h2>Overview</h2>
               <p>
                 TapPay combines contactless NFC with human-readable payments on{' '}
-                <strong style={{ color: 'var(--text-dark)' }}>multiple chains — Monad, Stellar, Solana, Base and more</strong>. You never paste seed
-                phrases in normal use — accounts are created with passkeys (Face ID / fingerprint via Mera), and private
-                keys stay in Android secure storage.
+                <strong style={{ color: 'var(--text-dark)' }}>multiple chains — Monad, Stellar, Solana, Base and more</strong>. Your wallet key is created on your phone, stays in Android secure
+                storage, and every payment needs your fingerprint, face or screen lock. You back up a 12-word recovery phrase once.
               </p>
               <DocsDemoVideo />
               <div className="docs-table-wrap">
@@ -147,7 +146,7 @@ export default function DocsPage() {
               <div className="docs-card">
                 <h3 style={{ marginTop: 0 }}>Account setup</h3>
                 <ul>
-                  <li>Create a wallet with <strong>passkey / biometric</strong> onboarding (no seed phrase required for daily use).</li>
+                  <li>Create a wallet on your phone, protected by your <strong>fingerprint, face or screen lock</strong>, and write down your 12-word recovery phrase.</li>
                   <li>Optionally <strong>claim a username</strong> (e.g. <span className="docs-code">@anurag</span>) linked to your wallet across chains.</li>
                   <li>Keep a small balance of <strong>MON</strong> for gas and/or supported stablecoins (AUSD, USDC, USDT) for sends.</li>
                   <li>Grant <strong>NFC</strong> and notification permissions when prompted.</li>
@@ -273,7 +272,7 @@ export default function DocsPage() {
               <ul>
                 <li><strong>Non-custodial</strong> — TapPay never holds your funds; smart contracts forward payments atomically.</li>
                 <li><strong>Keys on device</strong> — private material is stored with Android Keystore / Keychain wrappers, not plaintext.</li>
-                <li><strong>Passkeys (Mera)</strong> — unlock and sign with biometrics; no seed phrase in the default onboarding path.</li>
+                <li><strong>Phone authentication</strong> — every payment requires your fingerprint, face or screen lock; one wallet per device, with a recovery phrase backup.</li>
                 <li><strong>Session IDs</strong> — NFC payments use session hashing on <span className="docs-code">TapPayLedger</span> to reduce replay risk.</li>
                 <li><strong>Verify before accept</strong> — on receive-tap, always confirm amount and sender on screen before accepting.</li>
               </ul>

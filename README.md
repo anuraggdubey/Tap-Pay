@@ -66,7 +66,7 @@ Cross-border payments are **slow**, **expensive**, and **complex**. Traditional 
 | **👤 Username Pay** | Search `@username`, enter an amount on a Cash App–style keypad, confirm, and send — no wallet addresses needed. |
 
 **Key differentiators:**
-- 🔐 **No seed phrases** — Passkey onboarding via Mera (Face ID / Fingerprint)
+- 🔐 **Phone-secured wallet** — Your key lives in the Android Keystore and every payment needs your phone's fingerprint, face or screen lock. One wallet per device, 12-word recovery phrase backup.
 - 🏦 **Non-custodial** — Keys stay on-device (Android Keystore via `react-native-keychain`)
 - 🌍 **Cross-border** — Send AUSD, USDC, USDT stablecoins to anyone with a `@username`
 - ⚡ **Instant** — fast-finality chains mean payment confirms before the UI animation ends
@@ -144,8 +144,7 @@ graph TB
 
     subgraph "Application Layer"
         D["React Native App"]
-        D -->|Passkey Auth| E["Mera SDK"]
-        D -->|Key Storage| F["Android Keystore"]
+        D -->|Key Storage + Phone Auth| F["Android Keystore"]
         D -->|NFC Read/Write| G["react-native-hce\nreact-native-nfc-manager"]
         D -->|Sign & Broadcast| H["ethers.js v6"]
     end
@@ -234,7 +233,7 @@ graph TB
 | **NFC / HCE** | `react-native-hce`, Android `HostApduService` |
 | **NFC Reader** | `react-native-nfc-manager` |
 | **Wallet** | `ethers.js` v6 + Android Keystore (`react-native-keychain`) |
-| **Passkeys** | `@category-labs/mera` + `react-native-passkey` |
+| **Wallet security** | Android Keystore (secure hardware) + phone biometrics / screen lock, BIP-39 recovery phrase |
 | **Blockchain** | Multi-chain — EVM mainnet (Chain ID `143`) live; Stellar, Solana, Base and more |
 | **Smart Contracts** | Solidity (Hardhat), OpenZeppelin |
 | **Identity** | Supabase `@username` → address resolution |
@@ -301,7 +300,6 @@ TapPay/
 │   │   ├── registry.ts             # Username resolution
 │   │   ├── multiTokenLedger.ts     # Multi-token payment routing
 │   │   ├── crossBorder/            # Cross-border payment logic
-│   │   ├── mera/                   # Passkey (Mera) integration
 │   │   └── tokens/                 # Token config & balances
 │   ├── screens/                    # 13 screens (Home, Send, Receive, History…)
 │   ├── components/                 # UI (radar, waiting card, modals…)

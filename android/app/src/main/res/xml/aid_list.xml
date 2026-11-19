@@ -1,10 +1,12 @@
 <host-apdu-service xmlns:android="http://schemas.android.com/apk/res/android"
                    android:description="@string/app_name"
-                   android:requireDeviceUnlock="false">
+                   android:requireDeviceUnlock="true">
   <aid-group android:category="other"
              android:description="@string/app_name"
              android:priority="1000">
-    <!-- NFC Type 4 Tag Emulation AID (NFC Forum NDEF Tag Application) -->
+    <!-- NFC Type 4 Tag Emulation AID (NFC Forum NDEF Tag Application).
+         Required: the sender reads the receiver address as a standard NDEF Type 4 tag, and
+         react-native-hce emulates exactly this AID. The phone must be unlocked to respond. -->
     <aid-filter android:name="D2760000850101" />
   </aid-group>
 </host-apdu-service>

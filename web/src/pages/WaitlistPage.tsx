@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, Loader2 } from 'lucide-react';
 import { joinWaitlist } from '../services/waitlist';
 import { PlayBentoGrid } from '../components/PlayBentoGrid';
+import { Turnstile } from '../components/Turnstile';
 import { runWaitlistPageMotion } from '../motion/initScrollAnimations';
 import '../styles/waitlist.css';
 
@@ -21,6 +22,9 @@ export default function WaitlistPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+  const [token, setToken] = useState('');
+  const [captchaVersion, setCaptchaVersion] = useState(0);
+  const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY || '';
 
   useEffect(() => runWaitlistPageMotion(), []);
 
@@ -28,13 +32,20 @@ export default function WaitlistPage() {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    const result = await joinWaitlist(name, email);
-    setLoading(false);
-    if (result.ok) {
-      setDone(true);
-      return;
+    try {
+      const result = await joinWaitlist(name, email, token);
+      if (result.ok) {
+        setDone(true);
+      } else {
+        setError(result.message);
+      }
+    } catch {
+      setError('Unable to join the waitlist. Please try again later.');
+    } finally {
+      setLoading(false);
+      setToken('');
+      setCaptchaVersion(version => version + 1);
     }
-    setError(result.message);
   };
 
   return (
@@ -107,6 +118,7 @@ export default function WaitlistPage() {
                       onChange={(e) => setName(e.target.value)}
                       required
                       minLength={2}
+                      maxLength={100}
                       disabled={loading}
                     />
                   </div>
@@ -116,6 +128,7 @@ export default function WaitlistPage() {
                       id="waitlist-email"
                       name="email"
                       type="email"
+                      maxLength={254}
                       autoComplete="email"
                       placeholder="you@email.com"
                       value={email}
@@ -124,8 +137,13 @@ export default function WaitlistPage() {
                       disabled={loading}
                     />
                   </div>
+                  {siteKey ? (
+                    <Turnstile key={captchaVersion} siteKey={siteKey} onToken={setToken} />
+                  ) : (
+                    <p role="alert">Waitlist signup is currently unavailable.</p>
+                  )}
                   {error && <p className="waitlist-error" role="alert">{error}</p>}
-                  <button type="submit" className="waitlist-submit" disabled={loading}>
+                  <button type="submit" className="waitlist-submit" disabled={loading || !token || !siteKey}>
                     {loading ? (
                       <>
                         <Loader2 size={18} className="spin" />

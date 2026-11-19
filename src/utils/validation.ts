@@ -10,8 +10,9 @@ export function validateAmount(amount: string): {valid: boolean; error?: string}
     return {valid: false, error: 'Amount is required'};
   }
 
-  // Allow only digits and one decimal point
-  if (!/^\d+\.?\d*$/.test(amount)) {
+  // Require digits, optionally followed by a single decimal group.
+  // Rejects '1.', '.5' and '1.2.3' which parseFloat would silently accept.
+  if (!/^\d+(\.\d+)?$/.test(amount)) {
     return {valid: false, error: 'Invalid amount format'};
   }
 

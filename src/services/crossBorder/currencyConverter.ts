@@ -214,8 +214,14 @@ export function getConversionSummary(
     return `${amount} ${tokenSymbol}`;
   }
 
-  return `${amount} ${tokenSymbol} ≈ ${formatLocalAmount(result)}`;
+  // These are static fallback rates, not a live quote. Label them so users don't read them as exact.
+  const suffix = result.isLiveRate ? '' : ' (indicative)';
+  return `${amount} ${tokenSymbol} ≈ ${formatLocalAmount(result)}${suffix}`;
 }
+
+/** Shown near converted amounts so an indicative rate is never mistaken for a guaranteed quote. */
+export const FX_RATE_DISCLAIMER =
+  'Local-currency amounts use indicative rates and may differ from the amount received.';
 
 // ─── Currency Selection ──────────────────────────────────────────
 

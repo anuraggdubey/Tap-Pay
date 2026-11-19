@@ -1,15 +1,18 @@
 /**
- * Registry Service — Supabase Architecture
+ * Registry Service — Supabase is the single source of truth for usernames.
  *
- * Handles username registration, resolution, and reverse lookup
- * securely over Supabase.
+ * Usernames live in the Supabase `usernames` table (one row per wallet, mainnet chain 143).
+ * Registration and release require a wallet signature verified by the register-username Edge
+ * Function; resolution and reverse-resolution are public reads normalized the same way as
+ * registration. The on-chain UsernameRegistry contract exists but is intentionally NOT used by
+ * the app — do not add a second, divergent lookup path.
  */
 
 import {ethers} from 'ethers';
 import {loadPrivateKey} from './wallet';
 import {supabase} from '../config/supabase';
 import {MONAD_CONFIG} from '../config/monad';
-import {buildUsernameAuthMessage, UsernameAction} from './usernameAuth';
+import {buildUsernameAuthMessage, normalizeUsername, UsernameAction} from './usernameAuth';
 
 const ACTIVE_CHAIN_ID = MONAD_CONFIG.chainId;
 
@@ -132,7 +135,7 @@ export async function resolveUsername(username: string): Promise<string | null> 
     const { data } = await supabase
       .from('usernames')
       .select('wallet_address')
-      .eq('username', username)
+      .eq('normalized_username', normalizeUsername(username))
       .eq('chain_id', ACTIVE_CHAIN_ID)
       .maybeSingle();
     

@@ -62,6 +62,10 @@ describe('Validation Utils', () => {
     expect(validateAmount('0').valid).toBe(false);
     expect(validateAmount('-1').valid).toBe(false);
     expect(validateAmount('abc').valid).toBe(false);
+    // Malformed decimals parseFloat would otherwise accept.
+    expect(validateAmount('1.').valid).toBe(false);
+    expect(validateAmount('.5').valid).toBe(false);
+    expect(validateAmount('1.2.3').valid).toBe(false);
   });
 
   test('validates usernames', () => {

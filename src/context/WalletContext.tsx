@@ -70,24 +70,25 @@ export function WalletProvider({children}: {children: ReactNode}) {
   const [backupVerified, setBackupVerified] = useState(false);
   const [walletLocked, setWalletLocked] = useState(false);
 
-  // Load stored username from AsyncStorage
+  // Load the username: show the local cache instantly, then reconcile with the server so a
+  // stale or imported-from-another-wallet cache never keeps showing the wrong name.
   const loadStoredUsername = useCallback(async (addr: string | null) => {
     try {
-      // First try local storage
       const storedUsername = await AsyncStorage.getItem(USERNAME_STORAGE_KEY);
       if (storedUsername) {
         setUsername(storedUsername);
-        return;
       }
 
-      // Fallback: reverse-resolve @username from Supabase (mainnet registry)
       if (addr) {
-        const onChainUsername = await reverseResolve(addr);
-        if (onChainUsername) {
-          setUsername(onChainUsername);
-          // Cache it locally for next time
-          await AsyncStorage.setItem(USERNAME_STORAGE_KEY, onChainUsername);
+        const serverUsername = await reverseResolve(addr);
+        if (serverUsername) {
+          if (serverUsername !== storedUsername) {
+            setUsername(serverUsername);
+            await AsyncStorage.setItem(USERNAME_STORAGE_KEY, serverUsername);
+          }
         }
+        // If the server returns null we keep the local value: it may just be offline, and a
+        // released username clears the cache through resetWallet / release flows instead.
       }
     } catch {
       // Silently fail — username display is non-critical

@@ -113,14 +113,18 @@ export default function SettingsScreen({navigation}: Props) {
     triggerHaptic.notificationError();
     Alert.alert(
       'Reset Wallet',
-      'This will remove your wallet credentials and username from this device. Ensure you have backed up your private key.',
+      'This permanently removes your wallet and username from this phone. You can only restore the wallet with your 12-word recovery phrase. If you do not have it, your funds will be lost forever.',
       [
         {text: 'Cancel', style: 'cancel'},
         {
           text: 'Reset Wallet',
           style: 'destructive',
           onPress: async () => {
-            await resetWallet();
+            const done = await resetWallet();
+            if (!done) {
+              Alert.alert('Reset failed', 'Could not remove the wallet from this phone. Please try again.');
+              return;
+            }
             navigation.reset({
               index: 0,
               routes: [{name: 'WalletSetup'}],

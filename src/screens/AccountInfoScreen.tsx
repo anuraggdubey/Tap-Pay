@@ -1,5 +1,5 @@
 /**
- * AccountInfoScreen — Username (with claim), wallet address, biometric-locked secret key
+ * AccountInfoScreen — Username (with claim), wallet address, recovery phrase (phone-authentication protected, view-only)
  */
 
 import React, {useState, useEffect, useRef, useMemo} from 'react';
@@ -13,6 +13,7 @@ import {
   Alert,
   Animated,
   ActivityIndicator,
+  AppState,
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
@@ -30,13 +31,12 @@ type Props = {
 };
 
 export default function AccountInfoScreen({navigation}: Props) {
-  const {address, username, getPrivateKey, saveUsername} = useWallet();
+  const {address, username, revealRecoveryPhrase, saveUsername} = useWallet();
   const {colors} = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [showSecretKey, setShowSecretKey] = useState(false);
-  const [exportedKey, setExportedKey] = useState<string | null>(null);
+  const [revealedPhrase, setRevealedPhrase] = useState<string | null>(null);
   const [copiedAddr, setCopiedAddr] = useState(false);
-  const [copiedKey, setCopiedKey] = useState(false);
   const autoHideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -63,6 +63,17 @@ export default function AccountInfoScreen({navigation}: Props) {
     };
   }, [showSecretKey]);
 
+  // Never leave the phrase on screen when the app is backgrounded.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', state => {
+      if (state !== 'active') {
+        setShowSecretKey(false);
+        setRevealedPhrase(null);
+      }
+    });
+    return () => sub.remove();
+  }, []);
+
   const hideSecretKey = () => {
     Animated.timing(fadeAnim, {
       toValue: 0,
@@ -70,7 +81,7 @@ export default function AccountInfoScreen({navigation}: Props) {
       useNativeDriver: true,
     }).start(() => {
       setShowSecretKey(false);
-      setExportedKey(null);
+      setRevealedPhrase(null);
     });
   };
 
@@ -82,16 +93,6 @@ export default function AccountInfoScreen({navigation}: Props) {
     Clipboard.setString(address);
     setCopiedAddr(true);
     setTimeout(() => setCopiedAddr(false), 2000);
-  };
-
-  const copySecretKey = () => {
-    if (!exportedKey) {
-      return;
-    }
-    triggerHaptic.impactMedium();
-    Clipboard.setString(exportedKey);
-    setCopiedKey(true);
-    setTimeout(() => setCopiedKey(false), 2000);
   };
 
   // Claim username flow
@@ -145,8 +146,8 @@ export default function AccountInfoScreen({navigation}: Props) {
     }
 
     Alert.alert(
-      'Reveal Secret Key',
-      'Your secret key grants full control over your wallet. Never share it.',
+      'Reveal Recovery Phrase',
+      'Your recovery phrase gives full control of your wallet. Make sure nobody is watching and never share it.',
       [
         {text: 'Cancel', style: 'cancel'},
         {
@@ -155,17 +156,20 @@ export default function AccountInfoScreen({navigation}: Props) {
           onPress: async () => {
             try {
               triggerHaptic.impactMedium();
-              const key = await getPrivateKey('Authenticate to Reveal Secret Key');
-              if (key) {
-                setExportedKey(key);
+              const phrase = await revealRecoveryPhrase('Authenticate to reveal recovery phrase');
+              if (phrase) {
+                setRevealedPhrase(phrase);
                 setShowSecretKey(true);
               } else {
                 triggerHaptic.notificationError();
-                Alert.alert('Authentication Failed', 'Biometric verification required.');
+                Alert.alert(
+                  'Not available',
+                  'Authentication was cancelled or failed, or this wallet was imported from a private key and has no recovery phrase.',
+                );
               }
-            } catch (err: any) {
+            } catch {
               triggerHaptic.notificationError();
-              Alert.alert('Error', err?.message || 'Could not retrieve secret key.');
+              Alert.alert('Error', 'Could not retrieve the recovery phrase.');
             }
           },
         },
@@ -260,19 +264,19 @@ export default function AccountInfoScreen({navigation}: Props) {
         </TouchableOpacity>
       </View>
 
-      {/* Secret Key */}
-      <Text style={styles.sectionHeader}>SECRET KEY</Text>
+      {/* Recovery phrase */}
+      <Text style={styles.sectionHeader}>RECOVERY PHRASE</Text>
       <View style={[styles.card, styles.secretKeyCard]}>
         <View style={styles.secretKeyHeader}>
           <View style={styles.lockIconBox}>
             <KeyIcon size={16} color={colors.danger} />
           </View>
           <View style={styles.secretKeyMeta}>
-            <Text style={styles.secretKeyTitle}>Private Key</Text>
+            <Text style={styles.secretKeyTitle}>12-word recovery phrase</Text>
             <Text style={styles.secretKeySubtitle}>
               {showSecretKey
-                ? 'Key visible — auto-hides in 30s'
-                : 'Protected by biometric authentication'}
+                ? 'Phrase visible — auto-hides in 30s'
+                : 'Protected by your phone fingerprint, face or screen lock'}
             </Text>
           </View>
         </View>
@@ -282,27 +286,19 @@ export default function AccountInfoScreen({navigation}: Props) {
           onPress={handleUnlockSecretKey}
           activeOpacity={0.7}>
           <Text style={[styles.unlockButtonText, showSecretKey && styles.unlockButtonTextActive]}>
-            {showSecretKey ? 'Lock Secret Key' : 'Unlock Secret Key'}
+            {showSecretKey ? 'Hide Recovery Phrase' : 'Show Recovery Phrase'}
           </Text>
         </TouchableOpacity>
 
-        {showSecretKey && exportedKey && (
+        {showSecretKey && revealedPhrase && (
           <Animated.View style={[styles.revealedKeyBox, {opacity: fadeAnim}]}>
             <View style={styles.warningBanner}>
               <Text style={styles.warningBannerText}>
-                NEVER share your secret key. Anyone with this key has full
-                control over your funds.
+                NEVER share your recovery phrase. Anyone with these words has
+                full control over your funds. There is no copy button on purpose.
               </Text>
             </View>
-            <Text selectable style={styles.secretKeyMono}>{exportedKey}</Text>
-            <TouchableOpacity
-              style={styles.copyKeyButton}
-              onPress={copySecretKey}
-              activeOpacity={0.7}>
-              <Text style={styles.copyKeyButtonText}>
-                {copiedKey ? 'Copied' : 'Copy Secret Key'}
-              </Text>
-            </TouchableOpacity>
+            <Text style={styles.secretKeyMono}>{revealedPhrase}</Text>
           </Animated.View>
         )}
       </View>
@@ -578,19 +574,6 @@ function createStyles(colors: AppColors) {
       borderColor: 'rgba(255, 59, 48, 0.2)',
       marginBottom: 10,
       overflow: 'hidden',
-    },
-    copyKeyButton: {
-      backgroundColor: 'rgba(255, 59, 48, 0.1)',
-      borderColor: 'rgba(255, 59, 48, 0.25)',
-      borderWidth: 1,
-      paddingVertical: 10,
-      borderRadius: 12,
-      alignItems: 'center',
-    },
-    copyKeyButtonText: {
-      color: colors.danger,
-      fontWeight: '700',
-      fontSize: 13,
     },
   });
 }

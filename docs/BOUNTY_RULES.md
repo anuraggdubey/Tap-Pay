@@ -140,8 +140,7 @@ src/services/agora/             # Agora AUSD specific code
 
 # New: Smart Contracts for Bounty
 contracts/AgoraBounty/          # New contracts (don't modify old ones)
-  ├── MultiTokenLedger.sol      # Payment ledger supporting ERC-20 tokens
-  └── interfaces/IERC20.sol     # ERC-20 interface
+  └── MultiTokenLedger.sol      # Payment ledger using OpenZeppelin IERC20 and SafeERC20
 
 # New: Config Extensions
 src/config/tokens.ts            # Token list & addresses

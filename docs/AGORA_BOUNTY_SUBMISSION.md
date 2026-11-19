@@ -16,6 +16,18 @@ TapPay bridges this gap on the Monad Testnet. We built a React Native wallet tha
 3. **Instant Settlement:** Leveraging Monad's high throughput and ~1s finality, payments are settled before the UI animation even finishes.
 4. **Multi-Token Ledger:** A newly deployed, non-custodial smart contract (`MultiTokenLedger`) that safely routes ERC-20 token transfers and native MON.
 
+### MultiTokenLedger ERC-20 compatibility update (issue #12)
+
+ERC-20 payments always require an owner-whitelisted token; whitelist enforcement cannot be
+disabled. Transfers use OpenZeppelin SafeERC20 to support tokens that return no value and reject
+tokens that return false. `PaymentLogged.amount` is the recipient's actual balance increase,
+net of any transfer fee, rather than the requested amount. A zero balance increase reverts
+with `ZeroReceivedAmount`, rolling back the transfer and session marker.
+
+This change requires redeploying MultiTokenLedger. The maintainer must whitelist the supported
+tokens on the new deployment and update `multiTokenLedger` in `src/config/monad.ts` before using
+the updated ABI and mainnet checks. The currently configured deployed address is unchanged.
+
 **Why Monad & Agora?**
 Monad provides the speed required for a true "tap and go" retail experience, while Agora AUSD provides the stable, borderless medium of exchange required for real-world commerce.
 

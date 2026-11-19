@@ -4,11 +4,11 @@ const { ethers } = require("hardhat");
 describe("MultiTokenLedger", function () {
   let MultiTokenLedger, ledger;
   let MockERC20, ausd, usdc;
-  let owner, sender, recipient;
+  let owner, sender, recipient, attacker;
   let sessionIdHash;
 
   beforeEach(async function () {
-    [owner, sender, recipient] = await ethers.getSigners();
+    [owner, sender, recipient, attacker] = await ethers.getSigners();
 
     // Deploy mock ERC-20 tokens
     const MockERC20Factory = await ethers.getContractFactory("MockERC20");
@@ -48,7 +48,7 @@ describe("MultiTokenLedger", function () {
 
       const recipientFinalBalance = await ethers.provider.getBalance(recipient.address);
       expect(recipientFinalBalance - recipientInitialBalance).to.equal(amount);
-      expect(await ledger.processedSessions(sessionIdHash)).to.be.true;
+      expect(await ledger.processedSessions(sender.address, sessionIdHash)).to.be.true;
     });
 
     it("should fail if session is already processed", async function () {
@@ -74,7 +74,7 @@ describe("MultiTokenLedger", function () {
         .withArgs(sender.address, recipient.address, ausdAddress, amount, sessionIdHash);
 
       expect(await ausd.balanceOf(recipient.address)).to.equal(amount);
-      expect(await ledger.processedSessions(sessionIdHash)).to.be.true;
+      expect(await ledger.processedSessions(sender.address, sessionIdHash)).to.be.true;
     });
 
     it("should reject tokens that are not whitelisted", async function () {
@@ -96,7 +96,7 @@ describe("MultiTokenLedger", function () {
       await expect(
         ledger.connect(sender).payERC20WithLog(tokenAddress, recipient.address, amount, sessionIdHash)
       ).to.be.revertedWithCustomError(ledger, "UnsupportedToken");
-      expect(await ledger.processedSessions(sessionIdHash)).to.be.false;
+      expect(await ledger.processedSessions(sender.address, sessionIdHash)).to.be.false;
       expect(await ausd.balanceOf(recipient.address)).to.equal(0);
     });
 
@@ -140,7 +140,7 @@ describe("MultiTokenLedger", function () {
       expect(await token.balanceOf(recipient.address)).to.equal(amount);
       expect(await token.balanceOf(sender.address)).to.equal(0);
       expect(await token.allowance(sender.address, await ledger.getAddress())).to.equal(0);
-      expect(await ledger.processedSessions(sessionIdHash)).to.be.true;
+      expect(await ledger.processedSessions(sender.address, sessionIdHash)).to.be.true;
       await expect(
         ledger.connect(sender).payERC20WithLog(tokenAddress, recipient.address, amount, sessionIdHash)
       ).to.be.revertedWithCustomError(ledger, "SessionAlreadyProcessed");
@@ -155,7 +155,7 @@ describe("MultiTokenLedger", function () {
       ).to.be.revertedWithCustomError(ledger, "SafeERC20FailedOperation")
         .withArgs(tokenAddress);
 
-      expect(await ledger.processedSessions(sessionIdHash)).to.be.false;
+      expect(await ledger.processedSessions(sender.address, sessionIdHash)).to.be.false;
       expect(await token.balanceOf(recipient.address)).to.equal(0);
       expect(await token.balanceOf(sender.address)).to.equal(amount);
     });
@@ -174,7 +174,7 @@ describe("MultiTokenLedger", function () {
 
       expect(await token.balanceOf(recipient.address)).to.equal(initialBalance + received);
       expect(await token.balanceOf(sender.address)).to.equal(0);
-      expect(await ledger.processedSessions(sessionIdHash)).to.be.true;
+      expect(await ledger.processedSessions(sender.address, sessionIdHash)).to.be.true;
     });
 
     it("should reject zero received tokens and roll back balances and approval", async function () {
@@ -186,7 +186,7 @@ describe("MultiTokenLedger", function () {
         ledger.connect(sender).payERC20WithLog(tokenAddress, recipient.address, amount, sessionIdHash)
       ).to.be.revertedWithCustomError(ledger, "ZeroReceivedAmount");
 
-      expect(await ledger.processedSessions(sessionIdHash)).to.be.false;
+      expect(await ledger.processedSessions(sender.address, sessionIdHash)).to.be.false;
       expect(await token.balanceOf(sender.address)).to.equal(amount);
       expect(await token.balanceOf(recipient.address)).to.equal(123n);
       expect(await token.allowance(sender.address, await ledger.getAddress())).to.equal(amount);
@@ -204,10 +204,67 @@ describe("MultiTokenLedger", function () {
         )
       ).to.be.revertedWithCustomError(ledger, "ReentrancyGuardReentrantCall");
 
-      expect(await ledger.processedSessions(sessionIdHash)).to.be.false;
-      expect(await ledger.processedSessions(reentrySession)).to.be.false;
+      expect(await ledger.processedSessions(sender.address, sessionIdHash)).to.be.false;
+      expect(await ledger.processedSessions(sender.address, reentrySession)).to.be.false;
       expect(await token.balanceOf(sender.address)).to.equal(amount);
       expect(await token.balanceOf(recipient.address)).to.equal(0);
+    });
+  });
+
+  describe("Per-payer replay protection", function () {
+    it("should allow a native payment after another payer front-runs its session", async function () {
+      const amount = ethers.parseEther("1");
+      expect(await ledger.processedSessions(sender.address, sessionIdHash)).to.be.false;
+      await ledger.connect(attacker).payWithLog(recipient.address, sessionIdHash, { value: 1 });
+      expect(await ledger.processedSessions(attacker.address, sessionIdHash)).to.be.true;
+      expect(await ledger.processedSessions(sender.address, sessionIdHash)).to.be.false;
+
+      await expect(
+        ledger.connect(sender).payWithLog(recipient.address, sessionIdHash, { value: amount })
+      ).to.emit(ledger, "PaymentLogged")
+        .withArgs(sender.address, recipient.address, ethers.ZeroAddress, amount, sessionIdHash);
+      expect(await ledger.processedSessions(sender.address, sessionIdHash)).to.be.true;
+    });
+
+    it("should allow an ERC-20 payment after another payer front-runs its session", async function () {
+      const amount = ethers.parseUnits("10", 6);
+      const token = await ausd.getAddress();
+      await ausd.mint(attacker.address, 1);
+      await ausd.connect(attacker).approve(await ledger.getAddress(), 1);
+      await ausd.connect(sender).approve(await ledger.getAddress(), amount);
+
+      await ledger.connect(attacker).payERC20WithLog(token, recipient.address, 1, sessionIdHash);
+      expect(await ledger.processedSessions(attacker.address, sessionIdHash)).to.be.true;
+      expect(await ledger.processedSessions(sender.address, sessionIdHash)).to.be.false;
+      await expect(
+        ledger.connect(sender).payERC20WithLog(token, recipient.address, amount, sessionIdHash)
+      ).to.emit(ledger, "PaymentLogged")
+        .withArgs(sender.address, recipient.address, token, amount, sessionIdHash);
+      expect(await ledger.processedSessions(sender.address, sessionIdHash)).to.be.true;
+      expect(await ausd.balanceOf(recipient.address)).to.equal(amount + 1n);
+
+      await expect(
+        ledger.connect(sender).payERC20WithLog(token, recipient.address, amount, sessionIdHash)
+      ).to.be.revertedWithCustomError(ledger, "SessionAlreadyProcessed")
+        .withArgs(sessionIdHash);
+      await expect(
+        ledger.connect(sender).payWithLog(recipient.address, sessionIdHash, { value: 1 })
+      ).to.be.revertedWithCustomError(ledger, "SessionAlreadyProcessed")
+        .withArgs(sessionIdHash);
+    });
+
+    it("should reject the same payer's session across native and ERC-20 payments", async function () {
+      const amount = ethers.parseUnits("10", 6);
+      await ausd.connect(sender).approve(await ledger.getAddress(), amount);
+      await ledger.connect(sender).payWithLog(recipient.address, sessionIdHash, { value: 1 });
+
+      await expect(
+        ledger.connect(sender).payERC20WithLog(await ausd.getAddress(), recipient.address, amount, sessionIdHash)
+      ).to.be.revertedWithCustomError(ledger, "SessionAlreadyProcessed")
+        .withArgs(sessionIdHash);
+      expect(await ledger.processedSessions(sender.address, sessionIdHash)).to.be.true;
+      expect(await ledger.processedSessions(attacker.address, sessionIdHash)).to.be.false;
+      expect(await ausd.balanceOf(recipient.address)).to.equal(0);
     });
   });
 

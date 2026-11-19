@@ -70,7 +70,7 @@ contract CallbackToken is MockERC20 {
     }
 
     function transferFrom(address from, address to, uint256 amount) public override returns (bool) {
-        require(ledger.processedSessions(sessionIdHash), "Session not marked before callback");
+        require(ledger.processedSessions(from, sessionIdHash), "Session not marked before callback");
         ledger.payERC20WithLog(address(this), to, amount, reentrySessionIdHash);
         return super.transferFrom(from, to, amount);
     }

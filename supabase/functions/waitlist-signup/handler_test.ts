@@ -1,4 +1,5 @@
 import {Config, createHandler} from './handler.ts';
+import {hashIp} from './validation.ts';
 
 function assert(value: unknown): asserts value {
   if (!value) {
@@ -41,11 +42,27 @@ Deno.test('valid signup verifies CAPTCHA and inserts only normalized fields', as
   assert(result.status === 200 && (await result.json()).ok === true);
   assert(result.headers.get('Access-Control-Allow-Origin') === config.origins[0]);
   const hashed = JSON.parse(String(calls[0].init?.body)).p_ip_hash;
-  assert(/^[0-9a-f]{64}$/.test(hashed));
+  assert(hashed === await hashIp('198.51.100.9', config.ipSalt));
   const verification = calls[1].init?.body as URLSearchParams;
-  assert(verification.get('remoteip') === '192.0.2.1');
+  assert(verification.get('remoteip') === '198.51.100.9');
   assert(verification.get('response') === valid.token);
   assert(calls[2].init?.body === JSON.stringify({name: 'Ada', email: 'ada@example.com', source: 'web'}));
+});
+
+Deno.test('Cloudflare client IP takes precedence over forwarded proxy hops', async () => {
+  for (const forwarded of ['198.51.100.9, 192.0.2.1', null]) {
+    const {handler, calls} = setup([json(1), json(captcha), new Response(null, {status: 201})]);
+    const req = request();
+    req.headers.set('cf-connecting-ip', '203.0.113.7');
+    if (forwarded === null) {
+      req.headers.delete('x-forwarded-for');
+    } else {
+      req.headers.set('x-forwarded-for', forwarded);
+    }
+    assert((await handler(req)).status === 200);
+    assert(JSON.parse(String(calls[0].init?.body)).p_ip_hash === await hashIp('203.0.113.7', config.ipSalt));
+    assert((calls[1].init?.body as URLSearchParams).get('remoteip') === '203.0.113.7');
+  }
 });
 
 Deno.test('duplicates return exactly the same success as a new signup', async () => {
@@ -74,6 +91,7 @@ Deno.test('missing config or client IP fails closed', async () => {
   assert((await createHandler(null, fetch, () => undefined)(request())).status === 503);
   const {handler, calls} = setup([]);
   const req = request();
+  req.headers.delete('cf-connecting-ip');
   req.headers.delete('x-forwarded-for');
   assert((await handler(req)).status === 503 && calls.length === 0);
 });

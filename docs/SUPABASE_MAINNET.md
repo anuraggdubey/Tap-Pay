@@ -102,12 +102,13 @@ alter table public.usernames validate constraint usernames_normalized_consistenc
    `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are provided by hosted Supabase.
    For local function serving, supply these in an ignored local env file too.
    Keep the gateway JWT check enabled; the browser invokes with the public anon key.
-3. **Verify the gateway's trusted IP header before enabling signup.** The function
-   uses the rightmost `X-Forwarded-For` address, so the gateway must overwrite the
-   incoming header or append a trustworthy client address. Never expose a runtime
-   that merely passes client-supplied headers through. Missing IPs fail closed.
-   Check that different clients yield different trusted addresses; a shared proxy
-   address would instead rate-limit everyone together. CORS is not authentication.
+3. **After deploying, confirm which header carries the client IP.** The function
+   prefers `CF-Connecting-IP` (overwritten by Cloudflare), then the leftmost
+   `X-Forwarded-For` entry. Missing IPs fail closed. Confirm that the gateway
+   preserves a trusted client address rather than a shared proxy hop, and does
+   not simply pass spoofed client headers through. Turnstile is the primary
+   control: each signup request requires a fresh, single-use verification token.
+   The per-IP limit is defense in depth. CORS is not authentication.
 4. Configure `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` and
    `VITE_TURNSTILE_SITE_KEY` in `web/.env.local` or the Vercel build environment,
    then rebuild (`npm --prefix web ci && npm --prefix web run build`). No committed

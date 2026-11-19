@@ -83,8 +83,8 @@ export function createHandler(config: Config | null, fetcher: typeof fetch = fet
       return reply(400);
     }
 
-    // The gateway must overwrite/append this header; never trust a client-supplied first hop.
-    const ip = request.headers.get('x-forwarded-for')?.split(',').pop()?.trim();
+    const ip = request.headers.get('cf-connecting-ip')?.trim() ??
+      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
     if (!ip || ip.length > 45 || !/^[0-9a-fA-F:.]+$/.test(ip)) {
       log('waitlist: missing trusted client IP');
       return reply(503);

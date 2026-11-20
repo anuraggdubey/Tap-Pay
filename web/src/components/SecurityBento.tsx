@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowUpRight, ShieldCheck, Lock, ExternalLink, Copy, Check } from 'lucide-react';
+import { ArrowUpRight, Lock, Copy, Check } from 'lucide-react';
 
 export const SecurityBento: React.FC = () => {
   const [copied, setCopied] = useState<string | null>(null);

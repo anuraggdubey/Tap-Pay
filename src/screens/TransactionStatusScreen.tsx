@@ -3,7 +3,7 @@
  * Confirmed UI inspired by Glow-style Sent/Received receipt.
  */
 
-import React, {useState, useEffect, useRef, useMemo} from 'react';
+import React, {useState, useEffect, useRef, useMemo, useCallback} from 'react';
 import {
   View,
   Text,
@@ -140,7 +140,7 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
     navigation.setOptions({headerShown: false});
   }, [navigation]);
 
-  const markConfirmed = () => {
+  const markConfirmed = useCallback(() => {
     triggerHaptic.notificationSuccess();
     if (isRealTxHash) {
       updateTransactionStatus(txHash, 'confirmed');
@@ -153,16 +153,16 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
       useNativeDriver: true,
     }).start();
     refreshBalance();
-  };
+  }, [isRealTxHash, txHash, checkmarkScale, refreshBalance]);
 
-  const markFailed = (message: string) => {
+  const markFailed = useCallback((message: string) => {
     triggerHaptic.notificationError();
     if (isRealTxHash) {
       updateTransactionStatus(txHash, 'failed');
     }
     setStatus('failed');
     setErrorMessage(message);
-  };
+  }, [isRealTxHash, txHash]);
 
   useEffect(() => {
     // History / already-finalized txs: show the stored outcome, don't re-enter waiting UI.
@@ -232,7 +232,7 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
     return () => {
       isMounted = false;
     };
-  }, [txHash, waitForBalance, expectedAmountWei, address, balance, refreshBalance, initialStatus]);
+  }, [txHash, waitForBalance, expectedAmountWei, address, balance, refreshBalance, initialStatus, checkmarkScale, isRealTxHash, markConfirmed, markFailed]);
 
   const openExplorer = () => {
     if (isRealTxHash) {

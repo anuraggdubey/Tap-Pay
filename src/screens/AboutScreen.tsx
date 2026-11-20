@@ -26,7 +26,7 @@ type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'AboutTapPay'>;
 };
 
-export default function AboutScreen({navigation}: Props) {
+export default function AboutScreen(_props: Props) {
   const {colors} = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 

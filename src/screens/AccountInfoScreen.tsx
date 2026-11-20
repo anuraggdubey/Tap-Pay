@@ -2,7 +2,7 @@
  * AccountInfoScreen — Username (with claim), wallet address, recovery phrase (phone-authentication protected, view-only)
  */
 
-import React, {useState, useEffect, useRef, useMemo} from 'react';
+import React, {useState, useEffect, useRef, useMemo, useCallback} from 'react';
 import {
   View,
   Text,
@@ -30,7 +30,7 @@ type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'AccountInfo'>;
 };
 
-export default function AccountInfoScreen({navigation}: Props) {
+export default function AccountInfoScreen(_props: Props) {
   const {address, username, revealRecoveryPhrase, saveUsername} = useWallet();
   const {colors} = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -43,6 +43,17 @@ export default function AccountInfoScreen({navigation}: Props) {
   // Username claim state
   const [claimInput, setClaimInput] = useState('');
   const [claiming, setClaiming] = useState(false);
+
+  const hideSecretKey = useCallback(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => {
+      setShowSecretKey(false);
+      setRevealedPhrase(null);
+    });
+  }, [fadeAnim]);
 
   useEffect(() => {
     if (showSecretKey) {
@@ -61,7 +72,7 @@ export default function AccountInfoScreen({navigation}: Props) {
         clearTimeout(autoHideTimer.current);
       }
     };
-  }, [showSecretKey]);
+  }, [showSecretKey, fadeAnim, hideSecretKey]);
 
   // Never leave the phrase on screen when the app is backgrounded.
   useEffect(() => {
@@ -73,17 +84,6 @@ export default function AccountInfoScreen({navigation}: Props) {
     });
     return () => sub.remove();
   }, []);
-
-  const hideSecretKey = () => {
-    Animated.timing(fadeAnim, {
-      toValue: 0,
-      duration: 200,
-      useNativeDriver: true,
-    }).start(() => {
-      setShowSecretKey(false);
-      setRevealedPhrase(null);
-    });
-  };
 
   const copyAddress = () => {
     if (!address) {
@@ -118,7 +118,7 @@ export default function AccountInfoScreen({navigation}: Props) {
 
       // Try on-chain registration
       try {
-        const result = await registerUsername(trimmed);
+        await registerUsername(trimmed);
         // Success or fail, save locally
       } catch {
         // Contract not deployed — save locally anyway

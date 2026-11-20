@@ -1,7 +1,6 @@
 import {executeCrossBorderTransfer} from '../../src/services/crossBorder/transferService';
 import * as tokenTransfer from '../../src/services/tokens/tokenTransfer';
 import * as registry from '../../src/services/registry';
-import {ethers} from 'ethers';
 
 // Mock dependencies
 jest.mock('../../src/services/tokens/tokenTransfer');

@@ -3,24 +3,13 @@ import React, { useState, useEffect } from 'react';
 import { HeroMeshCanvas } from './effects/HeroMeshCanvas';
 import {
   Smartphone,
-  Radio,
   ArrowUpRight,
   Wifi,
   Battery,
-  Check,
   Zap,
   ShieldCheck,
   Play,
   Pause,
-  ExternalLink,
-  ChevronRight,
-  ArrowLeft,
-  Copy,
-  Lock,
-  Home as HomeIcon,
-  Clock,
-  Sliders,
-  Share2,
 } from 'lucide-react';
 import {
   TapPayMockHome,

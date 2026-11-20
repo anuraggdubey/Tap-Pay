@@ -12,7 +12,7 @@
  */
 
 import {ethers} from 'ethers';
-import {getProvider, getBalance as getNativeBalance, withRpcFailover} from '../wallet';
+import {getBalance as getNativeBalance, withRpcFailover} from '../wallet';
 import {
   SUPPORTED_TOKENS,
   ERC20_ABI,

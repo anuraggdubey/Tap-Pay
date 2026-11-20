@@ -1,5 +1,5 @@
 import React from 'react';
-import { Smartphone, ShieldCheck, Zap, Radio, Check, Trophy } from 'lucide-react';
+import { Smartphone, ShieldCheck, Zap, Radio, Trophy } from 'lucide-react';
 
 export const StatsCarousel: React.FC = () => {
   return (

@@ -8,16 +8,33 @@ import {HCESession, NFCTagType4, NFCTagType4NDEFContentType} from 'react-native-
 import {SESSION_TIMEOUT_MS} from '../config/monad';
 import {encodeReceiverAddress} from '../utils/apdu';
 
-let _activeSession: HCESession | null = null;
-let _sessionTimer: ReturnType<typeof setTimeout> | null = null;
+export type HceReceiverLease = {
+  start(receiverAddress: string, expiresAt?: number): Promise<boolean>;
+  stop(): Promise<void>;
+};
 
-function scheduleExpiry(): void {
-  if (_sessionTimer) {
+let _activeSession: HCESession | null = null;
+let _owner: HceReceiverLease | null = null;
+let _sessionTimer: ReturnType<typeof setTimeout> | null = null;
+let _nativeQueue: Promise<void> = Promise.resolve();
+
+function serialize<T>(operation: () => Promise<T>): Promise<T> {
+  const result = _nativeQueue.then(operation);
+  _nativeQueue = result.then(() => {}, () => {});
+  return result;
+}
+
+function clearExpiry(): void {
+  if (_sessionTimer !== null) {
     clearTimeout(_sessionTimer);
+    _sessionTimer = null;
   }
-  _sessionTimer = setTimeout(() => {
-    stopHceSession();
-  }, SESSION_TIMEOUT_MS);
+}
+
+function scheduleExpiry(owner: HceReceiverLease, expiresAt: number): void {
+  if (_owner !== owner) return;
+  clearExpiry();
+  _sessionTimer = setTimeout(() => { owner.stop(); }, Math.max(0, expiresAt - Date.now()));
 }
 
 async function ensureSession(): Promise<HCESession> {
@@ -27,64 +44,92 @@ async function ensureSession(): Promise<HCESession> {
   return _activeSession;
 }
 
-/**
- * Start an HCE session broadcasting the receiver's address.
- */
-export async function startHceReceiverSession(
-  receiverAddress: string,
-): Promise<boolean> {
-  try {
-    // Stop any existing session first
-    await stopHceSession();
+export function createHceReceiverLease(): HceReceiverLease {
+  let stopped = false;
+  let started = false;
+  let stopPromise: Promise<void> | undefined;
+  const ownsSession = () => _owner === lease && !stopped;
 
-    const encodedAddress = encodeReceiverAddress(receiverAddress);
-    console.log('[HCE] Broadcasting address:', encodedAddress);
+  const lease: HceReceiverLease = {
+    async start(receiverAddress, expiresAt) {
+      if (!ownsSession() || started) return false;
+      started = true;
+      const expired = () => expiresAt !== undefined && Date.now() >= expiresAt;
+      try {
+        if (!await preparation || !ownsSession()) return false;
+        const tag = new NFCTagType4({
+          type: NFCTagType4NDEFContentType.URL,
+          content: encodeReceiverAddress(receiverAddress),
+          writable: false,
+        });
 
-    const tag = new NFCTagType4({
-      type: NFCTagType4NDEFContentType.URL,
-      content: encodedAddress,
-      writable: false,
-    });
+        const session = await serialize(async () => {
+          if (!ownsSession()) return null;
+          const current = await ensureSession();
+          if (!ownsSession()) return null;
+          await current.setApplication(tag);
+          return ownsSession() ? current : null;
+        });
+        if (!session || !ownsSession()) return false;
 
-    const session = await ensureSession();
+        // Allow SharedPreferences to commit before enabling the service.
+        await new Promise(resolve => setTimeout(resolve, 100));
+        const enabled = await serialize(async () => {
+          if (!ownsSession() || expired()) return false;
+          await session.setEnabled(true);
+          return ownsSession();
+        });
+        if (!enabled) {
+          await lease.stop();
+          return false;
+        }
+        if (expiresAt !== undefined) scheduleExpiry(lease, expiresAt);
 
-    // IMPORTANT: Set application content BEFORE enabling the service
-    // so CardService.onCreate reads the correct data from SharedPreferences
-    await session.setApplication(tag);
+        // Allow Android to register the HostApduService.
+        await new Promise(resolve => setTimeout(resolve, 500));
+        if (!ownsSession()) return false;
+        if (expired()) {
+          await lease.stop();
+          return false;
+        }
+        if (expiresAt === undefined) scheduleExpiry(lease, Date.now() + SESSION_TIMEOUT_MS);
+        return true;
+      } catch (error) {
+        console.error('Failed to start HCE session:', error);
+        await lease.stop();
+        return false;
+      }
+    },
+    stop() {
+      if (stopPromise) return stopPromise;
+      stopped = true;
+      if (_owner !== lease) return Promise.resolve();
+      clearExpiry();
+      stopPromise = serialize(async () => {
+        if (_owner === lease && _activeSession) {
+          await _activeSession.setEnabled(false);
+        }
+      }).catch(error => { console.error('Failed to stop HCE session:', error); });
+      return stopPromise;
+    },
+  };
 
-    // Small pause to ensure SharedPreferences commit completes
-    await new Promise(resolve => setTimeout(resolve, 100));
-
-    await session.setEnabled(true);
-
-    // Pause for Android to fully register the HostApduService with the NFC subsystem
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    console.log('[HCE] Session enabled and broadcasting');
-    scheduleExpiry();
-    return true;
-  } catch (error) {
-    console.error('Failed to start HCE session:', error);
+  _owner = lease;
+  clearExpiry();
+  const preparation = serialize(async () => {
+    if (!ownsSession()) return false;
+    if (_activeSession) await _activeSession.setEnabled(false);
+    return ownsSession();
+  }).catch(async error => {
+    console.error('Failed to prepare HCE session:', error);
+    await lease.stop();
     return false;
-  }
+  });
+  return lease;
 }
 
-/**
- * Stop the active HCE session.
- */
-export async function stopHceSession(): Promise<void> {
-  try {
-    if (_sessionTimer) {
-      clearTimeout(_sessionTimer);
-      _sessionTimer = null;
-    }
-
-    if (_activeSession) {
-      await _activeSession.setEnabled(false);
-    }
-  } catch (error) {
-    console.error('Failed to stop HCE session:', error);
-  }
+export function stopHceSession(): Promise<void> {
+  return _owner?.stop() ?? Promise.resolve();
 }
 
 export function isHceActive(): boolean {

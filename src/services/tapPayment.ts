@@ -5,7 +5,7 @@
 import {ethers} from 'ethers';
 import {MONAD_CONFIG} from '../config/monad';
 import {
-  startHceReceiverSession,
+  createHceReceiverLease,
   stopHceSession,
 } from './hce';
 import {
@@ -129,14 +129,8 @@ export async function broadcastTapPayment(
   return {txHash: result.txHash};
 }
 
-export async function startReceiverBroadcast(
-  receiverAddress: string,
-): Promise<boolean> {
-  return await startHceReceiverSession(receiverAddress);
-}
-
-export async function stopReceiverBroadcast(): Promise<void> {
-  await stopHceSession();
+export function createReceiverBroadcastLease() {
+  return createHceReceiverLease();
 }
 
 export async function cancelTapSession(): Promise<void> {

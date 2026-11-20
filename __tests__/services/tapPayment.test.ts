@@ -13,7 +13,7 @@ jest.mock('../../src/services/nfcReader', () => ({
   stopContinuousHceScan: (...a: unknown[]) => mockStopContinuousHceScan(...a),
 }));
 jest.mock('../../src/services/hce', () => ({
-  startHceReceiverSession: jest.fn(),
+  createHceReceiverLease: jest.fn(),
   stopHceSession: jest.fn(),
 }));
 jest.mock('../../src/services/wallet', () => ({

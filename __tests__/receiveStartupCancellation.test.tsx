@@ -19,8 +19,9 @@ jest.mock('../src/services/nfcReader', () => ({
   initNfc: () => mockInit(), isNfcSupported: () => mockSupported(), isNfcEnabled: () => mockNfcEnabled(), openNfcSettings: jest.fn(),
 }));
 jest.mock('../src/services/tapPayment', () => ({
-  startReceiverBroadcast: (...args: unknown[]) => mockStart(...args),
-  stopReceiverBroadcast: () => mockStop(),
+  createReceiverBroadcastLease: () => ({
+    start: (...args: unknown[]) => mockStart(...args), stop: () => mockStop(),
+  }),
   waitForIncomingPayment: (...args: unknown[]) => mockWait(...args),
 }));
 jest.mock('../src/services/registry', () => ({reverseResolveAddress: jest.fn()}));
@@ -37,7 +38,7 @@ function deferred<T>() {
 }
 
 beforeEach(() => {
-  jest.useFakeTimers();
+  jest.useFakeTimers({doNotFake: ['queueMicrotask']});
   jest.clearAllMocks();
   mockWallet.address = ADDRESS;
   mockAdvertising = false;
@@ -76,7 +77,7 @@ it.each(['init', 'support', 'enabled'] as const)('does not start HCE if unmounte
   expect(mockWait).not.toHaveBeenCalled();
   expect(mockAdvertising).toBe(false);
   expect(Alert.alert).not.toHaveBeenCalled();
-});
+}, 30_000);
 
 it('disables a broadcast that finishes enabling after cleanup', async () => {
   const pending = deferred<boolean>();

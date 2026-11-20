@@ -306,6 +306,9 @@ export function WalletProvider({children}: {children: ReactNode}) {
       }
       return false;
     } catch (error) {
+      if (error instanceof WalletError) {
+        throw error;
+      }
       console.error('Reset wallet error:', error);
       return false;
     }

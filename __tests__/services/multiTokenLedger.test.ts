@@ -49,7 +49,7 @@ describe('sendErc20ViaMultiTokenLedger', () => {
     const tx = await send();
     expect(approvedAmounts()).toEqual([10n]);
     expect(approvalWait).toHaveBeenCalledTimes(1);
-    expect(paymentWait).toHaveBeenCalledTimes(1);
+    expect(paymentWait).not.toHaveBeenCalled();
     expect(tx.wait).toBe(paymentWait);
   });
 
@@ -107,16 +107,25 @@ describe('sendErc20ViaMultiTokenLedger', () => {
     expect(approvedAmounts()).toEqual([10n, 0n]);
   });
 
-  it.each([null, {status: 0}])('revokes after unsuccessful payment receipt %s', async receipt => {
+  it.each([null, {status: 0}])('returns broadcast payment without checking receipt %s or revoking', async receipt => {
     paymentWait.mockResolvedValue(receipt);
-    await expect(send()).rejects.toThrow('Payment was not confirmed successfully');
-    expect(approvedAmounts()).toEqual([10n, 0n]);
+    const tx = await send();
+    expect(tx).toBe(await pay.mock.results[0].value);
+    expect(paymentWait).not.toHaveBeenCalled();
+    expect(approvedAmounts()).toEqual([10n]);
   });
 
-  it('revokes after a mined payment reverts', async () => {
-    paymentWait.mockRejectedValue(new Error('execution reverted'));
-    await expect(send()).rejects.toThrow('execution reverted');
-    expect(approvedAmounts()).toEqual([10n, 0n]);
+  it('preserves the broadcast hash when later receipt polling fails without revoking', async () => {
+    const error = new Error('receipt timeout');
+    paymentWait.mockRejectedValue(error);
+    const broadcast = {hash: '0x' + '44'.repeat(32), wait: paymentWait};
+    pay.mockResolvedValue(broadcast);
+    const tx = await send();
+    expect(tx).toBe(broadcast);
+    expect(paymentWait).not.toHaveBeenCalled();
+    await expect(tx.wait()).rejects.toBe(error);
+    expect(tx.hash).toBe(broadcast.hash);
+    expect(approvedAmounts()).toEqual([10n]);
   });
 
   it('reports both errors when revocation fails', async () => {

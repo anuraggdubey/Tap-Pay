@@ -87,12 +87,7 @@ export async function sendErc20ViaMultiTokenLedger(
 
     const sessionIdHash = createSessionIdHash();
     const ledger = new ethers.Contract(ledgerAddress, MULTI_TOKEN_LEDGER_ABI, signer);
-    const tx = await ledger.payERC20WithLog(tokenAddress, to, amountRaw, sessionIdHash);
-    const receipt = await tx.wait();
-    if (!receipt || receipt.status !== 1) {
-      throw new Error('Payment was not confirmed successfully');
-    }
-    return tx;
+    return await ledger.payERC20WithLog(tokenAddress, to, amountRaw, sessionIdHash);
   } catch (error) {
     if (!approvalSent && allowance === 0n) {
       throw error;

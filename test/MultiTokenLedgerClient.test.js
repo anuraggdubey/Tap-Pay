@@ -54,7 +54,40 @@ describe('MultiTokenLedger client with USDT-like approvals', function () {
     });
   }
 
-  it('revokes the exact allowance when payment fails after approval', async function () {
+  it('returns the broadcast transaction without waiting or sending a revoke', async function () {
+    let payment, broadcasts = 0, waits = 0;
+    const signer = new Proxy(sender, {
+      get(target, property) {
+        if (property === 'sendTransaction') {
+          return async request => {
+            broadcasts++;
+            const tx = await target.sendTransaction(request);
+            if (request.to.toLowerCase() !== ledgerAddress.toLowerCase()) {
+              return tx;
+            }
+            payment = new Proxy(tx, {
+              get(response, key) {
+                if (key === 'wait') {
+                  return () => { waits++; throw new Error('receipt timeout'); };
+                }
+                return Reflect.get(response, key);
+              },
+            });
+            return payment;
+          };
+        }
+        const value = Reflect.get(target, property);
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    });
+    const tx = await client.sendErc20ViaMultiTokenLedger(signer, tokenAddress, recipient.address, 10n);
+    expect(tx.hash).to.equal(payment.hash);
+    expect(waits).to.equal(0);
+    expect(broadcasts).to.equal(2);
+    expect(await token.balanceOf(recipient.address)).to.equal(10n);
+  });
+
+  it('revokes the exact allowance when payment estimation fails after approval', async function () {
     await token.connect(sender).approve(ledgerAddress, 5n);
     await ledger.setSupportedToken(tokenAddress, false);
     await expect(client.sendErc20ViaMultiTokenLedger(sender, tokenAddress, recipient.address, 10n))

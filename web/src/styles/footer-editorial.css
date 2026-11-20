@@ -78,7 +78,7 @@
   margin-top: 8px;
   font-size: 12px;
   line-height: 1.65;
-  color: rgba(26, 26, 26, 0.42);
+  color: var(--text-dark-subtle);
   max-width: 240px;
 }
 
@@ -132,7 +132,7 @@
   line-height: 0.95;
   text-align: center;
   text-transform: none;
-  color: rgba(26, 26, 26, 0.08);
+  color: rgba(255, 253, 248, 0.05);
   white-space: nowrap;
   width: 100%;
   max-width: 100%;
@@ -140,7 +140,7 @@
 }
 
 .footer-legal-bar {
-  border-top: 1px solid rgba(26, 26, 26, 0.1);
+  border-top: 1px solid var(--canvas-line);
   padding-top: 22px;
   display: flex;
   align-items: center;

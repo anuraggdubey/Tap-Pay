@@ -16,29 +16,30 @@ export function HeroMeshCanvas() {
     let w = 0;
     let h = 0;
     let t = 0;
+    let frameCount = 0;
+    const dpr = Math.min(devicePixelRatio, 1.5);
 
     const resize = () => {
       const parent = canvas.parentElement;
       if (!parent) return;
       w = parent.clientWidth;
       h = parent.clientHeight;
-      canvas.width = Math.floor(w * devicePixelRatio);
-      canvas.height = Math.floor(h * devicePixelRatio);
+      canvas.width = Math.floor(w * dpr);
+      canvas.height = Math.floor(h * dpr);
       canvas.style.width = `${w}px`;
       canvas.style.height = `${h}px`;
-      ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
 
     const draw = () => {
-      if (!w || !h) {
+      frameCount++;
+      if (!w || !h || frameCount % 3 !== 0) {
         raf = requestAnimationFrame(draw);
         return;
       }
 
       ctx.clearRect(0, 0, w, h);
 
-      // Restrained accent glow on the dark canvas — blue + violet, low opacity,
-      // so it reads as atmospheric depth rather than a candy aurora.
       const blobs = [
         { x: 0.20 + Math.sin(t * 0.00035) * 0.06, y: 0.30 + Math.cos(t * 0.00028) * 0.05, r: 0.5, c: '10, 132, 255' },
         { x: 0.72 + Math.cos(t * 0.00031) * 0.06, y: 0.58 + Math.sin(t * 0.00026) * 0.05, r: 0.42, c: '110, 84, 255' },
@@ -49,8 +50,8 @@ export function HeroMeshCanvas() {
         const cy = b.y * h;
         const radius = b.r * Math.min(w, h);
         const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
-        g.addColorStop(0, `rgba(${b.c}, 0.14)`);
-        g.addColorStop(0.55, `rgba(${b.c}, 0.05)`);
+        g.addColorStop(0, `rgba(${b.c}, 0.10)`);
+        g.addColorStop(0.55, `rgba(${b.c}, 0.03)`);
         g.addColorStop(1, `rgba(${b.c}, 0)`);
         ctx.fillStyle = g;
         ctx.beginPath();
@@ -58,7 +59,7 @@ export function HeroMeshCanvas() {
         ctx.fill();
       });
 
-      if (!reduced) t += 16;
+      if (!reduced) t += 48;
       raf = requestAnimationFrame(draw);
     };
 

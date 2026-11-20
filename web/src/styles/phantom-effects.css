@@ -340,7 +340,6 @@
   opacity: 0;
   transform: translateY(44px) scale(0.97);
   transition: opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1), transform 0.85s cubic-bezier(0.16, 1, 0.3, 1);
-  will-change: opacity, transform;
 }
 
 .scroll-reveal.in-view {
@@ -353,7 +352,6 @@
   opacity: 0;
   transform: translateX(-45px) translateY(20px) scale(0.96);
   transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1), transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
-  will-change: opacity, transform;
 }
 
 .scroll-reveal-left.in-view {
@@ -366,7 +364,6 @@
   opacity: 0;
   transform: translateX(45px) translateY(20px) scale(0.96);
   transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1), transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
-  will-change: opacity, transform;
 }
 
 .scroll-reveal-right.in-view {
@@ -379,7 +376,6 @@
   opacity: 0;
   transform: scale(0.88) translateY(45px);
   transition: opacity 0.95s cubic-bezier(0.16, 1, 0.3, 1), transform 0.95s cubic-bezier(0.16, 1, 0.3, 1);
-  will-change: opacity, transform;
 }
 
 .scroll-reveal-scale.in-view {
@@ -397,18 +393,6 @@
 [data-parallax] {
   transform: translateY(var(--parallax-y, 0px));
   transition: transform 0.15s cubic-bezier(0, 0, 0.2, 1);
-  will-change: transform;
-}
-
-html.lenis-smooth-active [data-parallax] {
-  transition: none;
-}
-
-html.lenis-smooth-active .scroll-reveal,
-html.lenis-smooth-active .scroll-reveal-left,
-html.lenis-smooth-active .scroll-reveal-right,
-html.lenis-smooth-active .scroll-reveal-scale {
-  transition: none;
 }
 
 /* Ambient scroll-linked background orbs */
@@ -427,10 +411,8 @@ html.lenis-smooth-active .scroll-reveal-scale {
 .ambient-orb {
   position: absolute;
   border-radius: 50%;
-  filter: blur(80px);
   opacity: 0.45;
-  transform: translate3d(0, calc(var(--scroll-y, 0px) * -0.04), 0);
-  will-change: transform;
+  transform: translate3d(0, 0, 0);
 }
 
 .ambient-orb-a {
@@ -438,7 +420,7 @@ html.lenis-smooth-active .scroll-reveal-scale {
   height: min(55vw, 520px);
   top: -12%;
   left: -8%;
-  background: radial-gradient(circle, rgba(10, 132, 255, 0.10) 0%, transparent 68%);
+  background: radial-gradient(circle, rgba(10, 132, 255, 0.08) 0%, transparent 68%);
 }
 
 .ambient-orb-b {
@@ -446,8 +428,7 @@ html.lenis-smooth-active .scroll-reveal-scale {
   height: min(48vw, 440px);
   top: 38%;
   right: -10%;
-  background: radial-gradient(circle, rgba(110, 84, 255, 0.08) 0%, transparent 70%);
-  transform: translate3d(0, calc(var(--scroll-y, 0px) * 0.06), 0);
+  background: radial-gradient(circle, rgba(110, 84, 255, 0.06) 0%, transparent 70%);
 }
 
 .ambient-orb-c {
@@ -455,8 +436,7 @@ html.lenis-smooth-active .scroll-reveal-scale {
   height: min(42vw, 380px);
   bottom: 8%;
   left: 28%;
-  background: radial-gradient(circle, rgba(10, 132, 255, 0.06) 0%, transparent 72%);
-  transform: translate3d(0, calc(var(--scroll-y, 0px) * -0.08), 0);
+  background: radial-gradient(circle, rgba(10, 132, 255, 0.05) 0%, transparent 72%);
 }
 
 .scroll-progress-glow {
@@ -491,5 +471,21 @@ html.lenis-smooth-active .scroll-reveal-scale {
     opacity: 1 !important;
     transform: none !important;
   }
+}
+
+/* Low-end device mode — keep visuals, kill expensive paint ops */
+html.perf-lite .site-ambient-layer { display: none; }
+html.perf-lite .scroll-progress-glow { display: none; }
+html.perf-lite .hero-mesh-canvas { display: none; }
+html.perf-lite .cursor-spotlight { display: none; }
+html.perf-lite .glass-sheen-sweep { animation: none; }
+html.perf-lite .hero-floating-card { animation: none; }
+html.perf-lite .hero-nfc-waves-bg { display: none; }
+html.perf-lite .scroll-reveal,
+html.perf-lite .scroll-reveal-left,
+html.perf-lite .scroll-reveal-right,
+html.perf-lite .scroll-reveal-scale {
+  opacity: 1 !important;
+  transform: none !important;
 }
 

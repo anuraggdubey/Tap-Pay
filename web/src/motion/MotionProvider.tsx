@@ -10,12 +10,19 @@ interface MotionProviderProps {
   children: ReactNode;
 }
 
+function isLowEndDevice(): boolean {
+  const cores = navigator.hardwareConcurrency || 2;
+  const mem = (navigator as any).deviceMemory || 4;
+  return cores <= 4 || mem <= 4;
+}
+
 export function MotionProvider({ children }: MotionProviderProps) {
   useEffect(() => {
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     document.documentElement.classList.toggle('motion-reduced', reducedMotion);
 
-    if (reducedMotion) {
+    if (reducedMotion || isLowEndDevice()) {
+      document.documentElement.classList.add('perf-lite');
       return;
     }
 

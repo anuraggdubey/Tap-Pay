@@ -3,24 +3,11 @@ import React, { useState, useEffect } from 'react';
 import { HeroMeshCanvas } from './effects/HeroMeshCanvas';
 import {
   Smartphone,
-  Radio,
   ArrowUpRight,
   Wifi,
   Battery,
-  Check,
-  Zap,
-  ShieldCheck,
   Play,
   Pause,
-  ExternalLink,
-  ChevronRight,
-  ArrowLeft,
-  Copy,
-  Lock,
-  Home as HomeIcon,
-  Clock,
-  Sliders,
-  Share2,
 } from 'lucide-react';
 import {
   TapPayMockHome,
@@ -211,144 +198,44 @@ export const Hero: React.FC = () => {
   };
 
   return (
-    <section
-      id="hero"
-      className="hero-section"
-      style={{
-        background: 'transparent',
-        color: 'var(--text-dark)',
-        paddingTop: '110px',
-        paddingBottom: '48px',
-        position: 'relative',
-        overflow: 'hidden',
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-      }}
-    >
-      <div className="hero-cinematic-frame">
-        <HeroMeshCanvas />
-        <div className="hero-ambient-sheen" />
+    <section id="hero" className="hero-section">
+      <HeroMeshCanvas />
 
-      {/* Decorative Contactless Waves Behind Phone */}
-      <div className="hero-nfc-waves-bg">
-        <div className="nfc-pulse-ring ring-1" />
-        <div className="nfc-pulse-ring ring-2" />
-        <div className="nfc-pulse-ring ring-3" />
-      </div>
-
-      <div className="phantom-container hero-content-wrap" style={{ width: '100%', position: 'relative', zIndex: 2 }}>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1.15fr 0.85fr',
-            gap: '50px',
-            alignItems: 'center',
-          }}
-          className="hero-split-grid"
-        >
-          {/* ============================================================ */}
-          {/* LEFT SIDE: CLEAN, EDITORIAL, NON-SLOP TYPOGRAPHY            */}
-          {/* ============================================================ */}
-          <div
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}
-            className="hero-text-container"
-          >
-            {/* Clean, Refined Headline — No bulbous letters, no fake gradient masks */}
-            <div className="field-kicker" style={{ marginBottom: '22px' }}>Android · NFC · Non-custodial</div>
-            <h1 className="hero-headline">
-              <span className="hero-headline-line1">Hold two phones.</span>
-              <span className="hero-headline-line2">Money moves.</span>
-            </h1>
-
-            {/* Description */}
-            <p className="hero-description">
-              A self-custodial wallet that pays over a physical tap — no QR, no links, no seed-phrase
-              theatre. Bring two Android phones within <strong>4&nbsp;cm</strong> and the transfer
-              settles on-chain in under a second.
-            </p>
-
-            {/* Action Buttons */}
-            <div className="hero-action-buttons">
-              <Link
-                to="/download"
-                className="hero-btn-primary"
-                style={{ textDecoration: 'none' }}
-              >
-                <Smartphone size={18} />
-                <span>Multi-Chain APK — Coming Soon</span>
-                <span className="btn-version-badge">Android</span>
-              </Link>
-
-              <a
-                href="https://x.com/tapxpay"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hero-btn-secondary"
-              >
-                <span>Follow @tapxpay</span>
-                <ArrowUpRight size={15} />
-              </a>
-            </div>
-
-            {/* Quick Metrics Bar */}
-            <div className="hero-metrics-bar">
-              <div className="metric-item">
-                <div className="metric-value">~0.8s</div>
-                <div className="metric-label">Fast Finality</div>
-              </div>
-
-              <div className="metric-divider" />
-
-              <div className="metric-item">
-                <div className="metric-value">4cm</div>
-                <div className="metric-label">NFC Induction Range</div>
-              </div>
-
-              <div className="metric-divider" />
-
-              <div className="metric-item">
-                <div className="metric-value">100%</div>
-                <div className="metric-label">Hardware Keystore</div>
-              </div>
-            </div>
+      <div className="phantom-container hero-content-wrap">
+        {/* Centered editorial header */}
+        <div className="hero-header-block">
+          <div className="field-kicker hero-kicker">Android · NFC · Non-custodial</div>
+          <h1 className="hero-headline">
+            <span className="hero-headline-line1">Tap phones.</span>
+            <span className="hero-headline-line2">Move money.</span>
+          </h1>
+          <p className="hero-description">
+            Self-custodial payments over a physical NFC tap — no QR codes, no wallet addresses,
+            no seed-phrase theatre. Two Android phones within <strong>4&nbsp;cm</strong>, settled
+            on-chain in under a second.
+          </p>
+          <div className="hero-action-buttons">
+            <Link to="/download" className="hero-btn-primary" style={{ textDecoration: 'none' }}>
+              <Smartphone size={18} />
+              <span>Multi-Chain APK — Coming Soon</span>
+              <span className="btn-version-badge">Android</span>
+            </Link>
+            <a
+              href="https://x.com/tapxpay"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hero-btn-secondary"
+            >
+              <span>Follow @tapxpay</span>
+              <ArrowUpRight size={15} />
+            </a>
           </div>
+        </div>
 
-          {/* ============================================================ */}
-          {/* RIGHT SIDE: CONTINUOUS FULL-JOURNEY PHONE SIMULATOR          */}
-          {/* ============================================================ */}
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              position: 'relative',
-            }}
-            className="hero-phone-column"
-          >
-            {!['history', 'tx_detail', 'settings'].includes(currentStep) && (
-              <>
-                <div className="hero-floating-card card-float-1">
-                  <div className="float-card-icon green">
-                    <Zap size={14} />
-                  </div>
-                  <div>
-                    <div className="float-card-title">Atomic NFC Beam</div>
-                    <div className="float-card-sub">0.82s sub-second ledger</div>
-                  </div>
-                </div>
-
-                <div className="hero-floating-card card-float-2">
-                  <div className="float-card-icon blue">
-                    <ShieldCheck size={14} />
-                  </div>
-                  <div>
-                    <div className="float-card-title">Hardware Keystore</div>
-                    <div className="float-card-sub">StrongBox Enclave</div>
-                  </div>
-                </div>
-              </>
-            )}
+        {/* Phone as the centrepiece visual */}
+        <div className="hero-phone-stage">
+          <div className="hero-phone-glow" />
+          <div className="hero-phone-column">
 
             {/* Realistic Phone Chassis */}
             <div
@@ -517,95 +404,65 @@ export const Hero: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Metrics strip below phone */}
+          <div className="hero-metrics-bar">
+            <div className="metric-item">
+              <div className="metric-value">~0.8s</div>
+              <div className="metric-label">Fast Finality</div>
+            </div>
+            <div className="metric-divider" />
+            <div className="metric-item">
+              <div className="metric-value">4cm</div>
+              <div className="metric-label">NFC Range</div>
+            </div>
+            <div className="metric-divider" />
+            <div className="metric-item">
+              <div className="metric-value">100%</div>
+              <div className="metric-label">Non-Custodial</div>
+            </div>
+          </div>
         </div>
-      </div>
       </div>
 
       <style>{`
         /* ========================================================= */
-        /* HERO ADVANCED STYLING & HIGH-FASHION TYPOGRAPHY           */
+        /* HERO — CENTRED EDITORIAL LAYOUT                           */
         /* ========================================================= */
-
-        /* Structural grid wash instead of a soft white radial glow */
-        .hero-ambient-sheen {
-          position: absolute;
-          inset: 0;
-          background:
-            linear-gradient(var(--canvas-line) 1px, transparent 1px),
-            linear-gradient(90deg, var(--canvas-line) 1px, transparent 1px);
-          background-size: 68px 68px;
-          -webkit-mask-image: radial-gradient(ellipse 80% 60% at 30% 35%, #000 0%, transparent 72%);
-          mask-image: radial-gradient(ellipse 80% 60% at 30% 35%, #000 0%, transparent 72%);
-          opacity: 0.6;
-          pointer-events: none;
-          z-index: 0;
-        }
-
-        /* Decorative NFC waves radiating behind phone */
-        .hero-nfc-waves-bg {
-          position: absolute;
-          right: 12%;
-          top: 50%;
-          transform: translateY(-50%);
-          width: 500px;
-          height: 500px;
-          pointer-events: none;
-          z-index: 1;
-        }
-        .nfc-pulse-ring {
-          position: absolute;
-          inset: 0;
-          border-radius: 50%;
-          border: 1px solid var(--accent-wash);
-          animation: nfcPulseWave 8s linear infinite;
-        }
-        .nfc-pulse-ring.ring-1 { animation-delay: 0s; }
-        .nfc-pulse-ring.ring-2 { animation-delay: 2.6s; }
-        .nfc-pulse-ring.ring-3 { animation-delay: 5.2s; }
-
-        @keyframes nfcPulseWave {
-          0% { transform: scale(0.6); opacity: 0; }
-          40% { opacity: 0.6; }
-          100% { transform: scale(1.4); opacity: 0; }
-        }
-
-        /* Live Ping Dot */
-        .live-ping-container {
+        .hero-section {
           position: relative;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          width: 8px;
-          height: 8px;
-        }
-        .live-ping-bubble {
-          position: absolute;
-          width: 16px;
-          height: 16px;
-          border-radius: 50%;
-          background: #10B981;
-          opacity: 0.4;
-          animation: livePing 2s cubic-bezier(0, 0, 0.2, 1) infinite;
-        }
-        .live-ping-dot {
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
-          background: #10B981;
-        }
-        @keyframes livePing {
-          0% { transform: scale(0.6); opacity: 0.8; }
-          100% { transform: scale(2.2); opacity: 0; }
+          overflow: hidden;
+          padding: 130px 0 56px;
+          min-height: 100vh;
+          display: flex;
+          align-items: flex-start;
+          background: transparent;
+          color: var(--text-dark);
         }
 
-        /* Editorial serif display headline — the signature anti-"AI SaaS" move */
+        .hero-content-wrap {
+          position: relative;
+          z-index: 2;
+          width: 100%;
+        }
+
+        .hero-header-block {
+          text-align: center;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          margin-bottom: 48px;
+        }
+
+        .hero-kicker { margin-bottom: 20px; }
+
         .hero-headline {
           font-family: var(--font-serif);
-          font-size: clamp(52px, 7vw, 96px);
+          font-size: clamp(56px, 9vw, 120px);
           font-weight: 400;
-          letter-spacing: -0.02em;
-          line-height: 0.98;
-          margin-bottom: 26px;
+          letter-spacing: -0.025em;
+          line-height: 0.95;
+          margin-bottom: 24px;
         }
         .hero-headline-line1 {
           display: block;
@@ -613,18 +470,16 @@ export const Hero: React.FC = () => {
         }
         .hero-headline-line2 {
           display: block;
-          color: var(--accent-bright);
           font-style: italic;
         }
 
-        /* Description */
         .hero-description {
           font-family: var(--font-sans);
           font-size: 17px;
-          line-height: 1.6;
+          line-height: 1.65;
           color: var(--text-dark-muted);
-          max-width: 460px;
-          margin-bottom: 36px;
+          max-width: 520px;
+          margin-bottom: 32px;
           font-weight: 400;
         }
         .hero-description strong {
@@ -632,14 +487,14 @@ export const Hero: React.FC = () => {
           font-weight: 600;
         }
 
-        /* Action Buttons */
         .hero-action-buttons {
           display: flex;
           align-items: center;
+          justify-content: center;
           gap: 12px;
           flex-wrap: wrap;
-          margin-bottom: 42px;
         }
+
         .hero-btn-primary {
           display: inline-flex;
           align-items: center;
@@ -660,9 +515,7 @@ export const Hero: React.FC = () => {
           background: var(--accent-bright);
           border-color: var(--accent-bright);
         }
-        .hero-btn-primary:active {
-          transform: scale(0.96);
-        }
+        .hero-btn-primary:active { transform: scale(0.96); }
         .btn-version-badge {
           background: rgba(6, 6, 8, 0.22);
           padding: 2px 8px;
@@ -691,19 +544,51 @@ export const Hero: React.FC = () => {
           color: var(--accent-bright);
         }
 
+        /* Phone centrepiece */
+        .hero-phone-stage {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          position: relative;
+          margin-bottom: 40px;
+        }
+
+        .hero-phone-glow {
+          position: absolute;
+          width: 420px;
+          height: 420px;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background: radial-gradient(circle, rgba(10, 132, 255, 0.10) 0%, transparent 65%);
+          pointer-events: none;
+          z-index: 0;
+        }
+
+        .hero-phone-column {
+          position: relative;
+          z-index: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+        }
+
         /* Metrics Bar */
         .hero-metrics-bar {
           display: flex;
           align-items: center;
-          gap: 32px;
-          padding-top: 24px;
+          justify-content: center;
+          gap: 40px;
+          padding-top: 28px;
           border-top: 1px solid var(--canvas-line);
           width: 100%;
-          max-width: 480px;
+          max-width: 520px;
+          margin: 0 auto;
         }
         .metric-item {
           display: flex;
           flex-direction: column;
+          align-items: center;
         }
         .metric-value {
           font-family: var(--font-serif);
@@ -727,56 +612,6 @@ export const Hero: React.FC = () => {
           background: var(--canvas-line);
         }
 
-        /* Floating Chips around phone */
-        .hero-floating-card {
-          position: absolute;
-          z-index: 30;
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          background: var(--canvas-bg-raised);
-          padding: 9px 14px;
-          border-radius: var(--radius-card-sm);
-          box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
-          border: 1px solid var(--canvas-line-bright);
-          animation: floatLevitate 5s ease-in-out infinite;
-          pointer-events: none;
-        }
-        .card-float-1 {
-          top: 80px;
-          left: -35px;
-          animation-delay: 0s;
-        }
-        .card-float-2 {
-          bottom: 110px;
-          right: -35px;
-          animation-delay: 2.5s;
-        }
-        @keyframes floatLevitate {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-8px); }
-        }
-        .float-card-icon {
-          width: 28px;
-          height: 28px;
-          border-radius: 8px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .float-card-icon.green { background: var(--signal-wash); color: var(--signal); }
-        .float-card-icon.blue { background: var(--accent-wash); color: var(--accent-bright); }
-        .float-card-title {
-          font-size: 12px;
-          font-weight: 700;
-          color: var(--text-dark);
-        }
-        .float-card-sub {
-          font-family: var(--font-mono);
-          font-size: 10px;
-          color: var(--text-dark-subtle);
-        }
-
         /* ========================================================= */
         /* PHONE DEVICE & AUTOMATED FLOW SIMULATOR                   */
         /* ========================================================= */
@@ -788,7 +623,7 @@ export const Hero: React.FC = () => {
           background: #111218;
           padding: 8px;
           position: relative;
-          box-shadow: 
+          box-shadow:
             0 0 0 1px rgba(255, 255, 255, 0.12),
             0 0 0 4px #22232E,
             0 30px 80px -15px rgba(0, 0, 0, 0.35);
@@ -1701,13 +1536,11 @@ export const Hero: React.FC = () => {
         .hero-flow-controller {
           width: 100%;
           max-width: 320px;
-          background: rgba(255, 255, 255, 0.85);
-          backdrop-filter: blur(16px);
-          border: 1px solid rgba(26, 26, 26, 0.08);
+          background: var(--canvas-bg-raised);
+          border: 1px solid var(--canvas-line-bright);
           border-radius: 18px;
           padding: 10px 12px;
           margin-top: 16px;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
         }
         .flow-controller-header {
           display: flex;
@@ -1725,24 +1558,24 @@ export const Hero: React.FC = () => {
         .flow-title {
           font-size: 11px;
           font-weight: 600;
-          color: #18181B;
+          color: var(--text-dark);
         }
         .flow-pause-btn {
           display: flex;
           align-items: center;
           gap: 4px;
-          background: rgba(26, 26, 26, 0.05);
+          background: rgba(255, 255, 255, 0.06);
           border: none;
           border-radius: 9999px;
           padding: 2px 7px;
           font-size: 10px;
           font-weight: 600;
-          color: #18181B;
+          color: var(--text-dark-muted);
           cursor: pointer;
           transition: background 0.15s ease;
         }
         .flow-pause-btn:hover {
-          background: rgba(26, 26, 26, 0.1);
+          background: rgba(255, 255, 255, 0.12);
         }
         .flow-steps-grid {
           display: grid;
@@ -1758,7 +1591,7 @@ export const Hero: React.FC = () => {
         }
         .step-bar-track {
           height: 3px;
-          background: rgba(26, 26, 26, 0.08);
+          background: rgba(255, 255, 255, 0.08);
           border-radius: 2px;
           overflow: hidden;
           margin-bottom: 4px;
@@ -1773,44 +1606,26 @@ export const Hero: React.FC = () => {
           display: block;
           font-size: 8.5px;
           font-weight: 500;
-          color: #71717A;
+          color: var(--text-dark-subtle);
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
         }
         .flow-step-tab.is-active .step-label {
-          color: #18181B;
+          color: var(--text-dark);
           font-weight: 700;
         }
 
         /* Responsive Layout */
-        @media (max-width: 960px) {
-          .hero-split-grid {
-            grid-template-columns: 1fr !important;
-            gap: 36px !important;
-            text-align: center;
-          }
-          .hero-text-container {
-            align-items: center !important;
-          }
-          .hero-action-buttons {
-            justify-content: center;
-          }
-          .hero-metrics-bar {
-            justify-content: center;
-          }
-          .hero-floating-card {
-            display: none !important;
-          }
-        }
-
         @media (max-width: 640px) {
-          #hero {
-            padding-top: 100px !important;
-            padding-bottom: 45px !important;
+          .hero-section {
+            padding: 100px 0 36px;
           }
           .hero-headline {
-            font-size: 38px !important;
+            font-size: clamp(40px, 12vw, 56px) !important;
+          }
+          .hero-header-block {
+            margin-bottom: 32px;
           }
           .hero-action-buttons {
             width: 100%;
@@ -1821,11 +1636,18 @@ export const Hero: React.FC = () => {
             justify-content: center;
           }
           .hero-metrics-bar {
-            gap: 16px;
+            gap: 20px;
+          }
+          .metric-value {
+            font-size: 24px;
           }
           .hero-phone-device {
-            width: 280px !important;
-            height: 560px !important;
+            width: 270px !important;
+            height: 555px !important;
+          }
+          .hero-phone-glow {
+            width: 300px;
+            height: 300px;
           }
         }
       `}</style>

@@ -37,7 +37,7 @@ const navigation = {setOptions: jest.fn(), replace: jest.fn(), goBack: jest.fn()
 let tree: TestRenderer.ReactTestRenderer | undefined;
 
 beforeEach(() => {
-  jest.useFakeTimers();
+  jest.useFakeTimers({doNotFake: ['queueMicrotask']});
   jest.setSystemTime(0);
   jest.clearAllMocks();
   session.enabled = false;
@@ -53,11 +53,21 @@ beforeEach(() => {
   jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 });
 afterEach(async () => {
-  await act(async () => { tree?.unmount(); await stopHceSession(); });
-  tree = undefined;
-  jest.clearAllTimers();
-  jest.useRealTimers();
-  jest.restoreAllMocks();
+  try {
+    await act(async () => { tree?.unmount(); });
+    await act(async () => {
+      await stopHceSession();
+      // Flush the native animation mock's deferred completion frame.
+      await jest.advanceTimersByTimeAsync(16);
+    });
+    expect(session.enabled).toBe(false);
+    expect(jest.getTimerCount()).toBe(0);
+  } finally {
+    tree = undefined;
+    jest.clearAllTimers();
+    jest.useRealTimers();
+    jest.restoreAllMocks();
+  }
 });
 
 async function mount() {
@@ -71,6 +81,7 @@ function hasText(value: string) {
   return tree?.root.findAllByType(Text).some(node => node.props.children === value);
 }
 
+// The first render lazily initializes React Native host components on throttled CI.
 it('advertises and monitors past 60s, expires both at the shared deadline, and restarts', async () => {
   await mount();
   expect(session.enabled).toBe(true);
@@ -94,7 +105,7 @@ it('advertises and monitors past 60s, expires both at the shared deadline, and r
   await advance(SESSION_TIMEOUT_MS - 600);
   expect(session.enabled).toBe(false);
   expect(hasText('Session expired')).toBe(true);
-});
+}, 30_000);
 
 it('disables HCE on an early monitor timeout', async () => {
   jest.spyOn(tapPayment, 'waitForIncomingPayment').mockResolvedValueOnce({detected: false});
@@ -137,12 +148,15 @@ it('aborts the monitor and disables HCE on unmount', async () => {
 });
 
 it('expires even when the initial RPC never resolves', async () => {
-  mockProvider.getBlockNumber.mockReturnValueOnce(new Promise(() => {}));
+  let resolveBlock: (block: number) => void = () => {};
+  mockProvider.getBlockNumber.mockReturnValueOnce(new Promise<number>(resolve => { resolveBlock = resolve; }));
   await mount();
   expect(session.enabled).toBe(true);
   await advance(SESSION_TIMEOUT_MS - 600);
   expect(session.enabled).toBe(false);
   expect(hasText('Session expired')).toBe(true);
+  await act(async () => { resolveBlock(100); });
+  expect(mockProvider.getLogs).not.toHaveBeenCalled();
 });
 
 it('handles NFC initialization failure without an unhandled rejection', async () => {

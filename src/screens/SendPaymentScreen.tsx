@@ -270,7 +270,7 @@ export default function SendPaymentScreen({navigation}: Props) {
     setSending(true);
     try {
       const result = await executeCrossBorderTransfer({
-        recipient: resolvedUsername ? `@${resolvedUsername}` : resolvedAddress,
+        recipient: resolvedAddress,
         amount: amount,
         tokenSymbol: selectedToken,
       });

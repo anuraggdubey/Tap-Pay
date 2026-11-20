@@ -150,7 +150,7 @@ export default function UsernamePayScreen({navigation}: Props) {
     setSending(true);
     try {
       const result = await executeCrossBorderTransfer({
-        recipient: username ? `@${username}` : resolvedAddress,
+        recipient: resolvedAddress,
         amount: amount,
         tokenSymbol: selectedToken,
       });

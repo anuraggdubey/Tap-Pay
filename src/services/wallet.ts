@@ -9,6 +9,7 @@ import 'react-native-get-random-values';
 import '@ethersproject/shims';
 import {ethers} from 'ethers';
 import * as Keychain from 'react-native-keychain';
+import {NativeModules, Platform} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {normalizeMnemonic, walletFromRecoveryPhrase} from '../utils/recovery';
 import {MONAD_CONFIG, GAS_LIMIT_FALLBACK, TX_POLL_INTERVAL_MS, TX_MAX_WAIT_MS} from '../config/monad';
@@ -133,9 +134,11 @@ export async function isBiometricsAvailable(): Promise<boolean> {
 async function assertDeviceAuthReady(): Promise<void> {
   let ready = false;
   try {
-    ready = await Keychain.canImplyAuthentication({
-      authenticationType: Keychain.AUTHENTICATION_TYPE.DEVICE_PASSCODE_OR_BIOMETRICS,
-    });
+    ready = Platform.OS === 'android'
+      ? await NativeModules.DeviceAuth.isDeviceSecure()
+      : await Keychain.canImplyAuthentication({
+          authenticationType: Keychain.AUTHENTICATION_TYPE.DEVICE_PASSCODE_OR_BIOMETRICS,
+        });
   } catch {
     ready = false;
   }

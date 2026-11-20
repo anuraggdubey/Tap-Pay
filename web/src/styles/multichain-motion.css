@@ -1,7 +1,7 @@
 /* Multi-chain motion polish — additive layer (website only) */
 
 :root {
-  --mc-accent: 16, 185, 129;
+  --mc-accent: 10, 132, 255;
   --mc-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -17,7 +17,7 @@
 
 /* Flowing gradient on the hero headline */
 .hero-headline-line2 {
-  background: linear-gradient(100deg, #1a1a1a 0%, #10b981 30%, #6366f1 55%, #0ea5e9 75%, #1a1a1a 100%);
+  background: linear-gradient(100deg, var(--text-dark) 0%, var(--accent) 30%, var(--violet) 55%, var(--accent-bright) 75%, var(--text-dark) 100%);
   background-size: 250% 100%;
   -webkit-background-clip: text;
   background-clip: text;
@@ -94,7 +94,7 @@
 
 /* Scroll progress beam shimmer */
 .scroll-progress-beam {
-  background: linear-gradient(90deg, #10b981, #6366f1, #0ea5e9, #10b981) !important;
+  background: linear-gradient(90deg, var(--accent), var(--violet), var(--accent-bright), var(--accent)) !important;
   background-size: 300% 100% !important;
   animation: mc-text-flow 6s linear infinite;
 }

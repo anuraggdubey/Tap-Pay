@@ -217,13 +217,13 @@ export const NfcSimulator: React.FC = () => {
         <div
           className="sim-stage-card nfc-demo-stage"
           style={{
-            background: '#FFFFFF',
-            borderRadius: '32px',
+            background: 'var(--canvas-bg-raised)',
+            borderRadius: 'var(--radius-card)',
             padding: '36px 32px',
-            boxShadow: '0 20px 50px rgba(26, 26, 26, 0.08)',
+            boxShadow: '0 30px 70px rgba(0, 0, 0, 0.5)',
             maxWidth: '1120px',
             margin: '0 auto',
-            border: '1px solid rgba(26, 26, 26, 0.1)',
+            border: '1px solid var(--canvas-line)',
           }}
         >
           {/* Top Control Bar */}
@@ -236,7 +236,7 @@ export const NfcSimulator: React.FC = () => {
               flexWrap: 'wrap',
               gap: '16px',
               paddingBottom: '22px',
-              borderBottom: '1px solid rgba(26, 26, 26, 0.07)',
+              borderBottom: '1px solid var(--canvas-line)',
               marginBottom: '28px',
             }}
           >
@@ -249,10 +249,10 @@ export const NfcSimulator: React.FC = () => {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  background: 'var(--pill-bg)',
+                  background: 'var(--canvas-bg-sunken)',
                   padding: '6px 14px',
                   borderRadius: '9999px',
-                  border: '1px solid rgba(26, 26, 26, 0.08)',
+                  border: '1px solid var(--canvas-line)',
                 }}
               >
                 <input
@@ -283,9 +283,9 @@ export const NfcSimulator: React.FC = () => {
                       setPhase('home');
                     }}
                     style={{
-                      background: amount === preset ? '#18181B' : 'transparent',
-                      color: amount === preset ? '#FFFFFF' : '#71717A',
-                      border: '1px solid rgba(26, 26, 26, 0.08)',
+                      background: amount === preset ? 'var(--accent)' : 'transparent',
+                      color: amount === preset ? 'var(--text-on-accent)' : 'var(--text-dark-muted)',
+                      border: '1px solid var(--canvas-line)',
                       padding: '4px 10px',
                       borderRadius: '9999px',
                       fontSize: '12px',
@@ -305,8 +305,8 @@ export const NfcSimulator: React.FC = () => {
                 onClick={handleStartManualDemo}
                 className="phantom-btn-pill"
                 style={{
-                  background: '#18181B',
-                  color: '#FFFFFF',
+                  background: 'var(--accent)',
+                  color: 'var(--text-on-accent)',
                   padding: '11px 22px',
                   fontSize: '13px',
                   fontWeight: 600,
@@ -326,7 +326,7 @@ export const NfcSimulator: React.FC = () => {
                 onClick={() => setIsPaused(!isPaused)}
                 className="phantom-btn-pill"
                 style={{
-                  background: 'var(--pill-bg)',
+                  background: 'var(--canvas-bg-sunken)',
                   color: 'var(--text-dark)',
                   padding: '11px 18px',
                   fontSize: '13px',
@@ -336,7 +336,7 @@ export const NfcSimulator: React.FC = () => {
                   alignItems: 'center',
                   gap: '6px',
                   borderRadius: '9999px',
-                  border: '1px solid rgba(26, 26, 26, 0.08)',
+                  border: '1px solid var(--canvas-line)',
                 }}
               >
                 {isPaused ? <Play size={14} /> : <Pause size={14} />}
@@ -705,26 +705,27 @@ export const NfcSimulator: React.FC = () => {
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          background: rgba(26, 26, 26, 0.04);
-          border: 1px solid rgba(26, 26, 26, 0.06);
+          background: var(--canvas-bg-sunken);
+          border: 1px solid var(--canvas-line);
           padding: 6px 12px;
-          border-radius: 9999px;
+          border-radius: var(--radius-card-sm);
+          font-family: var(--font-mono);
           font-size: 11px;
-          font-weight: 600;
-          color: #71717A;
+          font-weight: 500;
+          letter-spacing: 0.01em;
+          color: var(--text-dark-subtle);
           cursor: pointer;
           transition: all 0.2s ease;
         }
         .tracker-pill.active {
-          background: #18181B;
-          color: #FFFFFF;
-          border-color: #18181B;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          background: var(--accent);
+          color: var(--text-on-accent);
+          border-color: var(--accent);
         }
         .tracker-pill.done {
-          background: #ECFDF5;
-          color: #065F46;
-          border-color: #A7F3D0;
+          background: var(--signal-wash);
+          color: var(--signal);
+          border-color: var(--signal-wash);
         }
         .step-num {
           font-weight: 700;
@@ -770,11 +771,12 @@ export const NfcSimulator: React.FC = () => {
           gap: 6px;
           padding: 4px 12px;
           border-radius: 9999px;
-          background: #F4F4F5;
+          background: var(--canvas-bg-sunken);
+          border: 1px solid var(--canvas-line);
           font-size: 11px;
           font-weight: 700;
           letter-spacing: 0.04em;
-          color: #18181B;
+          color: var(--text-dark);
           margin-bottom: 12px;
         }
         .device-tag-dot {
@@ -1329,10 +1331,10 @@ export const NfcSimulator: React.FC = () => {
           flex-direction: column;
           align-items: center;
           gap: 4px;
-          background: #FFFFFF;
-          border: 1px solid rgba(26, 26, 26, 0.08);
-          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-          border-radius: 16px;
+          background: var(--canvas-bg-raised);
+          border: 1px solid var(--canvas-line-bright);
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+          border-radius: var(--radius-card-sm);
           padding: 10px 8px;
           z-index: 5;
         }

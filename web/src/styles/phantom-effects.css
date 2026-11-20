@@ -167,18 +167,18 @@
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  background: #FDFCFE;
+  background: var(--canvas-bg-raised);
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--text-dark);
-  box-shadow: 0 4px 15px rgba(26, 26, 26, 0.06);
-  border: 1px solid rgba(26, 26, 26, 0.06);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--canvas-line);
   transition: background 0.2s ease;
 }
 
 .phantom-icon-btn:hover {
-  background: var(--pill-hover);
+  background: var(--canvas-bg-sunken);
 }
 
 /* Card Badge Pill */
@@ -328,10 +328,10 @@
   top: 0;
   left: 0;
   height: 2px;
-  background: linear-gradient(90deg, #1A1A1A 0%, #444444 50%, #10B981 100%);
+  background: linear-gradient(90deg, var(--canvas-bg) 0%, var(--accent-dim) 50%, var(--accent) 100%);
   z-index: 9999;
   pointer-events: none;
-  box-shadow: 0 0 8px rgba(16, 185, 129, 0.3);
+  box-shadow: 0 0 8px rgba(10, 132, 255, 0.3);
   transition: width 0.1s linear;
 }
 
@@ -438,7 +438,7 @@ html.lenis-smooth-active .scroll-reveal-scale {
   height: min(55vw, 520px);
   top: -12%;
   left: -8%;
-  background: radial-gradient(circle, rgba(16, 185, 129, 0.22) 0%, transparent 68%);
+  background: radial-gradient(circle, rgba(10, 132, 255, 0.10) 0%, transparent 68%);
 }
 
 .ambient-orb-b {
@@ -446,7 +446,7 @@ html.lenis-smooth-active .scroll-reveal-scale {
   height: min(48vw, 440px);
   top: 38%;
   right: -10%;
-  background: radial-gradient(circle, rgba(26, 26, 26, 0.08) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(110, 84, 255, 0.08) 0%, transparent 70%);
   transform: translate3d(0, calc(var(--scroll-y, 0px) * 0.06), 0);
 }
 
@@ -455,7 +455,7 @@ html.lenis-smooth-active .scroll-reveal-scale {
   height: min(42vw, 380px);
   bottom: 8%;
   left: 28%;
-  background: radial-gradient(circle, rgba(255, 253, 248, 0.55) 0%, transparent 72%);
+  background: radial-gradient(circle, rgba(10, 132, 255, 0.06) 0%, transparent 72%);
   transform: translate3d(0, calc(var(--scroll-y, 0px) * -0.08), 0);
 }
 
@@ -465,7 +465,7 @@ html.lenis-smooth-active .scroll-reveal-scale {
   width: 120px;
   height: 4px;
   margin-left: -60px;
-  background: radial-gradient(circle, rgba(16, 185, 129, 0.85) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(10, 132, 255, 0.85) 0%, transparent 70%);
   z-index: 9998;
   pointer-events: none;
   opacity: 0.85;

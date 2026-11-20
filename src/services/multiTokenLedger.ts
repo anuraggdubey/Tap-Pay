@@ -57,6 +57,7 @@ export async function sendErc20ViaMultiTokenLedger(
   const approvalInterface = new ethers.Interface([
     'function approve(address spender, uint256 amount) returns (bool)',
   ]);
+  let approvalSent = false;
   const approve = async (amount: bigint): Promise<void> => {
     const request = {
       to: tokenAddress,
@@ -68,6 +69,7 @@ export async function sendErc20ViaMultiTokenLedger(
       throw new Error('Token approval returned false');
     }
     const tx = await signer.sendTransaction(request);
+    approvalSent = true;
     const receipt = await tx.wait();
     if (!receipt || receipt.status !== 1) {
       throw new Error('Token approval was not confirmed successfully');
@@ -92,13 +94,16 @@ export async function sendErc20ViaMultiTokenLedger(
     }
     return tx;
   } catch (error) {
+    if (!approvalSent && allowance === 0n) {
+      throw error;
+    }
     try {
       await approve(0n);
     } catch (revokeError) {
-      throw new AggregateError(
-        [error, revokeError],
+      const cleanupError = new Error(
         'Payment or approval failed and allowance revocation failed; revoke the ledger allowance manually',
       );
+      throw Object.assign(cleanupError, {errors: [error, revokeError]});
     }
     throw error;
   }

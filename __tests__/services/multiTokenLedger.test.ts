@@ -68,14 +68,30 @@ describe('sendErc20ViaMultiTokenLedger', () => {
   it('rejects explicit false without broadcasting the approval or payment', async () => {
     call.mockResolvedValueOnce(boolResult(false));
     await expect(send()).rejects.toThrow('Token approval returned false');
-    expect(approvedAmounts()).toEqual([0n]);
+    expect(sendTransaction).not.toHaveBeenCalled();
     expect(pay).not.toHaveBeenCalled();
   });
 
   it('rejects malformed return data', async () => {
     call.mockResolvedValueOnce('0x12');
     await expect(send()).rejects.toThrow();
+    expect(sendTransaction).not.toHaveBeenCalled();
     expect(pay).not.toHaveBeenCalled();
+  });
+
+  it('skips revocation when submission fails with no existing allowance', async () => {
+    const error = new Error('submission rejected');
+    sendTransaction.mockRejectedValue(error);
+    await expect(send()).rejects.toBe(error);
+    expect(sendTransaction).toHaveBeenCalledTimes(1);
+    expect(pay).not.toHaveBeenCalled();
+  });
+
+  it('revokes an existing allowance even if no new approval was sent', async () => {
+    allowance.mockResolvedValue(10n);
+    pay.mockRejectedValue(new Error('payment failed'));
+    await expect(send()).rejects.toThrow('payment failed');
+    expect(approvedAmounts()).toEqual([0n]);
   });
 
   it.each([null, {status: 0}])('rejects unsuccessful approval receipt %s', async receipt => {
@@ -108,7 +124,10 @@ describe('sendErc20ViaMultiTokenLedger', () => {
     const revokeError = new Error('revoke failed');
     pay.mockRejectedValue(paymentError);
     sendTransaction.mockResolvedValueOnce({wait: approvalWait}).mockRejectedValueOnce(revokeError);
-    await expect(send()).rejects.toMatchObject({
+    const failure = await send().catch(error => error);
+    expect(failure).toBeInstanceOf(Error);
+    expect(failure.constructor).toBe(Error);
+    expect(failure).toMatchObject({
       message: expect.stringContaining('revoke the ledger allowance manually'),
       errors: [paymentError, revokeError],
     });

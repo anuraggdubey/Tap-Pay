@@ -5,7 +5,7 @@ import {HCESession} from 'react-native-hce';
 import ReceiveTapScreen from '../src/screens/ReceiveTapScreen';
 import PressableScale from '../src/components/PressableScale';
 import * as tapPayment from '../src/services/tapPayment';
-import {stopHceSession, startHceReceiverSession} from '../src/services/hce';
+import {stopHceSession, createHceReceiverLease} from '../src/services/hce';
 import {SESSION_TIMEOUT_MS} from '../src/config/monad';
 
 const mockWallet = {address: '0x1111111111111111111111111111111111111111', balance: 0n, refreshBalance: jest.fn()};
@@ -175,7 +175,7 @@ it.each(['unsupported', 'disabled'])('does not advertise when NFC is %s', async 
 });
 
 it('does not enable HCE if startup outlives its deadline', async () => {
-  const pending = startHceReceiverSession(mockWallet.address, Date.now() + 50);
+  const pending = createHceReceiverLease().start(mockWallet.address, Date.now() + 50);
   await advance(100);
   expect(await pending).toBe(false);
   expect(session.setEnabled).not.toHaveBeenCalledWith(true);

@@ -21,8 +21,7 @@ import {
   openNfcSettings,
 } from '../services/nfcReader';
 import {
-  startReceiverBroadcast,
-  stopReceiverBroadcast,
+  createReceiverBroadcastLease,
   waitForIncomingPayment,
 } from '../services/tapPayment';
 import {reverseResolveAddress} from '../services/registry';
@@ -62,6 +61,7 @@ export default function ReceiveTapScreen({navigation}: Props) {
 
   useEffect(() => {
     let cancelled = false;
+    const receiver = createReceiverBroadcastLease();
     isMountedRef.current = true;
     setSessionState('searching');
     const controller = new AbortController();
@@ -73,7 +73,7 @@ export default function ReceiveTapScreen({navigation}: Props) {
       controller.abort();
       if (sessionTimer !== undefined) clearTimeout(sessionTimer);
       if (!stopPromise) {
-        stopPromise = stopReceiverBroadcast().catch(error => {
+        stopPromise = receiver.stop().catch(error => {
           console.error('Failed to stop receive session:', error);
         });
       }
@@ -86,8 +86,10 @@ export default function ReceiveTapScreen({navigation}: Props) {
 
     (async () => {
       await initNfc();
+      if (cancelled) return;
 
       const supported = await isNfcSupported();
+      if (cancelled) return;
       if (!supported) {
         if (isMountedRef.current) {
           setNfcModalVisible(true);
@@ -96,6 +98,7 @@ export default function ReceiveTapScreen({navigation}: Props) {
       }
 
       const enabled = await isNfcEnabled();
+      if (cancelled) return;
       if (!enabled) {
         Alert.alert(
           'NFC Disabled',
@@ -112,15 +115,16 @@ export default function ReceiveTapScreen({navigation}: Props) {
         const expiresAt = Date.now() + SESSION_TIMEOUT_MS;
         sessionTimer = setTimeout(() => { expireSession(); }, SESSION_TIMEOUT_MS);
         // Start HCE broadcasting address
-        const started = await startReceiverBroadcast(address, expiresAt);
+        const started = await receiver.start(address, expiresAt);
         if (!started) {
+           if (cancelled) return;
            Alert.alert('Error', 'Failed to start NFC broadcast.');
            return;
         }
 
         // Detection is driven by a confirmed on-chain ledger event, not by any balance change.
         if (controller.signal.aborted) {
-          await stopReceiverBroadcast();
+          await receiver.stop();
           return;
         }
         const payment = await waitForIncomingPayment(address, Math.max(0, expiresAt - Date.now()), controller.signal);

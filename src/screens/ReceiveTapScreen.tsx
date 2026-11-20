@@ -61,7 +61,7 @@ export default function ReceiveTapScreen({navigation}: Props) {
 
   useEffect(() => {
     let cancelled = false;
-    const receiver = createReceiverBroadcastLease();
+    const {start: startReceiverBroadcast, stop: stopReceiverBroadcast} = createReceiverBroadcastLease();
     isMountedRef.current = true;
     setSessionState('searching');
     const controller = new AbortController();
@@ -73,7 +73,7 @@ export default function ReceiveTapScreen({navigation}: Props) {
       controller.abort();
       if (sessionTimer !== undefined) clearTimeout(sessionTimer);
       if (!stopPromise) {
-        stopPromise = receiver.stop().catch(error => {
+        stopPromise = stopReceiverBroadcast().catch(error => {
           console.error('Failed to stop receive session:', error);
         });
       }
@@ -115,7 +115,7 @@ export default function ReceiveTapScreen({navigation}: Props) {
         const expiresAt = Date.now() + SESSION_TIMEOUT_MS;
         sessionTimer = setTimeout(() => { expireSession(); }, SESSION_TIMEOUT_MS);
         // Start HCE broadcasting address
-        const started = await receiver.start(address, expiresAt);
+        const started = await startReceiverBroadcast(address, expiresAt);
         if (!started) {
            if (cancelled) return;
            Alert.alert('Error', 'Failed to start NFC broadcast.');
@@ -124,7 +124,7 @@ export default function ReceiveTapScreen({navigation}: Props) {
 
         // Detection is driven by a confirmed on-chain ledger event, not by any balance change.
         if (controller.signal.aborted) {
-          await receiver.stop();
+          await stopReceiverBroadcast();
           return;
         }
         const payment = await waitForIncomingPayment(address, Math.max(0, expiresAt - Date.now()), controller.signal);

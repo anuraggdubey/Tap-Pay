@@ -36,6 +36,7 @@ jest.mock('react-native-keychain', () => {
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Keychain from 'react-native-keychain';
+import {Platform} from 'react-native';
 import {
   WalletError,
   deleteWallet,
@@ -295,6 +296,95 @@ describe('wallet storage', () => {
       service: 'com.tappay.wallet.phrase',
       authenticationPrompt: expect.any(Object),
     }));
+  });
+
+  describe('reset with unrecoverable Android secrets', () => {
+    const invalidated = {
+      code: 'E_CRYPTO_FAILED',
+      message: 'Wrapped error: Key permanently invalidated',
+    };
+    const badTag = {
+      code: 'E_CRYPTO_FAILED',
+      message: 'Decryption failed: Authentication tag verification failed. ' +
+        'This usually indicates that the encrypted data was modified, corrupted, ' +
+        'or is being decrypted with the wrong key.',
+    };
+
+    beforeEach(() => jest.replaceProperty(Platform, 'OS', 'android'));
+    afterEach(() => jest.restoreAllMocks());
+
+    it.each([invalidated, badTag])('allows removal when both secrets are unrecoverable: $message', async error => {
+      const w = generateWallet();
+      await storeWallet({privateKey: w.privateKey, mnemonic: w.mnemonic});
+      kc.getGenericPassword.mockRejectedValueOnce(error).mockRejectedValueOnce(error);
+      expect(await deleteWallet()).toBe(true);
+      expect(kc.getGenericPassword.mock.calls.map((call: any[]) => call[0].service))
+        .toEqual(['com.tappay.wallet', 'com.tappay.wallet.phrase']);
+      expect(await hasWallet()).toBe(false);
+      expect(await hasRecoveryPhrase()).toBe(false);
+      expect(await AsyncStorage.getItem('@tappay_wallet_address')).toBeNull();
+    });
+
+    it('authenticates a recoverable phrase before deleting an invalidated signing key', async () => {
+      const w = generateWallet();
+      await storeWallet({privateKey: w.privateKey, mnemonic: w.mnemonic});
+      kc.getGenericPassword.mockRejectedValueOnce(invalidated);
+      expect(await deleteWallet()).toBe(true);
+      expect(kc.getGenericPassword).toHaveBeenLastCalledWith(expect.objectContaining({
+        service: 'com.tappay.wallet.phrase', authenticationPrompt: expect.any(Object),
+      }));
+      expect(kc.getGenericPassword.mock.invocationCallOrder[1])
+        .toBeLessThan(kc.resetGenericPassword.mock.invocationCallOrder[0]);
+    });
+
+    it('preserves both entries if authentication of the recoverable phrase is cancelled', async () => {
+      const w = generateWallet();
+      await storeWallet({privateKey: w.privateKey, mnemonic: w.mnemonic});
+      kc.getGenericPassword.mockRejectedValueOnce(invalidated)
+        .mockRejectedValueOnce({code: 'E_CRYPTO_FAILED', message: 'code: 10, msg: User cancelled'});
+      await expectCode(deleteWallet(), 'AUTHENTICATION_FAILED');
+      expect(kc.resetGenericPassword).not.toHaveBeenCalled();
+      expect(AsyncStorage.removeItem).not.toHaveBeenCalled();
+      expect(await hasRecoveryPhrase()).toBe(true);
+    });
+
+    it.each([
+      {code: 'E_CRYPTO_FAILED', message: 'code: 7, msg: Too many attempts'},
+      {code: 'E_CRYPTO_FAILED', message: 'code: 9, msg: Permanent biometric lockout'},
+      {code: 'E_CRYPTO_FAILED', message: 'code: 10, msg: User cancelled'},
+      {code: 'E_CRYPTO_FAILED', message: 'Wrapped error: User not authenticated'},
+      {code: 'E_CRYPTO_FAILED', message: 'Decryption failed'},
+      {code: 'E_KEYSTORE_ACCESS_ERROR', message: 'Could not access Keystore'},
+      {code: 'E_UNKNOWN_ERROR', message: invalidated.message},
+    ])('does not treat a generic/authentication error as permanent loss: $message', async error => {
+      await storeWallet({privateKey: generateWallet().privateKey});
+      kc.getGenericPassword.mockRejectedValueOnce(error);
+      await expectCode(deleteWallet(), 'AUTHENTICATION_FAILED');
+      expect(kc.resetGenericPassword).not.toHaveBeenCalled();
+      expect(AsyncStorage.removeItem).not.toHaveBeenCalled();
+    });
+
+    it('does not apply Android error-message handling on iOS', async () => {
+      jest.replaceProperty(Platform, 'OS', 'ios');
+      await storeWallet({privateKey: generateWallet().privateKey});
+      kc.getGenericPassword.mockRejectedValueOnce(invalidated);
+      await expectCode(deleteWallet(), 'AUTHENTICATION_FAILED');
+      expect(kc.resetGenericPassword).not.toHaveBeenCalled();
+    });
+
+    it('allows removing an invalidated raw-key wallet', async () => {
+      await storeWallet({privateKey: generateWallet().privateKey});
+      kc.getGenericPassword.mockRejectedValueOnce(invalidated);
+      expect(await deleteWallet()).toBe(true);
+      expect(kc.resetGenericPassword).toHaveBeenCalledTimes(1);
+    });
+
+    it('allows removing an unrecoverable orphaned recovery phrase', async () => {
+      kc.__store['com.tappay.wallet.phrase'] = {username: 'wallet', password: 'stored phrase', opts: {}};
+      kc.getGenericPassword.mockRejectedValueOnce(badTag);
+      expect(await deleteWallet()).toBe(true);
+      expect(await hasRecoveryPhrase()).toBe(false);
+    });
   });
 
   it('refuses to send without a ledger session instead of silently doing a plain transfer', async () => {

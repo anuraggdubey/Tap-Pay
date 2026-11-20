@@ -37,10 +37,11 @@ export function HeroMeshCanvas() {
 
       ctx.clearRect(0, 0, w, h);
 
+      // Restrained accent glow on the dark canvas — blue + violet, low opacity,
+      // so it reads as atmospheric depth rather than a candy aurora.
       const blobs = [
-        { x: 0.22 + Math.sin(t * 0.00035) * 0.08, y: 0.28 + Math.cos(t * 0.00028) * 0.06, r: 0.42, c: '16, 185, 129' },
-        { x: 0.78 + Math.cos(t * 0.00031) * 0.07, y: 0.35 + Math.sin(t * 0.00026) * 0.05, r: 0.38, c: '26, 26, 26' },
-        { x: 0.55 + Math.sin(t * 0.00022) * 0.1, y: 0.72 + Math.cos(t * 0.00024) * 0.04, r: 0.45, c: '255, 253, 248' },
+        { x: 0.20 + Math.sin(t * 0.00035) * 0.06, y: 0.30 + Math.cos(t * 0.00028) * 0.05, r: 0.5, c: '10, 132, 255' },
+        { x: 0.72 + Math.cos(t * 0.00031) * 0.06, y: 0.58 + Math.sin(t * 0.00026) * 0.05, r: 0.42, c: '110, 84, 255' },
       ];
 
       blobs.forEach((b) => {
@@ -48,8 +49,8 @@ export function HeroMeshCanvas() {
         const cy = b.y * h;
         const radius = b.r * Math.min(w, h);
         const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
-        g.addColorStop(0, `rgba(${b.c}, 0.22)`);
-        g.addColorStop(0.55, `rgba(${b.c}, 0.08)`);
+        g.addColorStop(0, `rgba(${b.c}, 0.14)`);
+        g.addColorStop(0.55, `rgba(${b.c}, 0.05)`);
         g.addColorStop(1, `rgba(${b.c}, 0)`);
         ctx.fillStyle = g;
         ctx.beginPath();

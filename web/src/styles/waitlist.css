@@ -728,18 +728,30 @@
 
 .nav-download-join {
   padding: 10px 18px;
-  font-size: 13px;
-  font-weight: 700;
-  background: var(--text-dark);
-  color: #fff;
-  border: none;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border-radius: var(--radius-card-sm);
+  background: var(--accent);
+  color: var(--text-on-accent);
+  border: 1px solid var(--accent);
   cursor: pointer;
   white-space: nowrap;
+  transition: background 0.18s ease, transform 0.18s var(--ease-tap);
+}
+
+.nav-download-join:hover {
+  background: var(--accent-bright);
+}
+
+.nav-download-join:active {
+  transform: scale(0.96);
 }
 
 .nav-download-split.is-dark .nav-download-join {
-  background: #fffdf8;
-  color: #0d0d12;
+  background: var(--accent);
+  color: var(--text-on-accent);
 }
 
 .nav-download-link {

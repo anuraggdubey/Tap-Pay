@@ -17,8 +17,15 @@ public class ApduHelper {
   public static final byte[] C_APDU_WRITE = BinaryUtils.HexStringToByteArray("00D6");
   public static final byte[] R_APDU_OK = BinaryUtils.HexStringToByteArray("9000");
   public static final byte[] R_APDU_ERROR = BinaryUtils.HexStringToByteArray("6A82");
+  public static final byte[] R_APDU_WRONG_LENGTH = BinaryUtils.HexStringToByteArray("6700");
+  public static final byte[] R_APDU_WRONG_OFFSET = BinaryUtils.HexStringToByteArray("6B00");
+  public static final byte[] R_APDU_WRONG_PARAMETERS = BinaryUtils.HexStringToByteArray("6A86");
+  public static final byte[] R_APDU_EOF = BinaryUtils.HexStringToByteArray("6282");
+  public static final byte[] R_APDU_UNKNOWN_ERROR = BinaryUtils.HexStringToByteArray("6F00");
 
   public static Boolean commandByRangeEquals(byte[] command, Integer from, Integer to, byte[] expectedCommand) {
-    return Arrays.equals(Arrays.copyOfRange(command, from, to), expectedCommand);
+    return command != null && expectedCommand != null && from != null && to != null
+      && from >= 0 && to >= from && to <= command.length
+      && Arrays.equals(Arrays.copyOfRange(command, from, to), expectedCommand);
   }
 }

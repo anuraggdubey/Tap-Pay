@@ -75,7 +75,8 @@ public class NFCTagType4 implements IHCEApplication {
   }
 
   public boolean assertSelectCommand(byte[] command) {
-    Boolean result = ApduHelper.commandByRangeEquals(command, 0, 13, C_APDU_SELECT);
+    boolean result = Arrays.equals(command, C_APDU_SELECT)
+      || Arrays.equals(command, Arrays.copyOf(C_APDU_SELECT, C_APDU_SELECT.length - 1));
 
     if (result) {
       // Refresh NDEF content from SharedPreferences on every new reader connection
@@ -90,12 +91,17 @@ public class NFCTagType4 implements IHCEApplication {
   }
 
   private byte[] respondSelectFile(byte[] command) {
+    if (command.length != 7 || command[4] != 2) {
+      return ApduHelper.R_APDU_WRONG_LENGTH;
+    }
     byte[] file = Arrays.copyOfRange(command, 5, 7);
 
     if (Arrays.equals(file, FILENAME_CC)) {
       this.selectedFile = SelectedFile.FILENAME_CC;
     } else if (Arrays.equals(file, FILENAME_NDEF)) {
       this.selectedFile = SelectedFile.FILENAME_NDEF;
+    } else {
+      return ApduHelper.R_APDU_ERROR;
     }
 
     if (this.selectedFile != null) {
@@ -106,21 +112,28 @@ public class NFCTagType4 implements IHCEApplication {
   }
 
   private byte[] respondRead(byte[] command) {
+    if (command.length != 5) {
+      return ApduHelper.R_APDU_WRONG_LENGTH;
+    }
     if (this.selectedFile == null) {
       return ApduHelper.R_APDU_ERROR;
     }
 
-    int offset = Integer.parseInt(BinaryUtils.ByteArrayToHexString(Arrays.copyOfRange(command, 2, 4)), 16);
-    int length = Integer.parseInt(BinaryUtils.ByteArrayToHexString(Arrays.copyOfRange(command, 4, 5)), 16);
+    int offset = ((command[2] & 0xFF) << 8) | (command[3] & 0xFF);
+    int length = command[4] & 0xFF;
+    if (length == 0) length = 256;
 
     byte[] fullResponse = getFullResponseByFile();
-    byte[] slicedResponse = Arrays.copyOfRange(fullResponse, offset, fullResponse.length);
+    if (offset >= fullResponse.length) {
+      return ApduHelper.R_APDU_WRONG_OFFSET;
+    }
 
-    int realLength = Math.min(slicedResponse.length, length);
-    byte[] response = new byte[realLength + ApduHelper.R_APDU_OK.length];
+    int realLength = Math.min(fullResponse.length - offset, length);
+    byte[] status = realLength < length ? ApduHelper.R_APDU_EOF : ApduHelper.R_APDU_OK;
+    byte[] response = new byte[realLength + status.length];
 
-    System.arraycopy(slicedResponse, 0, response, 0, realLength);
-    System.arraycopy(ApduHelper.R_APDU_OK, 0, response, realLength, ApduHelper.R_APDU_OK.length);
+    System.arraycopy(fullResponse, offset, response, 0, realLength);
+    System.arraycopy(status, 0, response, realLength, status.length);
 
     this.hceModel.getLastState()
       .setValue(HceViewModel.HCE_STATE_READ);
@@ -133,6 +146,7 @@ public class NFCTagType4 implements IHCEApplication {
 
     try {
       int nlen = Integer.parseInt(BinaryUtils.ByteArrayToHexString(Arrays.copyOfRange(this.ndefDataBuffer, 0, 2)), 16);
+      if (nlen > this.ndefDataBuffer.length - 2) return null;
       nm = NdefEntity.fromBytes(Arrays.copyOfRange(this.ndefDataBuffer, 2, 2 + nlen));
     } catch (Exception e) {
       return null;
@@ -150,8 +164,17 @@ public class NFCTagType4 implements IHCEApplication {
       return ApduHelper.R_APDU_ERROR;
     }
 
-    int offset = Integer.parseInt(BinaryUtils.ByteArrayToHexString(Arrays.copyOfRange(command, 2, 4)), 16);
-    int length = Integer.parseInt(BinaryUtils.ByteArrayToHexString(Arrays.copyOfRange(command, 4, 5)), 16);
+    if (command.length < 5) {
+      return ApduHelper.R_APDU_WRONG_LENGTH;
+    }
+    int length = command[4] & 0xFF;
+    if (length == 0 || command.length != 5 + length) {
+      return ApduHelper.R_APDU_WRONG_LENGTH;
+    }
+    int offset = ((command[2] & 0xFF) << 8) | (command[3] & 0xFF);
+    if (offset >= ndefDataBuffer.length || length > ndefDataBuffer.length - offset) {
+      return ApduHelper.R_APDU_WRONG_OFFSET;
+    }
 
     byte[] data = Arrays.copyOfRange(command, 5, 5 + length);
     System.arraycopy(data, 0, ndefDataBuffer, offset, length);
@@ -174,16 +197,34 @@ public class NFCTagType4 implements IHCEApplication {
   }
 
   public byte[] processCommand(byte[] command) {
-    if (ApduHelper.commandByRangeEquals(command, 0, 5, ApduHelper.C_APDU_SELECT_FILE)) {
-      return this.respondSelectFile(command);
+    try {
+      return dispatchCommand(command);
+    } catch (Exception error) {
+      Log.w(TAG, "Command failed", error);
+      return ApduHelper.R_APDU_UNKNOWN_ERROR;
     }
+  }
 
+  private byte[] dispatchCommand(byte[] command) {
+    if (command == null || command.length < 2) {
+      return ApduHelper.R_APDU_WRONG_LENGTH;
+    }
     if (ApduHelper.commandByRangeEquals(command, 0, 2, ApduHelper.C_APDU_READ)) {
       return this.respondRead(command);
     }
 
     if (ApduHelper.commandByRangeEquals(command, 0, 2, ApduHelper.C_APDU_WRITE)) {
       return this.respondWrite(command);
+    }
+
+    if (command.length < 4) {
+      return ApduHelper.R_APDU_WRONG_LENGTH;
+    }
+    if (command[0] == 0 && command[1] == (byte) 0xA4) {
+      if (command[2] != 0 || command[3] != 0x0C) {
+        return ApduHelper.R_APDU_WRONG_PARAMETERS;
+      }
+      return this.respondSelectFile(command);
     }
 
     Log.i(TAG, "Unknown command.");

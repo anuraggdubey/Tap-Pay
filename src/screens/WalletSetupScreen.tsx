@@ -273,11 +273,15 @@ export default function WalletSetupScreen({navigation}: Props) {
           text: 'Reset wallet',
           style: 'destructive',
           onPress: async () => {
-            const done = await resetWallet();
-            if (done) {
-              setStep('welcome');
-            } else {
-              Alert.alert('Reset failed', 'Could not remove the wallet. Please try again.');
+            try {
+              const done = await resetWallet();
+              if (done) {
+                setStep('welcome');
+              } else {
+                Alert.alert('Reset failed', 'Could not remove the wallet. Please try again.');
+              }
+            } catch (error) {
+              Alert.alert('Wallet not reset', errorMessage(error));
             }
           },
         },

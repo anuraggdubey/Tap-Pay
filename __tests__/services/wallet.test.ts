@@ -209,12 +209,92 @@ describe('wallet storage', () => {
     const w = generateWallet();
     await storeWallet({privateKey: w.privateKey, mnemonic: w.mnemonic});
     expect(await deleteWallet()).toBe(true);
+    expect(kc.getGenericPassword).toHaveBeenCalledWith({
+      service: 'com.tappay.wallet',
+      authenticationPrompt: expect.objectContaining({
+        title: 'Authenticate to reset your wallet',
+        subtitle: 'TapPay Authorization',
+        cancel: 'Cancel',
+      }),
+    });
+    expect(kc.getGenericPassword.mock.invocationCallOrder[0])
+      .toBeLessThan(kc.resetGenericPassword.mock.invocationCallOrder[0]);
+    expect(kc.resetGenericPassword.mock.calls).toEqual([
+      [{service: 'com.tappay.wallet'}],
+      [{service: 'com.tappay.wallet.phrase'}],
+    ]);
     expect(await hasWallet()).toBe(false);
     expect(await hasRecoveryPhrase()).toBe(false);
     expect(await AsyncStorage.getItem('@tappay_wallet_address')).toBeNull();
 
     const n = generateWallet();
     await expect(storeWallet({privateKey: n.privateKey, mnemonic: n.mnemonic})).resolves.toBe(n.address);
+  });
+
+  it.each(['cancelled', 'failed', 'missing', 'empty'])(
+    'does not delete anything when reset authentication is %s',
+    async failure => {
+      const w = generateWallet();
+      await storeWallet({privateKey: w.privateKey, mnemonic: w.mnemonic});
+      if (failure === 'cancelled' || failure === 'failed') {
+        kc.getGenericPassword.mockRejectedValueOnce(new Error(failure));
+      } else {
+        kc.getGenericPassword.mockResolvedValueOnce(failure === 'missing' ? false : {password: ''});
+      }
+      await expectCode(deleteWallet(), 'AUTHENTICATION_FAILED');
+      expect(kc.resetGenericPassword).not.toHaveBeenCalled();
+      expect(AsyncStorage.removeItem).not.toHaveBeenCalled();
+      expect(kc.__store['com.tappay.wallet'].password).toBe(w.privateKey);
+      expect(kc.__store['com.tappay.wallet.phrase'].password).toBe(w.mnemonic);
+      expect(await AsyncStorage.getItem('@tappay_wallet_address')).toBe(w.address);
+    },
+  );
+
+  it.each(['key', 'phrase'])('fails closed if the %s existence check fails', async service => {
+    const w = generateWallet();
+    await storeWallet({privateKey: w.privateKey, mnemonic: w.mnemonic});
+    if (service === 'phrase') {
+      kc.hasGenericPassword.mockResolvedValueOnce(true);
+    }
+    kc.hasGenericPassword.mockRejectedValueOnce(new Error('Keystore unavailable'));
+    await expectCode(deleteWallet(), 'AUTHENTICATION_FAILED');
+    expect(kc.getGenericPassword).not.toHaveBeenCalled();
+    expect(kc.resetGenericPassword).not.toHaveBeenCalled();
+    expect(AsyncStorage.removeItem).not.toHaveBeenCalled();
+  });
+
+  it('allows reset without an authentication prompt when no secrets exist', async () => {
+    await AsyncStorage.setItem('@tappay_wallet_address', 'stale address');
+    expect(await deleteWallet()).toBe(true);
+    expect(kc.getGenericPassword).not.toHaveBeenCalled();
+    expect(kc.resetGenericPassword).not.toHaveBeenCalled();
+    expect(await AsyncStorage.getItem('@tappay_wallet_address')).toBeNull();
+  });
+
+  it('authenticates a raw-key wallet before resetting it', async () => {
+    const w = generateWallet();
+    await storeWallet({privateKey: w.privateKey});
+    expect(await deleteWallet()).toBe(true);
+    expect(kc.getGenericPassword).toHaveBeenCalledTimes(1);
+    expect(kc.resetGenericPassword).toHaveBeenCalledTimes(1);
+    expect(await hasWallet()).toBe(false);
+  });
+
+  it.each([true, false])('protects an orphaned recovery phrase (auth succeeds: %s)', async authorized => {
+    kc.__store['com.tappay.wallet.phrase'] = {username: 'wallet', password: 'stored phrase', opts: {}};
+    if (!authorized) {
+      kc.getGenericPassword.mockResolvedValueOnce(false);
+      await expectCode(deleteWallet(), 'AUTHENTICATION_FAILED');
+      expect(kc.resetGenericPassword).not.toHaveBeenCalled();
+      expect(AsyncStorage.removeItem).not.toHaveBeenCalled();
+    } else {
+      expect(await deleteWallet()).toBe(true);
+      expect(await hasRecoveryPhrase()).toBe(false);
+    }
+    expect(kc.getGenericPassword).toHaveBeenCalledWith(expect.objectContaining({
+      service: 'com.tappay.wallet.phrase',
+      authenticationPrompt: expect.any(Object),
+    }));
   });
 
   it('refuses to send without a ledger session instead of silently doing a plain transfer', async () => {

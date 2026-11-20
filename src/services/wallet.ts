@@ -20,6 +20,7 @@ const ADDRESS_STORAGE_KEY = '@tappay_wallet_address';
 export type WalletErrorCode =
   | 'WALLET_EXISTS'
   | 'NO_DEVICE_AUTH'
+  | 'AUTHENTICATION_FAILED'
   | 'NO_SECURE_HARDWARE'
   | 'INVALID_SECRET'
   | 'STORAGE_FAILED';
@@ -320,13 +321,33 @@ export async function hasRecoveryPhrase(): Promise<boolean> {
 }
 
 /**
- * Delete the stored wallet, recovery phrase and cached address from this device.
+ * Delete the stored wallet, recovery phrase and cached address after phone authentication.
  * Returns true only if everything was removed.
  */
 export async function deleteWallet(): Promise<boolean> {
+  let keyExists: boolean;
+  let phraseExists: boolean;
   try {
-    const keyRemoved = await Keychain.resetGenericPassword({service: KEYCHAIN_SERVICE});
-    const phraseRemoved = await Keychain.resetGenericPassword({service: PHRASE_SERVICE});
+    keyExists = await Keychain.hasGenericPassword({service: KEYCHAIN_SERVICE});
+    phraseExists = await Keychain.hasGenericPassword({service: PHRASE_SERVICE});
+  } catch {
+    throw new WalletError('AUTHENTICATION_FAILED', 'Could not verify the stored wallet. Nothing was removed.');
+  }
+
+  const promptTitle = 'Authenticate to reset your wallet';
+  if (
+    (keyExists && !(await loadPrivateKey(promptTitle))) ||
+    (!keyExists && phraseExists && !(await loadRecoveryPhrase(promptTitle)))
+  ) {
+    throw new WalletError(
+      'AUTHENTICATION_FAILED',
+      'Device authentication was cancelled or failed. Your wallet was not reset.',
+    );
+  }
+
+  try {
+    const keyRemoved = !keyExists || await Keychain.resetGenericPassword({service: KEYCHAIN_SERVICE});
+    const phraseRemoved = !phraseExists || await Keychain.resetGenericPassword({service: PHRASE_SERVICE});
     await AsyncStorage.removeItem(ADDRESS_STORAGE_KEY);
     return keyRemoved !== false && phraseRemoved !== false;
   } catch (error) {

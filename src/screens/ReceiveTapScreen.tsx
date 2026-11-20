@@ -21,8 +21,7 @@ import {
   openNfcSettings,
 } from '../services/nfcReader';
 import {
-  startReceiverBroadcast,
-  stopReceiverBroadcast,
+  createReceiverBroadcastLease,
   waitForIncomingPayment,
 } from '../services/tapPayment';
 import {reverseResolveAddress} from '../services/registry';
@@ -58,12 +57,16 @@ export default function ReceiveTapScreen({navigation}: Props) {
   }, [navigation]);
 
   useEffect(() => {
+    let cancelled = false;
+    const {start: startReceiverBroadcast, stop: stopReceiverBroadcast} = createReceiverBroadcastLease();
     isMountedRef.current = true;
 
     (async () => {
       await initNfc();
+      if (cancelled) return;
 
       const supported = await isNfcSupported();
+      if (cancelled) return;
       if (!supported) {
         if (isMountedRef.current) {
           setNfcModalVisible(true);
@@ -72,6 +75,7 @@ export default function ReceiveTapScreen({navigation}: Props) {
       }
 
       const enabled = await isNfcEnabled();
+      if (cancelled) return;
       if (!enabled) {
         Alert.alert(
           'NFC Disabled',
@@ -88,10 +92,15 @@ export default function ReceiveTapScreen({navigation}: Props) {
         // Start HCE broadcasting address
         const started = await startReceiverBroadcast(address);
         if (!started) {
+           if (cancelled) return;
            Alert.alert('Error', 'Failed to start NFC broadcast.');
            return;
         }
 
+        if (cancelled) {
+          await stopReceiverBroadcast();
+          return;
+        }
         // Detection is driven by a confirmed on-chain ledger event, not by any balance change.
         const payment = await waitForIncomingPayment(address);
 
@@ -143,6 +152,7 @@ export default function ReceiveTapScreen({navigation}: Props) {
     })();
 
     return () => {
+      cancelled = true;
       isMountedRef.current = false;
       stopReceiverBroadcast();
     };

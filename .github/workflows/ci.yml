@@ -52,7 +52,72 @@ jobs:
       - name: Run Jest tests
         run: npm test
 
+  # ── Supabase: Edge Functions, SQL Permissions & Rollout ──
+  supabase:
+    name: Supabase Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: postgres
 
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
+        with:
+          deno-version: 2.2.12
+
+      - name: Install SQL and smoke-test tools
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client curl jq
+
+      - name: Test Edge Functions with mocked Supabase and Turnstile
+        run: deno test --deny-net --deny-env supabase/functions
+
+      - name: Test historical SQL permission and cleanup migrations
+        run: |
+          echo 'SKIP: pg_cron scheduling assertions require pg_cron, absent in stock PostgreSQL 16. Cleanup and permissions are tested.'
+          for test in supabase/tests/*.sql; do
+            createdb sql_test
+            psql -X -v ON_ERROR_STOP=1 -d sql_test -f "$test"
+            dropdb sql_test
+          done
+
+      - name: Apply all migrations in order and test final permissions
+        run: |
+          createdb migrated_test
+          psql -X -v ON_ERROR_STOP=1 -d migrated_test -f supabase/ci/bootstrap.sql
+          psql -X -v ON_ERROR_STOP=1 -d migrated_test -f supabase/waitlist.sql
+          for migration in supabase/migrations/*.sql; do
+            psql -X -v ON_ERROR_STOP=1 -d migrated_test -f "$migration"
+          done
+          for test in supabase/tests/migrated/*.sql; do
+            psql -X -v ON_ERROR_STOP=1 -d migrated_test -f "$test"
+          done
+
+      - name: Test rollout script with local HTTP fixtures (no live credentials)
+        run: node --test supabase/tests/*.mjs
 
   # ── Lint ──
   lint:

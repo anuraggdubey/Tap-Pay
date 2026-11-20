@@ -142,6 +142,10 @@ public class NFCTagType4 implements IHCEApplication {
   }
 
   private byte[] respondWrite(byte[] command) {
+    if (!this.prefManager.getWritable()) {
+      return BinaryUtils.HexStringToByteArray("6982");
+    }
+
     if (this.selectedFile != SelectedFile.FILENAME_NDEF) {
       return ApduHelper.R_APDU_ERROR;
     }

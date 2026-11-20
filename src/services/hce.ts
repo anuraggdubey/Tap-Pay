@@ -11,13 +11,13 @@ import {encodeReceiverAddress} from '../utils/apdu';
 let _activeSession: HCESession | null = null;
 let _sessionTimer: ReturnType<typeof setTimeout> | null = null;
 
-function scheduleExpiry(): void {
+function scheduleExpiry(expiresAt: number): void {
   if (_sessionTimer) {
     clearTimeout(_sessionTimer);
   }
   _sessionTimer = setTimeout(() => {
     stopHceSession();
-  }, SESSION_TIMEOUT_MS);
+  }, Math.max(0, expiresAt - Date.now()));
 }
 
 async function ensureSession(): Promise<HCESession> {
@@ -32,6 +32,7 @@ async function ensureSession(): Promise<HCESession> {
  */
 export async function startHceReceiverSession(
   receiverAddress: string,
+  expiresAt = Date.now() + SESSION_TIMEOUT_MS,
 ): Promise<boolean> {
   try {
     // Stop any existing session first
@@ -55,13 +56,21 @@ export async function startHceReceiverSession(
     // Small pause to ensure SharedPreferences commit completes
     await new Promise(resolve => setTimeout(resolve, 100));
 
+    if (Date.now() >= expiresAt) {
+      await stopHceSession();
+      return false;
+    }
     await session.setEnabled(true);
+    scheduleExpiry(expiresAt);
 
     // Pause for Android to fully register the HostApduService with the NFC subsystem
     await new Promise(resolve => setTimeout(resolve, 500));
 
     console.log('[HCE] Session enabled and broadcasting');
-    scheduleExpiry();
+    if (Date.now() >= expiresAt) {
+      await stopHceSession();
+      return false;
+    }
     return true;
   } catch (error) {
     console.error('Failed to start HCE session:', error);

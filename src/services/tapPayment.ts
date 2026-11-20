@@ -3,7 +3,7 @@
  */
 
 import {ethers} from 'ethers';
-import {MONAD_CONFIG} from '../config/monad';
+import {MONAD_CONFIG, SESSION_TIMEOUT_MS} from '../config/monad';
 import {
   startHceReceiverSession,
   stopHceSession,
@@ -131,8 +131,9 @@ export async function broadcastTapPayment(
 
 export async function startReceiverBroadcast(
   receiverAddress: string,
+  expiresAt = Date.now() + SESSION_TIMEOUT_MS,
 ): Promise<boolean> {
-  return await startHceReceiverSession(receiverAddress);
+  return await startHceReceiverSession(receiverAddress, expiresAt);
 }
 
 export async function stopReceiverBroadcast(): Promise<void> {
@@ -143,10 +144,6 @@ export async function cancelTapSession(): Promise<void> {
   await cancelNfcRead();
   await stopContinuousHceScan();
   await stopHceSession();
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 export type IncomingPaymentMatch = {
@@ -167,13 +164,16 @@ export type IncomingPaymentMatch = {
 export async function scanForIncomingTapPayment(
   recipientAddress: string,
   fromBlock: number,
+  signal?: AbortSignal,
 ): Promise<IncomingPaymentMatch | null> {
   const tapLedger = MONAD_CONFIG.contracts.tapPayLedger;
   const multiLedger = MONAD_CONFIG.contracts.multiTokenLedger;
 
   try {
     return await withRpcFailover(async provider => {
+      if (signal?.aborted) return null;
       const head = await provider.getBlockNumber();
+      if (signal?.aborted) return null;
       const start = Math.max(0, fromBlock);
 
       const found: {event: ethers.EventLog; tokenAddress?: string}[] = [];
@@ -185,6 +185,7 @@ export async function scanForIncomingTapPayment(
           start,
           head,
         );
+        if (signal?.aborted) return null;
         for (const e of events) {
           found.push({event: e as ethers.EventLog});
         }
@@ -197,6 +198,7 @@ export async function scanForIncomingTapPayment(
           start,
           head,
         );
+        if (signal?.aborted) return null;
         for (const e of events) {
           const evt = e as ethers.EventLog;
           found.push({event: evt, tokenAddress: evt.args?.token as string});
@@ -220,6 +222,7 @@ export async function scanForIncomingTapPayment(
           continue;
         }
         const receipt = await provider.getTransactionReceipt(event.transactionHash);
+        if (signal?.aborted) return null;
         if (!receipt || receipt.status !== 1) {
           continue;
         }
@@ -249,30 +252,60 @@ export async function scanForIncomingTapPayment(
  */
 export async function waitForIncomingPayment(
   address: string,
-  timeoutMs = 60_000,
+  timeoutMs = SESSION_TIMEOUT_MS,
+  signal?: AbortSignal,
 ): Promise<IncomingPaymentInfo> {
-  let startBlock = 0;
-  try {
-    startBlock = await withRpcFailover(p => p.getBlockNumber());
-  } catch {
-    startBlock = 0;
+  if (signal?.aborted || timeoutMs <= 0) {
+    return {detected: false};
   }
-
   const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    const match = await scanForIncomingTapPayment(address, startBlock);
-    if (match) {
-      return {
-        detected: true,
-        senderAddress: match.senderAddress,
-        amountWei: match.amountWei,
-        amountDisplay: match.amountDisplay,
-        tokenSymbol: match.tokenSymbol,
-        txHash: match.txHash,
-      };
-    }
-    await sleep(1000);
-  }
+  const scanController = new AbortController();
+  let finished = false;
+  let pollTimer: ReturnType<typeof setTimeout> | undefined;
+  let wake: (() => void) | undefined;
+  let endWait: () => void = () => {};
+  const ended = new Promise<IncomingPaymentInfo>(resolve => {
+    endWait = () => resolve({detected: false});
+  });
+  const expiryTimer = setTimeout(endWait, timeoutMs);
+  signal?.addEventListener('abort', endWait);
 
-  return {detected: false};
+  const poll = async (): Promise<IncomingPaymentInfo> => {
+    let startBlock = 0;
+    try {
+      startBlock = await withRpcFailover(p => p.getBlockNumber());
+    } catch {
+      startBlock = 0;
+    }
+    while (!finished && !signal?.aborted && Date.now() < deadline) {
+      const match = await scanForIncomingTapPayment(address, startBlock, scanController.signal);
+      if (finished || signal?.aborted || Date.now() >= deadline) break;
+      if (match) {
+        return {
+          detected: true,
+          senderAddress: match.senderAddress,
+          amountWei: match.amountWei,
+          amountDisplay: match.amountDisplay,
+          tokenSymbol: match.tokenSymbol,
+          txHash: match.txHash,
+        };
+      }
+      await new Promise<void>(resolve => {
+        wake = resolve;
+        pollTimer = setTimeout(resolve, Math.min(1000, deadline - Date.now()));
+      });
+    }
+    return {detected: false};
+  };
+
+  try {
+    return await Promise.race([poll(), ended]);
+  } finally {
+    finished = true;
+    scanController.abort();
+    clearTimeout(expiryTimer);
+    if (pollTimer !== undefined) clearTimeout(pollTimer);
+    signal?.removeEventListener('abort', endWait);
+    wake?.();
+  }
 }

@@ -234,12 +234,12 @@ export const Navbar: React.FC = () => {
           background: var(--nav-bg-light);
           backdrop-filter: blur(20px);
           -webkit-backdrop-filter: blur(20px);
-          border-bottom: 1px solid rgba(26, 26, 26, 0.06);
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+          border-bottom: 1px solid var(--canvas-line);
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
         }
         .site-navbar-header.is-scrolled.is-dark {
-          background: rgba(15, 16, 21, 0.94);
-          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          background: var(--nav-bg-dark);
+          border-bottom: 1px solid var(--canvas-line);
           box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
         }
 
@@ -248,18 +248,22 @@ export const Navbar: React.FC = () => {
           align-items: center;
           gap: 4px;
           padding: 8px 16px;
-          border-radius: 9999px;
-          font-size: 14px;
+          border-radius: var(--radius-card-sm);
+          font-family: var(--font-mono);
+          font-size: 12.5px;
           font-weight: 500;
-          color: inherit;
-          transition: background 0.15s ease;
+          letter-spacing: 0.01em;
+          color: var(--text-dark-muted);
+          transition: background 0.15s ease, color 0.15s ease;
           text-decoration: none;
         }
         .phantom-nav-item:hover {
-          background: rgba(26, 26, 26, 0.06);
+          background: var(--canvas-line);
+          color: var(--text-dark);
         }
         .phantom-nav-pill.is-dark .phantom-nav-item:hover {
-          background: rgba(255, 255, 255, 0.1);
+          background: var(--canvas-line);
+          color: var(--text-dark);
         }
         @media (min-width: 900px) {
           .nav-center-desktop {
@@ -270,15 +274,15 @@ export const Navbar: React.FC = () => {
           .site-navbar-header {
             padding-block: 10px !important;
             padding-inline: 0 !important;
-            background: var(--nav-bg-light) !important;
+            background: var(--nav-bg-dark) !important;
             backdrop-filter: blur(20px) !important;
             -webkit-backdrop-filter: blur(20px) !important;
-            border-bottom: 1px solid rgba(26, 26, 26, 0.06) !important;
-            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.04) !important;
+            border-bottom: 1px solid var(--canvas-line) !important;
+            box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4) !important;
           }
           .site-navbar-header.is-dark {
-            background: rgba(15, 16, 21, 0.94) !important;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+            background: var(--nav-bg-dark) !important;
+            border-bottom: 1px solid var(--canvas-line) !important;
           }
           .nav-mobile-toggle {
             display: flex !important;

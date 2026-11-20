@@ -14,7 +14,7 @@ export const SecurityBento: React.FC = () => {
     <section
       id="security"
       style={{
-        background: '#0D0E12',
+        background: 'var(--canvas-bg)',
         color: '#FFFDF8',
         padding: '120px 0',
         position: 'relative',
@@ -55,12 +55,12 @@ export const SecurityBento: React.FC = () => {
         >
           {/* Card 1: Self Custodial Guarantee */}
           <div className="phantom-card-wrapper scroll-reveal scroll-delay-1" data-parallax="0.04">
-            <div className="phantom-card-shadow-layer" style={{ background: '#0D0D12' }} />
+            <div className="phantom-card-shadow-layer" style={{ background: 'var(--accent-wash)' }} />
             <div
               className="phantom-card-main"
               style={{
-                background: '#FFFDF9',
-                color: '#3C315B',
+                background: 'var(--canvas-bg-raised)',
+                color: 'var(--text-dark)',
               }}
             >
               <div>
@@ -86,19 +86,19 @@ export const SecurityBento: React.FC = () => {
                 >
                   Self-custodial means you control your funds. We never have access.
                 </h3>
-                <p style={{ color: '#6C628A', fontSize: '15px', lineHeight: 1.6, marginBottom: '24px' }}>
+                <p style={{ color: 'var(--text-dark-subtle)', fontSize: '15px', lineHeight: 1.6, marginBottom: '24px' }}>
                   TapPay does not hold a single token in escrow. Every payment executes atomically between sender and receiver via TapPayLedger.
                 </p>
               </div>
 
               <div
                 style={{
-                  background: '#F5F3FF',
+                  background: 'var(--canvas-bg-sunken)',
                   borderRadius: '20px',
                   padding: '18px',
                   fontSize: '13px',
                   fontWeight: 600,
-                  color: '#4C3B78',
+                  color: 'var(--text-dark-subtle)',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '8px',
@@ -122,12 +122,12 @@ export const SecurityBento: React.FC = () => {
 
           {/* Card 2: Hardware Secure Element */}
           <div className="phantom-card-wrapper scroll-reveal scroll-delay-2" data-parallax="-0.03">
-            <div className="phantom-card-shadow-layer" style={{ background: '#0D0D12' }} />
+            <div className="phantom-card-shadow-layer" style={{ background: 'var(--accent-wash)' }} />
             <div
               className="phantom-card-main"
               style={{
-                background: '#FFFDF9',
-                color: '#3C315B',
+                background: 'var(--canvas-bg-raised)',
+                color: 'var(--text-dark)',
               }}
             >
               <div>
@@ -136,7 +136,7 @@ export const SecurityBento: React.FC = () => {
                     fontSize: '12px',
                     fontWeight: 800,
                     letterSpacing: '0.06em',
-                    color: '#10B981',
+                    color: 'var(--signal)',
                     marginBottom: '12px',
                   }}
                 >
@@ -153,19 +153,19 @@ export const SecurityBento: React.FC = () => {
                 >
                   Private keys never leave your physical device.
                 </h3>
-                <p style={{ color: '#6C628A', fontSize: '15px', lineHeight: 1.6, marginBottom: '24px' }}>
+                <p style={{ color: 'var(--text-dark-subtle)', fontSize: '15px', lineHeight: 1.6, marginBottom: '24px' }}>
                   Keys are generated using standard ethers.js curves and sealed in the hardware Secure Element via react-native-keychain.
                 </p>
               </div>
 
               <div
                 style={{
-                  background: '#ECFDF5',
+                  background: 'var(--signal-wash)',
                   borderRadius: '20px',
                   padding: '18px',
                   fontSize: '13px',
                   fontWeight: 600,
-                  color: '#047857',
+                  color: 'var(--signal)',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '8px',
@@ -189,12 +189,12 @@ export const SecurityBento: React.FC = () => {
 
           {/* Card 3: Deployed Contracts */}
           <div className="phantom-card-wrapper scroll-reveal scroll-delay-3" data-parallax="0.04">
-            <div className="phantom-card-shadow-layer" style={{ background: '#0D0D12' }} />
+            <div className="phantom-card-shadow-layer" style={{ background: 'var(--accent-wash)' }} />
             <div
               className="phantom-card-main"
               style={{
-                background: '#FFFDF9',
-                color: '#3C315B',
+                background: 'var(--canvas-bg-raised)',
+                color: 'var(--text-dark)',
               }}
             >
               <div>
@@ -203,7 +203,7 @@ export const SecurityBento: React.FC = () => {
                     fontSize: '12px',
                     fontWeight: 800,
                     letterSpacing: '0.06em',
-                    color: '#2563EB',
+                    color: 'var(--accent-bright)',
                     marginBottom: '12px',
                   }}
                 >
@@ -225,14 +225,14 @@ export const SecurityBento: React.FC = () => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div
                   style={{
-                    background: '#F0F9FF',
+                    background: 'var(--accent-wash)',
                     borderRadius: '16px',
                     padding: '14px',
                     fontSize: '12px',
                   }}
                 >
-                  <div style={{ fontWeight: 700, color: '#0369A1', marginBottom: '4px' }}>TapPayLedger.sol</div>
-                  <div style={{ fontFamily: 'monospace', color: '#64748B', wordBreak: 'break-all' }}>
+                  <div style={{ fontWeight: 700, color: 'var(--accent-bright)', marginBottom: '4px' }}>TapPayLedger.sol</div>
+                  <div style={{ fontFamily: 'monospace', color: 'var(--text-dark-subtle)', wordBreak: 'break-all' }}>
                     0x5B177FEF554dA84A86be62E45fb49BB52e6D6838
                   </div>
                   <button
@@ -241,7 +241,7 @@ export const SecurityBento: React.FC = () => {
                       marginTop: '8px',
                       fontSize: '11px',
                       fontWeight: 700,
-                      color: '#0284C7',
+                      color: 'var(--accent-bright)',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '4px',
@@ -254,14 +254,14 @@ export const SecurityBento: React.FC = () => {
 
                 <div
                   style={{
-                    background: '#F5F3FF',
+                    background: 'var(--canvas-bg-sunken)',
                     borderRadius: '16px',
                     padding: '14px',
                     fontSize: '12px',
                   }}
                 >
-                  <div style={{ fontWeight: 700, color: '#6D28D9', marginBottom: '4px' }}>UsernameRegistry.sol</div>
-                  <div style={{ fontFamily: 'monospace', color: '#64748B', wordBreak: 'break-all' }}>
+                  <div style={{ fontWeight: 700, color: 'var(--violet)', marginBottom: '4px' }}>UsernameRegistry.sol</div>
+                  <div style={{ fontFamily: 'monospace', color: 'var(--text-dark-subtle)', wordBreak: 'break-all' }}>
                     0xEebB05F9AF06908eCb7bFa5F916Dde1EEa231aDD
                   </div>
                   <button
@@ -270,7 +270,7 @@ export const SecurityBento: React.FC = () => {
                       marginTop: '8px',
                       fontSize: '11px',
                       fontWeight: 700,
-                      color: '#7C3AED',
+                      color: 'var(--violet)',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '4px',

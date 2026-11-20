@@ -255,16 +255,17 @@ export const Hero: React.FC = () => {
             className="hero-text-container"
           >
             {/* Clean, Refined Headline — No bulbous letters, no fake gradient masks */}
+            <div className="field-kicker" style={{ marginBottom: '22px' }}>Android · NFC · Non-custodial</div>
             <h1 className="hero-headline">
-              <span className="hero-headline-line1">Tap to Pay.</span>
-              <span className="hero-headline-line2">Crypto, Simplified.</span>
+              <span className="hero-headline-line1">Hold two phones.</span>
+              <span className="hero-headline-line2">Money moves.</span>
             </h1>
 
             {/* Description */}
             <p className="hero-description">
-              The first non-custodial Android wallet for instant phone-to-phone contactless NFC tap payments.
-              Hold devices within <strong>4cm</strong> and execute an atomic multi-chain transfer.
-              No QR codes. No seed phrase stress.
+              A self-custodial wallet that pays over a physical tap — no QR, no links, no seed-phrase
+              theatre. Bring two Android phones within <strong>4&nbsp;cm</strong> and the transfer
+              settles on-chain in under a second.
             </p>
 
             {/* Action Buttons */}
@@ -525,14 +526,17 @@ export const Hero: React.FC = () => {
         /* HERO ADVANCED STYLING & HIGH-FASHION TYPOGRAPHY           */
         /* ========================================================= */
 
+        /* Structural grid wash instead of a soft white radial glow */
         .hero-ambient-sheen {
           position: absolute;
-          top: -120px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 1200px;
-          height: 500px;
-          background: radial-gradient(ellipse at 50% 30%, rgba(255, 255, 255, 0.75) 0%, rgba(246, 244, 240, 0) 70%);
+          inset: 0;
+          background:
+            linear-gradient(var(--canvas-line) 1px, transparent 1px),
+            linear-gradient(90deg, var(--canvas-line) 1px, transparent 1px);
+          background-size: 68px 68px;
+          -webkit-mask-image: radial-gradient(ellipse 80% 60% at 30% 35%, #000 0%, transparent 72%);
+          mask-image: radial-gradient(ellipse 80% 60% at 30% 35%, #000 0%, transparent 72%);
+          opacity: 0.6;
           pointer-events: none;
           z-index: 0;
         }
@@ -552,7 +556,7 @@ export const Hero: React.FC = () => {
           position: absolute;
           inset: 0;
           border-radius: 50%;
-          border: 1px solid rgba(26, 26, 26, 0.04);
+          border: 1px solid var(--accent-wash);
           animation: nfcPulseWave 8s linear infinite;
         }
         .nfc-pulse-ring.ring-1 { animation-delay: 0s; }
@@ -594,37 +598,37 @@ export const Hero: React.FC = () => {
           100% { transform: scale(2.2); opacity: 0; }
         }
 
-        /* Clean, Crisp Neo-Grotesque Headline (No AI-slop bulbous curves) */
+        /* Editorial serif display headline — the signature anti-"AI SaaS" move */
         .hero-headline {
-          font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-          font-size: clamp(42px, 5.2vw, 68px);
-          font-weight: 600;
-          letter-spacing: -0.035em;
-          line-height: 1.08;
-          margin-bottom: 22px;
+          font-family: var(--font-serif);
+          font-size: clamp(52px, 7vw, 96px);
+          font-weight: 400;
+          letter-spacing: -0.02em;
+          line-height: 0.98;
+          margin-bottom: 26px;
         }
         .hero-headline-line1 {
           display: block;
-          color: #18181B;
+          color: var(--text-dark);
         }
         .hero-headline-line2 {
           display: block;
-          color: #52525B;
-          font-weight: 500;
+          color: var(--accent-bright);
+          font-style: italic;
         }
 
         /* Description */
         .hero-description {
-          font-family: 'Inter', sans-serif;
+          font-family: var(--font-sans);
           font-size: 17px;
-          line-height: 1.65;
-          color: #4A4A52;
-          max-width: 490px;
+          line-height: 1.6;
+          color: var(--text-dark-muted);
+          max-width: 460px;
           margin-bottom: 36px;
           font-weight: 400;
         }
         .hero-description strong {
-          color: #18181B;
+          color: var(--text-dark);
           font-weight: 600;
         }
 
@@ -640,25 +644,29 @@ export const Hero: React.FC = () => {
           display: inline-flex;
           align-items: center;
           gap: 10px;
-          background: #18181B;
-          color: #FFFFFF;
+          background: var(--accent);
+          color: var(--text-on-accent);
           padding: 15px 26px;
-          border-radius: 9999px;
-          font-size: 14px;
+          border-radius: var(--radius-card-sm);
+          font-family: var(--font-mono);
+          font-size: 13px;
           font-weight: 600;
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-          transition: transform 0.15s ease, background 0.15s ease;
+          letter-spacing: 0.01em;
+          border: 1px solid var(--accent);
+          transition: transform 0.18s var(--ease-tap), background 0.18s ease;
           cursor: pointer;
         }
         .hero-btn-primary:hover {
-          transform: translateY(-1px);
-          background: #27272A;
+          background: var(--accent-bright);
+          border-color: var(--accent-bright);
+        }
+        .hero-btn-primary:active {
+          transform: scale(0.96);
         }
         .btn-version-badge {
-          background: rgba(255, 255, 255, 0.16);
+          background: rgba(6, 6, 8, 0.22);
           padding: 2px 8px;
-          border-radius: 9999px;
+          border-radius: 2px;
           font-size: 11px;
           font-weight: 600;
         }
@@ -667,20 +675,20 @@ export const Hero: React.FC = () => {
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          background: #FFFFFF;
-          color: #18181B;
+          background: transparent;
+          color: var(--text-dark);
           padding: 15px 22px;
-          border-radius: 9999px;
-          font-size: 14px;
+          border-radius: var(--radius-card-sm);
+          font-family: var(--font-mono);
+          font-size: 13px;
           font-weight: 600;
-          border: 1px solid rgba(26, 26, 26, 0.1);
-          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
-          transition: all 0.15s ease;
+          border: 1px solid var(--canvas-line-bright);
+          transition: all 0.18s ease;
           text-decoration: none;
         }
         .hero-btn-secondary:hover {
-          background: #FAFAFA;
-          border-color: rgba(26, 26, 26, 0.2);
+          border-color: var(--accent);
+          color: var(--accent-bright);
         }
 
         /* Metrics Bar */
@@ -689,7 +697,7 @@ export const Hero: React.FC = () => {
           align-items: center;
           gap: 32px;
           padding-top: 24px;
-          border-top: 1px solid rgba(26, 26, 26, 0.08);
+          border-top: 1px solid var(--canvas-line);
           width: 100%;
           max-width: 480px;
         }
@@ -698,22 +706,25 @@ export const Hero: React.FC = () => {
           flex-direction: column;
         }
         .metric-value {
-          font-family: 'Inter', sans-serif;
-          font-size: 24px;
-          font-weight: 700;
-          letter-spacing: -0.03em;
-          color: #18181B;
+          font-family: var(--font-serif);
+          font-size: 30px;
+          font-weight: 400;
+          letter-spacing: -0.01em;
+          color: var(--text-dark);
         }
         .metric-label {
-          font-size: 12px;
-          color: #71717A;
+          font-family: var(--font-mono);
+          font-size: 11px;
+          color: var(--text-dark-subtle);
           font-weight: 500;
-          margin-top: 2px;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          margin-top: 4px;
         }
         .metric-divider {
           width: 1px;
           height: 32px;
-          background: rgba(26, 26, 26, 0.08);
+          background: var(--canvas-line);
         }
 
         /* Floating Chips around phone */
@@ -723,12 +734,11 @@ export const Hero: React.FC = () => {
           display: flex;
           align-items: center;
           gap: 10px;
-          background: rgba(255, 255, 255, 0.94);
-          backdrop-filter: blur(16px);
-          padding: 8px 14px;
-          border-radius: 14px;
-          box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
-          border: 1px solid rgba(26, 26, 26, 0.06);
+          background: var(--canvas-bg-raised);
+          padding: 9px 14px;
+          border-radius: var(--radius-card-sm);
+          box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+          border: 1px solid var(--canvas-line-bright);
           animation: floatLevitate 5s ease-in-out infinite;
           pointer-events: none;
         }
@@ -754,16 +764,17 @@ export const Hero: React.FC = () => {
           align-items: center;
           justify-content: center;
         }
-        .float-card-icon.green { background: #E8F8F0; color: #10B981; }
-        .float-card-icon.blue { background: #EFF6FF; color: #3B82F6; }
+        .float-card-icon.green { background: var(--signal-wash); color: var(--signal); }
+        .float-card-icon.blue { background: var(--accent-wash); color: var(--accent-bright); }
         .float-card-title {
           font-size: 12px;
           font-weight: 700;
-          color: #18181B;
+          color: var(--text-dark);
         }
         .float-card-sub {
+          font-family: var(--font-mono);
           font-size: 10px;
-          color: #71717A;
+          color: var(--text-dark-subtle);
         }
 
         /* ========================================================= */

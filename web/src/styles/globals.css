@@ -1,36 +1,72 @@
 :root {
-  /* TapPay Original Palette — Warm paper-tone canvas */
-  --canvas-bg: #F6F4F0;               /* Warm bone / paper white */
-  --canvas-bg-alt: #EDEAE4;           /* Slightly deeper parchment */
-  --text-dark: #1A1A1A;               /* Near-black charcoal */
-  --text-dark-muted: #5A5A5A;         /* Neutral mid-grey */
-  --text-dark-subtle: #8A8A8A;        /* Soft grey */
+  /* ======================================================================
+     TapPay — "Field Report" design system
+     A structural, editorial, dark-canvas identity grounded in the real
+     app's own palette (accent blue #0A84FF), not a generic SaaS template.
+     ====================================================================== */
 
-  --hero-card-bg: #0D0D12;            /* Deep space charcoal for hero */
-  --hero-text-light: #FFFDF8;         /* Warm ivory headline */
-  --hero-text-muted: #A3A2B3;
+  /* Canvas — full-bleed near-black, not a light paper page with a floating
+     dark "hero card". The whole site lives at this depth. */
+  --canvas-bg: #0A0A0D;
+  --canvas-bg-raised: #111114;
+  --canvas-bg-sunken: #050506;
+  --canvas-line: rgba(255, 253, 248, 0.08);
+  --canvas-line-bright: rgba(255, 253, 248, 0.16);
 
-  --card-white: #FDFCFE;              /* Silk off-white */
-  --card-lavender: #EAE6FE;           /* Soft pastel lavender */
-  --card-sky: #E2EFFE;                /* Soft pastel sky */
-  --card-mint: #E1F8F0;               /* Soft pastel mint */
-  --card-cream: #FFF6E5;              /* Soft pastel warm cream */
-  --card-dark: #1F1934;               /* Deep purple for security section */
+  /* Text */
+  --text-dark: #F5F3EE;           /* primary ink on dark canvas */
+  --text-dark-muted: #A6A4B3;
+  --text-dark-subtle: #6E6C7C;
+  --text-on-accent: #060608;
 
-  --pill-bg: #EDEDEB;                 /* Neutral warm grey pill */
-  --pill-text: #1A1A1A;
-  --pill-hover: #E0DED9;
+  /* Accent — pulled directly from the real app's theme (src/theme/palettes.ts)
+     so the site and the product share one identity. Used with restraint. */
+  --accent: #0A84FF;
+  --accent-bright: #4DA3FF;
+  --accent-dim: #0A5FBF;
+  --accent-wash: rgba(10, 132, 255, 0.12);
+  --accent-wash-strong: rgba(10, 132, 255, 0.22);
+  --violet: #6E54FF;              /* secondary — small tags/badges only */
+  --violet-wash: rgba(110, 84, 255, 0.14);
+  --signal: #30D158;              /* confirmation / success state */
+  --signal-wash: rgba(48, 209, 88, 0.14);
+  --danger: #FF453A;
 
-  --nav-bg-light: rgba(246, 244, 240, 0.92);
-  --nav-bg-dark: rgba(30, 24, 52, 0.92);
+  /* Legacy aliases kept so untouched components/styles don't break —
+     mapped onto the new system rather than the old pastel set. */
+  --canvas-bg-alt: var(--canvas-bg-raised);
+  --hero-card-bg: var(--canvas-bg);
+  --hero-text-light: var(--text-dark);
+  --hero-text-muted: var(--text-dark-muted);
+  --card-white: var(--canvas-bg-raised);
+  --card-lavender: var(--canvas-bg-raised);
+  --card-sky: var(--canvas-bg-raised);
+  --card-mint: var(--canvas-bg-raised);
+  --card-cream: var(--canvas-bg-raised);
+  --card-dark: var(--canvas-bg-sunken);
+  --pill-bg: var(--text-dark);
+  --pill-text: var(--text-on-accent);
+  --pill-hover: var(--accent-bright);
+  --nav-bg-light: rgba(10, 10, 13, 0.82);
+  --nav-bg-dark: rgba(10, 10, 13, 0.92);
 
-  --font-headline: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-display: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  /* Type */
+  --font-serif: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+  --font-sans: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-headline: var(--font-serif);
+  --font-display: var(--font-sans);
 
+  /* Shape — mostly sharp/structural; one rounded signature element per
+     section at most, never rounded-everything. */
   --radius-pill: 9999px;
-  --radius-card: 32px;
-  --radius-card-sm: 24px;
+  --radius-card: 4px;
+  --radius-card-sm: 3px;
+  --radius-card-lg: 6px;
+
+  /* Motion */
+  --ease-snap: cubic-bezier(0.19, 1, 0.22, 1);
+  --ease-tap: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 *, *::before, *::after {
@@ -55,17 +91,10 @@ body {
   color: var(--text-dark);
   padding: 0;
   margin: 0;
-  zoom: 1;
-  /* Subtle paper grain texture via CSS noise */
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+  /* Fine grain, not a soft blob mesh — keeps the dark canvas from looking flat/plastic */
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
   background-repeat: repeat;
   background-size: 200px 200px;
-}
-
-@media (max-width: 768px) {
-  body {
-    zoom: 1;
-  }
 }
 
 a {
@@ -88,6 +117,11 @@ img {
   max-width: 100%;
 }
 
+::selection {
+  background: var(--accent);
+  color: var(--text-on-accent);
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 10px;
@@ -96,11 +130,11 @@ img {
   background: var(--canvas-bg);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(26, 26, 26, 0.15);
+  background: var(--canvas-line-bright);
   border-radius: 5px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(26, 26, 26, 0.28);
+  background: var(--accent-dim);
 }
 
 .phantom-container {
@@ -113,4 +147,121 @@ img {
   .phantom-container {
     padding: 0 16px;
   }
+}
+
+/* ============ Shared "Field Report" primitives ============ */
+
+/* Eyebrow / kicker label — mono, uppercase, letter-spaced. The signature
+   small-caps mono tag used instead of generic pill badges. */
+.field-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dark-muted);
+}
+
+.field-kicker::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+
+.field-kicker.is-signal::before {
+  background: var(--signal);
+}
+
+/* Hairline rule — structural divider used instead of soft card shadows */
+.field-rule {
+  height: 1px;
+  background: var(--canvas-line);
+  width: 100%;
+  border: none;
+}
+
+/* Structural card: sharp corners, hairline border, no soft glass blur */
+.field-card {
+  background: var(--canvas-bg-raised);
+  border: 1px solid var(--canvas-line);
+  border-radius: var(--radius-card);
+  position: relative;
+}
+
+.field-card::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  width: 18px;
+  height: 18px;
+  border-top: 1px solid var(--accent);
+  border-left: 1px solid var(--accent);
+  opacity: 0;
+  transition: opacity 0.3s var(--ease-snap);
+  pointer-events: none;
+}
+
+.field-card:hover::before {
+  opacity: 1;
+}
+
+/* Buttons — sharp corners, crisp tap feedback instead of soft shadow hover */
+.field-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 13px 24px;
+  border-radius: var(--radius-card-sm);
+  transition: transform 0.18s var(--ease-tap), background-color 0.18s ease, border-color 0.18s ease;
+  white-space: nowrap;
+}
+
+.field-btn-primary {
+  background: var(--accent);
+  color: var(--text-on-accent);
+  border: 1px solid var(--accent);
+}
+
+.field-btn-primary:hover {
+  background: var(--accent-bright);
+  border-color: var(--accent-bright);
+}
+
+.field-btn-primary:active {
+  transform: scale(0.96);
+}
+
+.field-btn-ghost {
+  background: transparent;
+  color: var(--text-dark);
+  border: 1px solid var(--canvas-line-bright);
+}
+
+.field-btn-ghost:hover {
+  border-color: var(--accent);
+  color: var(--accent-bright);
+}
+
+.field-btn-ghost:active {
+  transform: scale(0.96);
+}
+
+.field-display {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  line-height: 1.02;
+  color: var(--text-dark);
 }

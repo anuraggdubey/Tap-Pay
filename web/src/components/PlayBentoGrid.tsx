@@ -19,11 +19,11 @@ export const PlayBentoGrid: React.FC<PlayBentoGridProps> = ({ variant = 'waitlis
             <h3>Contactless NFC payments in 4cm</h3>
             <p>Tap two phones — no QR, no addresses at the counter.</p>
           </div>
-          <Radio size={44} color="#A78BFA" strokeWidth={1.8} className="play-bento-icon" />
+          <Radio size={44} color="var(--violet)" strokeWidth={1.8} className="play-bento-icon" />
         </div>
         <div className="play-bento-card play-bento-card--pink">
           <h3>Send and receive crypto, instantly</h3>
-          <Send size={40} color="#701A75" strokeWidth={1.8} className="play-bento-icon" />
+          <Send size={40} color="var(--accent-bright)" strokeWidth={1.8} className="play-bento-icon" />
         </div>
       </div>
 
@@ -31,9 +31,9 @@ export const PlayBentoGrid: React.FC<PlayBentoGridProps> = ({ variant = 'waitlis
         <p className="play-bento-center-kicker">{variant === 'download' ? 'Download' : 'Waitlist'}</p>
         <h3>{centerTitle}</h3>
         {variant === 'download' ? (
-          <Smartphone size={48} color="#1A1A1A" strokeWidth={1.6} style={{ marginTop: 20, opacity: 0.85 }} />
+          <Smartphone size={48} color="var(--text-dark-muted)" strokeWidth={1.6} style={{ marginTop: 20, opacity: 0.85 }} />
         ) : (
-          <Mail size={48} color="#1A1A1A" strokeWidth={1.6} style={{ marginTop: 20, opacity: 0.85 }} />
+          <Mail size={48} color="var(--text-dark-muted)" strokeWidth={1.6} style={{ marginTop: 20, opacity: 0.85 }} />
         )}
       </div>
 
@@ -43,11 +43,11 @@ export const PlayBentoGrid: React.FC<PlayBentoGridProps> = ({ variant = 'waitlis
             <h3>100% Non-Custodial &amp; Keystore secured</h3>
             <p>Keys stay on your device. Zero escrow.</p>
           </div>
-          <ShieldCheck size={44} color="#34D399" strokeWidth={1.8} className="play-bento-icon" />
+          <ShieldCheck size={44} color="var(--signal)" strokeWidth={1.8} className="play-bento-icon" />
         </div>
         <div className="play-bento-card play-bento-card--coral">
           <h3>Multi-chain — fast finality</h3>
-          <Zap size={42} color="#DC2626" strokeWidth={1.8} className="play-bento-icon" />
+          <Zap size={42} color="var(--danger)" strokeWidth={1.8} className="play-bento-icon" />
         </div>
       </div>
     </div>

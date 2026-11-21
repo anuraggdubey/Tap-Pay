@@ -196,20 +196,22 @@ describe('history service uses the encrypted store', () => {
   const A = '0x1111111111111111111111111111111111111111';
   const B = '0x2222222222222222222222222222222222222222';
 
-  it.each(['plaintext', 'encrypted'])('migrates provably owned %s rows once and drops foreign or unattributed rows', async format => {
+  it.each(['plaintext', 'encrypted'])('migrates all %s rows once, regardless of endpoint metadata', async format => {
     let store = freshStore();
     const base = JSON.parse(SAMPLE)[0];
     const sent = {...base, from: A.toUpperCase(), to: B};
     const received = {...base, id: '2', txHash: '0x' + 'cd'.repeat(32), sender: B, recipient: A};
     const foreign = {...base, id: '3', txHash: 'foreign', from: B, to: B};
-    const source = JSON.stringify([sent, received, foreign, base]);
+    const counterpartyOnly = {...base, id: '4', txHash: 'counterparty-only'};
+    const rows = [sent, received, foreign, counterpartyOnly];
+    const source = JSON.stringify(rows);
     if (format === 'encrypted') await store.saveHistoryJson(source);
     else mockAsync[LEGACY] = source;
-    expect(JSON.parse((await store.loadHistoryJson(A))!)).toEqual([sent, received]);
+    expect(JSON.parse((await store.loadHistoryJson(A))!)).toEqual(rows);
     expect(mockAsync[ENC]).toBeUndefined();
     expect(mockAsync[LEGACY]).toBeUndefined();
     store = freshStore();
-    expect(JSON.parse((await store.loadHistoryJson(A))!)).toEqual([sent, received]);
+    expect(JSON.parse((await store.loadHistoryJson(A))!)).toEqual(rows);
     await expect(store.loadHistoryJson(B)).resolves.toBeNull();
   });
 
@@ -224,9 +226,9 @@ describe('history service uses the encrypted store', () => {
     expect(JSON.parse((await store.loadHistoryJson(A))!)).toEqual([owned]);
   });
 
-  it('keeps distinct owned placeholder-hash payments from both legacy stores', async () => {
+  it('keeps distinct counterparty-only placeholder-hash payments from both legacy stores', async () => {
     const store = freshStore();
-    const first = {...JSON.parse(SAMPLE)[0], id: 'first', txHash: 'tap-payment', to: A};
+    const first = {...JSON.parse(SAMPLE)[0], id: 'first', txHash: 'tap-payment'};
     const second = {...first, id: 'second'};
     await store.saveHistoryJson(JSON.stringify([first]));
     mockAsync[LEGACY] = JSON.stringify([first, second]);
@@ -234,9 +236,36 @@ describe('history service uses the encrypted store', () => {
     expect(JSON.parse((await freshStore().loadHistoryJson(A))!)).toEqual([first, second]);
   });
 
+  it('commits scoped ciphertext before deleting either legacy source', async () => {
+    const store = freshStore();
+    await store.saveHistoryJson(SAMPLE);
+    mockAsync[LEGACY] = SAMPLE;
+    const storage = require('@react-native-async-storage/async-storage').default;
+    storage.removeItem.mockImplementationOnce(async (key: string) => {
+      expect(mockAsync[`${ENC}:${A}`]).toBeTruthy();
+      expect(key).toBe(ENC);
+      throw new Error('Interrupted cleanup');
+    });
+    await expect(store.loadHistoryJson(A)).rejects.toThrow('Interrupted cleanup');
+    expect(mockAsync[ENC]).toBeTruthy();
+    expect(mockAsync[LEGACY]).toBeTruthy();
+    expect(JSON.parse((await store.loadHistoryJson(A))!)).toEqual(JSON.parse(SAMPLE));
+  });
+
+  it.each(['plaintext', 'encrypted'])('discards orphaned %s history without attaching it to a later wallet', async format => {
+    let store = freshStore();
+    if (format === 'encrypted') await store.saveHistoryJson(SAMPLE);
+    else mockAsync[LEGACY] = SAMPLE;
+    await store.discardLegacyHistory();
+    expect(mockAsync[ENC]).toBeUndefined();
+    expect(mockAsync[LEGACY]).toBeUndefined();
+    store = freshStore();
+    await expect(store.loadHistoryJson(B)).resolves.toBeNull();
+  });
+
   it('preserves migrated rows across later writes after an initial hydration failure', async () => {
     freshStore();
-    const owned = {...JSON.parse(SAMPLE)[0], from: A};
+    const owned = JSON.parse(SAMPLE)[0];
     mockAsync[LEGACY] = JSON.stringify([owned]);
     mockKeychain.failSet = true;
     const history = require('../../src/services/history');
@@ -268,7 +297,7 @@ describe('history service uses the encrypted store', () => {
 
   it('merges migration with an early payment during hydration and hides both after wallet reset/import', async () => {
     freshStore();
-    const owned = {...JSON.parse(SAMPLE)[0], from: A};
+    const owned = JSON.parse(SAMPLE)[0];
     mockAsync[LEGACY] = JSON.stringify([owned]);
     const history = require('../../src/services/history');
     const {setHistoryWallet} = require('../../src/services/walletHistory');
@@ -302,11 +331,14 @@ describe('history service uses the encrypted store', () => {
     await expect(store.loadHistoryJson(A)).resolves.toBe(SAMPLE);
   });
 
-  it('does not assign unowned encrypted or legacy rows to an imported wallet', async () => {
+  it('discards only unscoped rows before import and retains previously scoped history', async () => {
     const store = freshStore();
+    await store.saveHistoryJson(SAMPLE, A);
     await store.saveHistoryJson(SAMPLE);
     mockAsync[LEGACY] = SAMPLE;
+    await store.discardLegacyHistory();
     await expect(store.loadHistoryJson(B)).resolves.toBeNull();
+    await expect(store.loadHistoryJson(A)).resolves.toBe(SAMPLE);
     expect(mockAsync[ENC]).toBeUndefined();
     expect(mockAsync[LEGACY]).toBeUndefined();
   });

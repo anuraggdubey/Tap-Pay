@@ -188,21 +188,30 @@ function serialize<T>(operation: () => Promise<T>): Promise<T> {
 
 async function migrateLegacy(walletAddress: string): Promise<boolean> {
   const plaintext = await AsyncStorage.getItem(LEGACY_STORAGE_KEY);
-  const legacy = await readHistoryJson(undefined, true);
-  if (legacy === null && plaintext === null) return false;
-  const owner = walletAddress.toLowerCase();
-  const owned = mergeRows(rowsFrom(legacy), rowsFrom(plaintext)).filter(row =>
-    ['sender', 'from', 'recipient', 'to', 'senderAddress', 'recipientAddress'].some(field =>
-      typeof row[field] === 'string' && row[field].toLowerCase() === owner,
-    ),
-  );
+  const encrypted = await AsyncStorage.getItem(ENCRYPTED_STORAGE_KEY);
+  if (encrypted === null && plaintext === null) return false;
+  let legacy: string | null = null;
+  if (encrypted !== null) {
+    const key = await getKey(false);
+    if (!key) throw new Error('History key unavailable');
+    legacy = decrypt(encrypted, key);
+    if (legacy === null) throw new Error('Legacy history unreadable');
+  }
+  const rows = mergeRows(rowsFrom(legacy), rowsFrom(plaintext));
   const current = rowsFrom(await readHistoryJson(walletAddress, true));
-  const merged = mergeRows(current, owned);
-  if (merged.length) await writeHistoryJson(JSON.stringify(merged), walletAddress);
+  const merged = mergeRows(current, rows);
+  await writeHistoryJson(JSON.stringify(merged), walletAddress);
   // Commit the scoped copy before consuming the source; retries deduplicate after interruption.
   await AsyncStorage.removeItem(ENCRYPTED_STORAGE_KEY);
   await AsyncStorage.removeItem(LEGACY_STORAGE_KEY);
   return true;
+}
+
+export function discardLegacyHistory(): Promise<void> {
+  return serialize(async () => {
+    await AsyncStorage.removeItem(ENCRYPTED_STORAGE_KEY);
+    await AsyncStorage.removeItem(LEGACY_STORAGE_KEY);
+  });
 }
 
 export function loadHistoryJson(walletAddress?: string): Promise<string | null> {

@@ -8,9 +8,11 @@ import {getTransactionHistory, recordTransaction} from '../src/services/history'
 const mockStored = new Map<string, string>();
 const mockLoad = jest.fn((owner: string) => Promise.resolve(mockStored.get(owner) ?? null));
 const mockSave = jest.fn(async (json: string, owner: string) => { mockStored.set(owner, json); });
+const mockDiscard = jest.fn(async () => {});
 jest.mock('../src/services/secureHistoryStore', () => ({
   loadHistoryJson: (owner: string) => mockLoad(owner),
   saveHistoryJson: (json: string, owner: string) => mockSave(json, owner),
+  discardLegacyHistory: () => mockDiscard(),
 }));
 jest.mock('../src/services/wallet', () => ({
   ...jest.requireActual('../src/services/wallet'),
@@ -43,6 +45,7 @@ async function mount() {
 
 beforeEach(async () => {
   jest.clearAllMocks();
+  mockDiscard.mockReset().mockResolvedValue(undefined);
   mockStored.clear();
   await AsyncStorage.clear();
   A = '0x' + String(++sequence).padStart(40, '0');
@@ -107,4 +110,38 @@ it('keeps signed-out startup empty without loading any unowned history', async (
   expect(state.address).toBeNull();
   expect(getTransactionHistory()).toEqual([]);
   expect(mockLoad).not.toHaveBeenCalled();
+  expect(mockDiscard).toHaveBeenCalledTimes(1);
+});
+
+it('cleans up unscoped history before persisting a new wallet, including after cleanup failure', async () => {
+  jest.mocked(wallet.hasWallet).mockResolvedValue(false);
+  await mount();
+  mockDiscard.mockRejectedValueOnce(new Error('Storage unavailable'));
+  await act(async () => { await expect(state.importPrivateKey(KEY)).rejects.toThrow('Storage unavailable'); });
+  expect(wallet.storeWallet).not.toHaveBeenCalled();
+  await act(async () => { await state.importPrivateKey(KEY); });
+  expect(mockDiscard.mock.invocationCallOrder[2]).toBeLessThan(jest.mocked(wallet.storeWallet).mock.invocationCallOrder[0]);
+  expect(getTransactionHistory()).toEqual([]);
+});
+
+it('does not discard an existing wallet\'s pending legacy migration on rejected import', async () => {
+  await mount();
+  jest.mocked(wallet.storeWallet).mockRejectedValueOnce(new Error('Wallet already exists'));
+  await act(async () => { await expect(state.importPrivateKey(KEY)).rejects.toThrow('Wallet already exists'); });
+  expect(mockDiscard).not.toHaveBeenCalled();
+});
+
+it('preserves legacy history when wallet presence is unknown and allows initialization retry', async () => {
+  const errorLog = jest.spyOn(console, 'error').mockImplementation(() => {});
+  try {
+    jest.mocked(wallet.hasWallet).mockRejectedValueOnce(new Error('Keychain unavailable'));
+    await mount();
+    expect(wallet.hasWallet).toHaveBeenCalledWith(true);
+    expect(mockDiscard).not.toHaveBeenCalled();
+    await act(async () => { await state.unlockWallet(); });
+    expect(state.address).toBe(A);
+    expect(getTransactionHistory().map(tx => tx.txHash)).toEqual(['A-payment']);
+  } finally {
+    errorLog.mockRestore();
+  }
 });

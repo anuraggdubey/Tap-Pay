@@ -37,6 +37,8 @@
     "react-native-nfc-manager": "^3.17.2",
     "react-native-safe-area-context": "^5.9.1",
     "react-native-screens": "^4.27.0",
+    "react-native-sound": "^0.13.0",
+    "react-native-svg": "^15.16.1",
     "react-native-url-polyfill": "^4.0.0"
   },
   "devDependencies": {

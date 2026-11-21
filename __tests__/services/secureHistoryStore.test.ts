@@ -196,6 +196,67 @@ describe('history service uses the encrypted store', () => {
   const A = '0x1111111111111111111111111111111111111111';
   const B = '0x2222222222222222222222222222222222222222';
 
+  it.each(['plaintext', 'encrypted'])('migrates provably owned %s rows once and drops foreign or unattributed rows', async format => {
+    let store = freshStore();
+    const base = JSON.parse(SAMPLE)[0];
+    const sent = {...base, from: A.toUpperCase(), to: B};
+    const received = {...base, id: '2', txHash: '0x' + 'cd'.repeat(32), sender: B, recipient: A};
+    const foreign = {...base, id: '3', txHash: 'foreign', from: B, to: B};
+    const source = JSON.stringify([sent, received, foreign, base]);
+    if (format === 'encrypted') await store.saveHistoryJson(source);
+    else mockAsync[LEGACY] = source;
+    expect(JSON.parse((await store.loadHistoryJson(A))!)).toEqual([sent, received]);
+    expect(mockAsync[ENC]).toBeUndefined();
+    expect(mockAsync[LEGACY]).toBeUndefined();
+    store = freshStore();
+    expect(JSON.parse((await store.loadHistoryJson(A))!)).toEqual([sent, received]);
+    await expect(store.loadHistoryJson(B)).resolves.toBeNull();
+  });
+
+  it('preserves the source on encryption failure and retries without duplicates', async () => {
+    const store = freshStore();
+    const owned = {...JSON.parse(SAMPLE)[0], to: A};
+    mockAsync[LEGACY] = JSON.stringify([owned]);
+    mockKeychain.failSet = true;
+    await expect(store.loadHistoryJson(A)).rejects.toThrow('History key unavailable');
+    expect(mockAsync[LEGACY]).toBeTruthy();
+    mockKeychain.failSet = false;
+    expect(JSON.parse((await store.loadHistoryJson(A))!)).toEqual([owned]);
+  });
+
+  it('does not destroy encrypted legacy data while its key is unavailable', async () => {
+    let store = freshStore();
+    await store.saveHistoryJson(JSON.stringify([{...JSON.parse(SAMPLE)[0], from: A}]));
+    store = freshStore();
+    mockKeychain.failGet = true;
+    await expect(store.loadHistoryJson(A)).rejects.toThrow('History key unavailable');
+    expect(mockAsync[ENC]).toBeTruthy();
+    mockKeychain.failGet = false;
+    expect(JSON.parse((await store.loadHistoryJson(A))!)).toHaveLength(1);
+  });
+
+  it('merges migration with an early payment during hydration and hides both after wallet reset/import', async () => {
+    freshStore();
+    const owned = {...JSON.parse(SAMPLE)[0], from: A};
+    mockAsync[LEGACY] = JSON.stringify([owned]);
+    const history = require('../../src/services/history');
+    const {setHistoryWallet} = require('../../src/services/walletHistory');
+    setHistoryWallet(A);
+    const early = history.recordTransaction({walletAddress: A, direction: 'sent', counterparty: B, amount: '1', status: 'pending', txHash: 'early'});
+    await history.initHistory();
+    await new Promise(resolve => setImmediate(resolve));
+    expect(history.getTransactionHistory()).toEqual([early, owned]);
+    setHistoryWallet(null);
+    await history.initHistory();
+    expect(history.getTransactionHistory()).toEqual([]);
+    setHistoryWallet(B);
+    await history.initHistory();
+    expect(history.getTransactionHistory()).toEqual([]);
+    setHistoryWallet(A);
+    await history.initHistory();
+    expect(history.getTransactionHistory()).toEqual([early, owned]);
+  });
+
   it('separates wallets across restart and authenticates the owning address', async () => {
     let store = freshStore();
     await store.saveHistoryJson(SAMPLE, A);

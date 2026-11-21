@@ -112,15 +112,14 @@ function decrypt(stored: string, key: Uint8Array, walletAddress?: string): strin
  * Persist the history JSON encrypted. Throws if it cannot be encrypted (nothing is written in
  * plaintext). Removes the legacy plaintext copy once the encrypted copy is stored.
  */
-export async function saveHistoryJson(json: string, walletAddress?: string): Promise<void> {
+async function writeHistoryJson(json: string, walletAddress?: string): Promise<void> {
   const key = await getKey(true);
   if (!key) {
     throw new Error('History key unavailable');
   }
   await AsyncStorage.setItem(storageKey(walletAddress), encrypt(json, key, walletAddress));
-  await AsyncStorage.removeItem(LEGACY_STORAGE_KEY);
-  if (walletAddress) {
-    await AsyncStorage.removeItem(ENCRYPTED_STORAGE_KEY);
+  if (!walletAddress) {
+    await AsyncStorage.removeItem(LEGACY_STORAGE_KEY);
   }
 }
 
@@ -128,15 +127,11 @@ export async function saveHistoryJson(json: string, walletAddress?: string): Pro
  * Load the history JSON. Migrates a legacy plaintext copy on first run. Returns null when there
  * is nothing readable.
  */
-export async function loadHistoryJson(walletAddress?: string): Promise<string | null> {
-  if (walletAddress) {
-    // Unscoped rows have no provable owner; never assign them to the next imported wallet.
-    await AsyncStorage.removeItem(LEGACY_STORAGE_KEY);
-    await AsyncStorage.removeItem(ENCRYPTED_STORAGE_KEY);
-  }
+async function readHistoryJson(walletAddress?: string, preserveUnreadable = false): Promise<string | null> {
   const stored = await AsyncStorage.getItem(storageKey(walletAddress));
   if (stored) {
     const key = await getKey(false);
+    if (!key && preserveUnreadable) throw new Error('History key unavailable');
     const json = key ? decrypt(stored, key, walletAddress) : null;
     if (json === null) {
       // Tampered, or the key is gone: unrecoverable. Drop it rather than crash or loop.
@@ -153,11 +148,75 @@ export async function loadHistoryJson(walletAddress?: string): Promise<string | 
     return null;
   }
   try {
-    await saveHistoryJson(legacy);
+    await writeHistoryJson(legacy);
   } catch {
     // Could not encrypt right now: keep the legacy copy so nothing is lost, and retry next time.
   }
   return legacy;
+}
+
+type LegacyRow = Record<string, unknown> & {txHash: string};
+
+function rowsFrom(json: string | null): LegacyRow[] {
+  try {
+    const rows = JSON.parse(json || '[]');
+    return Array.isArray(rows) ? rows.filter(row => row && typeof row.txHash === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+function mergeRows(current: LegacyRow[], legacy: LegacyRow[]): LegacyRow[] {
+  const seen = new Set<string>();
+  return [...current, ...legacy].filter(row => {
+    const identity = `${row.txHash.toLowerCase()}:${row.direction}`;
+    if (seen.has(identity)) return false;
+    seen.add(identity);
+    return true;
+  });
+}
+
+let storageChain: Promise<unknown> = Promise.resolve();
+
+function serialize<T>(operation: () => Promise<T>): Promise<T> {
+  const run = storageChain.then(operation);
+  storageChain = run.catch(() => {});
+  return run;
+}
+
+async function migrateLegacy(walletAddress: string): Promise<boolean> {
+  const legacy = await readHistoryJson(undefined, true);
+  if (legacy === null) return false;
+  const owner = walletAddress.toLowerCase();
+  const owned = rowsFrom(legacy).filter(row =>
+    ['sender', 'from', 'recipient', 'to', 'senderAddress', 'recipientAddress'].some(field =>
+      typeof row[field] === 'string' && row[field].toLowerCase() === owner,
+    ),
+  );
+  const current = rowsFrom(await readHistoryJson(walletAddress));
+  const merged = mergeRows(current, owned);
+  if (merged.length) await writeHistoryJson(JSON.stringify(merged), walletAddress);
+  // Commit the scoped copy before consuming the source; retries deduplicate after interruption.
+  await AsyncStorage.removeItem(ENCRYPTED_STORAGE_KEY);
+  await AsyncStorage.removeItem(LEGACY_STORAGE_KEY);
+  return true;
+}
+
+export function loadHistoryJson(walletAddress?: string): Promise<string | null> {
+  return serialize(async () => {
+    if (walletAddress) await migrateLegacy(walletAddress);
+    return readHistoryJson(walletAddress);
+  });
+}
+
+export function saveHistoryJson(json: string, walletAddress?: string): Promise<void> {
+  return serialize(async () => {
+    let snapshot = json;
+    if (walletAddress && await migrateLegacy(walletAddress)) {
+      snapshot = JSON.stringify(mergeRows(rowsFrom(json), rowsFrom(await readHistoryJson(walletAddress))));
+    }
+    await writeHistoryJson(snapshot, walletAddress);
+  });
 }
 
 /** Remove every stored copy of the history and its key. */

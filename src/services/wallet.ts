@@ -9,6 +9,7 @@ import 'react-native-get-random-values';
 import '@ethersproject/shims';
 import {ethers} from 'ethers';
 import * as Keychain from 'react-native-keychain';
+import {Platform} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {normalizeMnemonic, walletFromRecoveryPhrase} from '../utils/recovery';
 import {MONAD_CONFIG, GAS_LIMIT_FALLBACK, TX_POLL_INTERVAL_MS, TX_MAX_WAIT_MS} from '../config/monad';
@@ -20,6 +21,7 @@ const ADDRESS_STORAGE_KEY = '@tappay_wallet_address';
 export type WalletErrorCode =
   | 'WALLET_EXISTS'
   | 'NO_DEVICE_AUTH'
+  | 'AUTHENTICATION_FAILED'
   | 'NO_SECURE_HARDWARE'
   | 'INVALID_SECRET'
   | 'STORAGE_FAILED';
@@ -319,14 +321,53 @@ export async function hasRecoveryPhrase(): Promise<boolean> {
   }
 }
 
+async function authorizeResetSecret(service: string): Promise<'authenticated' | 'unrecoverable'> {
+  try {
+    const credentials = await Keychain.getGenericPassword({
+      service,
+      authenticationPrompt: authPrompt('Authenticate to reset your wallet'),
+    });
+    if (credentials && credentials.password) {
+      return 'authenticated';
+    }
+  } catch (error: any) {
+    if (Platform.OS === 'android' && error?.code === 'E_CRYPTO_FAILED' && (
+      error?.message === 'Wrapped error: Key permanently invalidated' ||
+      error?.message === 'Decryption failed: Authentication tag verification failed. ' +
+        'This usually indicates that the encrypted data was modified, corrupted, ' +
+        'or is being decrypted with the wrong key.'
+    )) {
+      return 'unrecoverable';
+    }
+  }
+  throw new WalletError(
+    'AUTHENTICATION_FAILED',
+    'Device authentication was cancelled or failed. Your wallet was not reset.',
+  );
+}
+
 /**
- * Delete the stored wallet, recovery phrase and cached address from this device.
+ * Delete stored secrets after phone authentication, or if each secret is unrecoverable.
  * Returns true only if everything was removed.
  */
 export async function deleteWallet(): Promise<boolean> {
+  let keyExists: boolean;
+  let phraseExists: boolean;
   try {
-    const keyRemoved = await Keychain.resetGenericPassword({service: KEYCHAIN_SERVICE});
-    const phraseRemoved = await Keychain.resetGenericPassword({service: PHRASE_SERVICE});
+    keyExists = await Keychain.hasGenericPassword({service: KEYCHAIN_SERVICE});
+    phraseExists = await Keychain.hasGenericPassword({service: PHRASE_SERVICE});
+  } catch {
+    throw new WalletError('AUTHENTICATION_FAILED', 'Could not verify the stored wallet. Nothing was removed.');
+  }
+
+  const keyAccess = keyExists ? await authorizeResetSecret(KEYCHAIN_SERVICE) : null;
+  if (phraseExists && keyAccess !== 'authenticated') {
+    await authorizeResetSecret(PHRASE_SERVICE);
+  }
+
+  try {
+    const keyRemoved = !keyExists || await Keychain.resetGenericPassword({service: KEYCHAIN_SERVICE});
+    const phraseRemoved = !phraseExists || await Keychain.resetGenericPassword({service: PHRASE_SERVICE});
     await AsyncStorage.removeItem(ADDRESS_STORAGE_KEY);
     return keyRemoved !== false && phraseRemoved !== false;
   } catch (error) {

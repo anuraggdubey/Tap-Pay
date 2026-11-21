@@ -19,7 +19,7 @@ import {useTheme} from '../context/ThemeContext';
 import {radii, shadows} from '../theme';
 import type {AppColors, AppGlass} from '../theme';
 
-type NfcPhaseVisual = 'searching' | 'broadcasting' | 'success' | 'failed';
+type NfcPhaseVisual = 'searching' | 'broadcasting' | 'success' | 'failed' | 'expired' | 'received';
 
 type Props = {
   accent?: 'purple' | 'green' | 'blue';
@@ -274,6 +274,12 @@ export default function NfcWaitingCard({
   } else if (phase === 'failed') {
     statusTitle = 'Payment Failed';
     statusSub = 'The tap session could not be completed.';
+  } else if (phase === 'expired') {
+    statusTitle = 'Session expired';
+    statusSub = 'Restart the receive session to accept another payment.';
+  } else if (phase === 'received') {
+    statusTitle = 'Payment received';
+    statusSub = 'Opening transaction details…';
   }
 
   return (
@@ -302,7 +308,7 @@ export default function NfcWaitingCard({
               s.nfcBadgeText,
               {color: isSuccess ? colors.success : colors.accent},
             ]}>
-            {isSuccess ? 'Done' : 'NFC Active'}
+            {isSuccess ? 'Done' : phase === 'expired' || phase === 'received' ? 'NFC Off' : 'NFC Active'}
           </Text>
         </View>
       </View>

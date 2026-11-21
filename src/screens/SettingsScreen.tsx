@@ -25,6 +25,7 @@ import {RootStackParamList} from '../navigation/AppNavigator';
 import {triggerHaptic} from '../utils/haptics';
 import {truncateAddress} from '../utils/format';
 import {MONAD_CONFIG} from '../config/monad';
+import {WalletError} from '../services/wallet';
 import {
   UserIcon,
   WalletCardIcon,
@@ -120,15 +121,21 @@ export default function SettingsScreen({navigation}: Props) {
           text: 'Reset Wallet',
           style: 'destructive',
           onPress: async () => {
-            const done = await resetWallet();
-            if (!done) {
-              Alert.alert('Reset failed', 'Could not remove the wallet from this phone. Please try again.');
-              return;
+            try {
+              const done = await resetWallet();
+              if (!done) {
+                Alert.alert('Reset failed', 'Could not remove the wallet from this phone. Please try again.');
+                return;
+              }
+              navigation.reset({
+                index: 0,
+                routes: [{name: 'WalletSetup'}],
+              });
+            } catch (error) {
+              Alert.alert('Wallet not reset', error instanceof WalletError
+                ? error.message
+                : 'Could not remove the wallet from this phone. Please try again.');
             }
-            navigation.reset({
-              index: 0,
-              routes: [{name: 'WalletSetup'}],
-            });
           },
         },
       ],

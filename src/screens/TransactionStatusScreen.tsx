@@ -302,14 +302,13 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
       <View style={[styles.container, {paddingTop: insets.top + 40}]}>
         {background}
         <View style={styles.centerState}>
-          <SuccessBurst colors={['#FF5C5C', '#FF8A5C']} reduced />
+          <SuccessBurst colors={['#FF453A', '#FF453A']} reduced />
           <Text style={styles.stateTitle}>Payment failed</Text>
           {errorMessage && <Text style={styles.stateHint}>{errorMessage}</Text>}
         </View>
         <View style={[styles.actions, {paddingBottom: insets.bottom + 20}]}>
           <PressableScale style={styles.primaryBtn} contentStyle={styles.btnInner} onPress={() => navigation.popToTop()}>
-            <GradientFill colors={['#3D7BFF', '#7C5CFF']} angle={135} />
-            <Text style={styles.primaryBtnText}>Back to home</Text>
+            <Text style={styles.primaryBtnText}>Done</Text>
           </PressableScale>
         </View>
       </View>
@@ -334,7 +333,7 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
         showsVerticalScrollIndicator={false}>
         <View style={styles.hero}>
           <SuccessBurst
-            colors={isReceived ? ['#2DD4A0', '#14B8A6'] : ['#3D7BFF', '#7C5CFF']}
+            colors={['#30D158', '#30D158']}
             onStart={onSuccessStart}
           />
           <Text style={styles.stateTitle}>{isReceived ? 'Payment received' : 'Payment sent'}</Text>
@@ -361,9 +360,7 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
               </View>
             </View>
           ))}
-          <View style={[styles.notch, styles.notchL]} />
-          <View style={[styles.notch, styles.notchR]} />
-        </View>
+                  </View>
 
         {isRealTxHash && (
           <PressableScale onPress={openExplorer} contentStyle={styles.explorerLink}>
@@ -375,8 +372,7 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
 
       <View style={[styles.actions, {paddingBottom: insets.bottom + 20}]}>
         <PressableScale style={styles.primaryBtn} contentStyle={styles.btnInner} onPress={() => navigation.popToTop()}>
-          <GradientFill colors={['#3D7BFF', '#7C5CFF']} angle={135} />
-          <Text style={styles.primaryBtnText}>Done</Text>
+            <Text style={styles.primaryBtnText}>Done</Text>
         </PressableScale>
       </View>
     </View>
@@ -413,8 +409,7 @@ function PendingPulse({accent}: {accent: string}) {
     <View style={{width: 200, height: 200, alignItems: 'center', justifyContent: 'center'}}>
       {ring(0)}
       {ring(0.5)}
-      <View style={{width: 88, height: 88, borderRadius: 44, overflow: 'hidden', alignItems: 'center', justifyContent: 'center'}}>
-        <GradientFill colors={['#3D7BFF', '#7C5CFF']} angle={135} />
+      <View style={{width: 88, height: 88, borderRadius: 44, overflow: 'hidden', backgroundColor: '#0A84FF', alignItems: 'center', justifyContent: 'center'}}>
         <ContactlessWave size={38} color="#FFFFFF" />
       </View>
     </View>
@@ -427,23 +422,21 @@ function createStyles(colors: AppColors) {
     scrollContent: {paddingHorizontal: 20},
     centerState: {flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, gap: 10},
     hero: {alignItems: 'center', marginTop: 4, marginBottom: 8},
-    stateTitle: {fontSize: 15, fontWeight: '700', color: colors.textMuted, letterSpacing: 0.2, marginTop: -30},
+    stateTitle: {fontSize: 17, fontWeight: '600', color: colors.textMuted, marginTop: -30},
     stateHint: {fontSize: 14, color: colors.textMuted, textAlign: 'center', lineHeight: 20},
     amountChip: {marginTop: 8, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 999, backgroundColor: colors.surfaceSolid, borderWidth: 1, borderColor: colors.border},
     amountChipText: {fontSize: 16, fontWeight: '700', color: colors.text},
-    bigAmount: {fontSize: 44, fontWeight: '800', letterSpacing: -2, marginTop: 6, maxWidth: '100%'},
+    bigAmount: {fontSize: 44, fontWeight: '700', letterSpacing: -1, marginTop: 6, maxWidth: '100%'},
     bigUnit: {fontSize: 18, fontWeight: '700', color: colors.textMuted, letterSpacing: 0},
     heroSub: {fontSize: 14, color: colors.textMuted, marginTop: 4},
     ticket: {
       marginTop: 18,
-      borderRadius: 24,
+      borderRadius: 14,
       backgroundColor: colors.surfaceSolid,
-      borderWidth: 1,
-      borderColor: colors.border,
-      paddingHorizontal: 18,
+      paddingHorizontal: 16,
     },
     ticketRow: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingVertical: 15, gap: 16},
-    ticketRowBorder: {borderTopWidth: 1, borderTopColor: colors.borderSubtle, borderStyle: 'dashed'},
+    ticketRowBorder: {borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.separator},
     ticketKey: {fontSize: 13, color: colors.textMuted, fontWeight: '500'},
     ticketValWrap: {flex: 1, alignItems: 'flex-end'},
     ticketVal: {fontSize: 14, color: colors.text, fontWeight: '600'},
@@ -452,10 +445,10 @@ function createStyles(colors: AppColors) {
     notchL: {left: -10},
     notchR: {right: -10},
     explorerLink: {flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 18},
-    explorerLinkText: {fontSize: 14, fontWeight: '600', color: colors.accent},
+    explorerLinkText: {fontSize: 15, fontWeight: '400', color: colors.accent},
     actions: {paddingHorizontal: 20, paddingTop: 8},
-    primaryBtn: {borderRadius: 20, overflow: 'hidden'},
-    btnInner: {height: 56, alignItems: 'center', justifyContent: 'center'},
-    primaryBtnText: {fontSize: 16, fontWeight: '800', color: '#FFFFFF', letterSpacing: -0.2},
+    primaryBtn: {borderRadius: 14, overflow: 'hidden', backgroundColor: colors.text},
+    btnInner: {height: 50, alignItems: 'center', justifyContent: 'center'},
+    primaryBtnText: {fontSize: 17, fontWeight: '600', color: colors.background},
   });
 }

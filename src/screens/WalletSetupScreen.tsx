@@ -41,7 +41,6 @@ import {
 } from '../utils/recovery';
 import {triggerHaptic} from '../utils/haptics';
 import WelcomeHero from '../components/WelcomeHero';
-import {GradientFill} from '../components/Gradient';
 import PressableScale from '../components/PressableScale';
 
 type Props = {
@@ -608,14 +607,6 @@ export default function WalletSetupScreen({navigation}: Props) {
   // ── Welcome ──────────────────────────────────────────────────────────────
   return (
     <View style={[styles.welcomeRoot, {paddingTop: insets.top + 12, paddingBottom: insets.bottom + 20}]}>
-      <GradientFill
-        colors={['#0A0B0F', '#0A0B0F']}
-        angle={90}
-        glows={[
-          {color: '#3D7BFF', cx: 0.5, cy: 0.3, r: 0.75, opacity: 0.28},
-          {color: '#8B5CF6', cx: 1, cy: 0, r: 0.5, opacity: 0.2},
-        ]}
-      />
       <WelcomeHero />
       <View style={styles.welcomeCta}>
         <PressableScale
@@ -623,11 +614,10 @@ export default function WalletSetupScreen({navigation}: Props) {
           contentStyle={styles.welcomePrimaryInner}
           onPress={handleCreate}
           disabled={loading}>
-          <GradientFill colors={['#3D7BFF', '#7C5CFF']} angle={135} />
           {loading ? (
-            <ActivityIndicator color="#FFFFFF" />
+            <ActivityIndicator color="#000000" />
           ) : (
-            <Text style={styles.welcomePrimaryText}>Create wallet</Text>
+            <Text style={styles.welcomePrimaryText}>Create Wallet</Text>
           )}
         </PressableScale>
         <PressableScale
@@ -635,7 +625,7 @@ export default function WalletSetupScreen({navigation}: Props) {
           contentStyle={styles.welcomeSecondaryInner}
           onPress={() => setStep('restore')}
           disabled={loading}>
-          <Text style={styles.welcomeSecondaryText}>I have a recovery phrase</Text>
+          <Text style={styles.welcomeSecondaryText}>I Have a Recovery Phrase</Text>
         </PressableScale>
         <TouchableOpacity onPress={() => setStep('import')} disabled={loading} activeOpacity={0.7}>
           <Text style={styles.welcomeAdvanced}>Import private key (advanced)</Text>
@@ -650,16 +640,16 @@ export default function WalletSetupScreen({navigation}: Props) {
 
 function createStyles(colors: AppColors) {
   return StyleSheet.create({
-  welcomeRoot: {flex: 1, backgroundColor: '#0A0B0F', paddingHorizontal: 24},
+  welcomeRoot: {flex: 1, backgroundColor: '#000000', paddingHorizontal: 24},
   welcomeCta: {gap: 12, alignItems: 'center'},
-  welcomePrimary: {width: '100%', borderRadius: 22, overflow: 'hidden'},
-  welcomePrimaryInner: {height: 58, alignItems: 'center', justifyContent: 'center'},
-  welcomePrimaryText: {fontSize: 17, fontWeight: '800', color: '#FFFFFF', letterSpacing: -0.2},
-  welcomeSecondary: {width: '100%', borderRadius: 22, borderWidth: 1, borderColor: '#262A34', backgroundColor: '#14161C'},
-  welcomeSecondaryInner: {height: 54, alignItems: 'center', justifyContent: 'center'},
-  welcomeSecondaryText: {fontSize: 15, fontWeight: '700', color: '#F4F5F7'},
-  welcomeAdvanced: {fontSize: 13, fontWeight: '600', color: '#8B91A0', paddingVertical: 6},
-  welcomeFine: {fontSize: 12, color: '#5F6573', textAlign: 'center'},
+  welcomePrimary: {width: '100%', borderRadius: 14, overflow: 'hidden', backgroundColor: '#FFFFFF'},
+  welcomePrimaryInner: {height: 52, alignItems: 'center', justifyContent: 'center'},
+  welcomePrimaryText: {fontSize: 17, fontWeight: '600', color: '#000000'},
+  welcomeSecondary: {width: '100%', borderRadius: 14, backgroundColor: '#1C1C1E'},
+  welcomeSecondaryInner: {height: 52, alignItems: 'center', justifyContent: 'center'},
+  welcomeSecondaryText: {fontSize: 17, fontWeight: '600', color: '#FFFFFF'},
+  welcomeAdvanced: {fontSize: 15, fontWeight: '400', color: '#0A84FF', paddingVertical: 6},
+  welcomeFine: {fontSize: 12, color: '#636366', textAlign: 'center'},
   screenWrapper: {
     flex: 1,
     backgroundColor: colors.background,

@@ -50,11 +50,7 @@ export default function TapFab({onPress, reduced = false}: {onPress: () => void;
         accessibilityLabel="Tap to pay"
         onPress={onPress}
         scaleTo={0.92}>
-        <GradientFill
-          colors={['#3D7BFF', '#7C5CFF']}
-          angle={135}
-          glows={[{color: '#64D2FF', cx: 0.2, cy: 0.1, r: 0.8, opacity: 0.6}]}
-        />
+        <GradientFill colors={['#0A84FF']} />
         <ContactlessWave size={30} color="#FFFFFF" />
       </PressableScale>
     </View>
@@ -63,7 +59,7 @@ export default function TapFab({onPress, reduced = false}: {onPress: () => void;
 
 const s = StyleSheet.create({
   wrap: {width: 68, height: 68, alignItems: 'center', justifyContent: 'center', marginTop: -28},
-  ring: {position: 'absolute', width: 68, height: 68, borderRadius: 34, backgroundColor: '#5B7CFF'},
+  ring: {position: 'absolute', width: 68, height: 68, borderRadius: 34, backgroundColor: '#0A84FF'},
   btn: {width: 68, height: 68, borderRadius: 34, overflow: 'hidden'},
   btnInner: {width: 68, height: 68, alignItems: 'center', justifyContent: 'center'},
 });

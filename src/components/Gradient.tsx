@@ -1,80 +1,26 @@
 /**
- * Gradient primitives built on react-native-svg (no extra native gradient lib).
- * - GradientFill: linear gradient background that fills its parent.
- * - RippleRings: the TapPay signature concentric "tap ripple" motif.
+ * Fill + ripple primitives (react-native-svg).
+ * GradientFill intentionally renders a SOLID fill (first color): the app follows
+ * the Apple Pay look, which has no gradients. Kept so call sites stay simple.
  */
 
-import React, {useRef} from 'react';
+import React from 'react';
 import {StyleProp, StyleSheet, View, ViewStyle} from 'react-native';
-import Svg, {
-  Circle,
-  Defs,
-  LinearGradient,
-  RadialGradient,
-  Rect,
-  Stop,
-} from 'react-native-svg';
-
-let uid = 0;
-const useUid = () => {
-  const ref = useRef<number | undefined>(undefined);
-  if (ref.current === undefined) {
-    uid += 1;
-    ref.current = uid;
-  }
-  return `g${ref.current}`;
-};
-
-type Glow = {color: string; opacity?: number; cx: number; cy: number; r: number};
+import Svg, {Circle} from 'react-native-svg';
 
 type FillProps = {
   colors: string[];
-  /** Degrees, 0 = left to right, 90 = top to bottom. */
   angle?: number;
-  glows?: Glow[];
+  glows?: unknown[];
   style?: StyleProp<ViewStyle>;
 };
 
-export function GradientFill({colors, angle = 135, glows = [], style}: FillProps) {
-  const id = useUid();
-  const rad = (angle * Math.PI) / 180;
-  const x1 = 0.5 - Math.cos(rad) / 2;
-  const y1 = 0.5 - Math.sin(rad) / 2;
-  const x2 = 0.5 + Math.cos(rad) / 2;
-  const y2 = 0.5 + Math.sin(rad) / 2;
+export function GradientFill({colors, style}: FillProps) {
   return (
-    <View pointerEvents="none" style={[StyleSheet.absoluteFill, style]}>
-      <Svg width="100%" height="100%">
-        <Defs>
-          <LinearGradient id={`${id}l`} x1={x1} y1={y1} x2={x2} y2={y2}>
-            {colors.map((c, i) => (
-              <Stop
-                key={c + i}
-                offset={colors.length === 1 ? 0 : i / (colors.length - 1)}
-                stopColor={c}
-              />
-            ))}
-          </LinearGradient>
-          {glows.map((g, i) => (
-            <RadialGradient
-              key={i}
-              id={`${id}r${i}`}
-              cx={g.cx}
-              cy={g.cy}
-              r={g.r}
-              fx={g.cx}
-              fy={g.cy}>
-              <Stop offset="0" stopColor={g.color} stopOpacity={g.opacity ?? 0.5} />
-              <Stop offset="1" stopColor={g.color} stopOpacity={0} />
-            </RadialGradient>
-          ))}
-        </Defs>
-        <Rect width="100%" height="100%" fill={`url(#${id}l)`} />
-        {glows.map((g, i) => (
-          <Rect key={i} width="100%" height="100%" fill={`url(#${id}r${i})`} />
-        ))}
-      </Svg>
-    </View>
+    <View
+      pointerEvents="none"
+      style={[StyleSheet.absoluteFill, {backgroundColor: colors[0]}, style]}
+    />
   );
 }
 
@@ -86,6 +32,7 @@ type RippleProps = {
   style?: StyleProp<ViewStyle>;
 };
 
+/** Thin concentric rings — used only on the NFC / empty-state illustrations. */
 export function RippleRings({
   size = 220,
   color = '#FFFFFF',
@@ -107,7 +54,7 @@ export function RippleRings({
               r={r}
               stroke={color}
               strokeOpacity={opacity * (1 - i / (rings + 1))}
-              strokeWidth={1.2}
+              strokeWidth={1}
               fill="none"
             />
           );

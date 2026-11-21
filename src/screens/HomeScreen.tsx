@@ -1,18 +1,10 @@
 /**
- * HomeScreen — TapPay wallet dashboard.
- * Gradient balance card with ripple motif, quick actions, activity feed,
- * and a floating dock with a pulsing Tap button.
+ * HomeScreen — Wallet (Apple Pay style): large title, solid card, Send/Receive
+ * buttons, grouped "Latest Transactions" list.
  */
 
 import React, {useState, useCallback, useEffect, useMemo} from 'react';
-import {
-  AccessibilityInfo,
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  RefreshControl,
-} from 'react-native';
+import {View, Text, StyleSheet, ScrollView, RefreshControl} from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import {ethers} from 'ethers';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -24,12 +16,7 @@ import {useTheme} from '../context/ThemeContext';
 import {truncateAddress, formatTimestamp} from '../utils/format';
 import {triggerHaptic} from '../utils/haptics';
 import {RootStackParamList} from '../navigation/AppNavigator';
-import {
-  HistoryIcon,
-  SendTapIcon,
-  ReceiveTapIcon,
-  UserIcon,
-} from '../components/AppIcons';
+import {ContactlessWave} from '../components/AppIcons';
 import {
   getTransactionHistory,
   getTxTokenSymbol,
@@ -39,66 +26,23 @@ import {
 import {initNfc, isNfcEnabled, isNfcSupported} from '../services/nfcReader';
 import PressableScale from '../components/PressableScale';
 import FadeInView from '../components/FadeInView';
-import LivePulseDot from '../components/LivePulseDot';
-import {GradientFill, RippleRings} from '../components/Gradient';
 import SendMethodSheet, {SendMethod} from '../components/SendMethodSheet';
 import {preloadSounds} from '../utils/sounds';
 import type {AppColors} from '../theme';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-function getTxTitle(tx: TransactionRecord): string {
-  if (tx.direction === 'received') {
-    return tx.counterpartyUsername
-      ? `@${tx.counterpartyUsername}`
-      : truncateAddress(tx.counterparty, 6, 4);
-  }
+function txTitle(tx: TransactionRecord): string {
   if (tx.counterpartyUsername) {
     return `@${tx.counterpartyUsername}`;
   }
   return truncateAddress(tx.counterparty, 6, 4);
 }
 
-function getTxSubtitle(tx: TransactionRecord): string {
+function txSubtitle(tx: TransactionRecord): string {
   const kind =
-    tx.direction === 'received'
-      ? 'Received'
-      : tx.counterpartyUsername
-        ? 'Sent'
-        : 'Tap payment';
+    tx.direction === 'received' ? 'Received' : tx.counterpartyUsername ? 'Sent' : 'Tap payment';
   return `${kind} · ${formatTimestamp(tx.timestamp)}`;
-}
-
-const AVATAR_GRADIENTS = [
-  ['#3D7BFF', '#7C5CFF'],
-  ['#14B8A6', '#2DD4A0'],
-  ['#F59E0B', '#FF6B6B'],
-  ['#EC4899', '#8B5CF6'],
-];
-
-function avatarGradient(seed: string) {
-  let h = 0;
-  for (let i = 0; i < seed.length; i++) {
-    h = (h * 31 + seed.charCodeAt(i)) >>> 0;
-  }
-  return AVATAR_GRADIENTS[h % AVATAR_GRADIENTS.length];
-}
-
-function Avatar({label, seed, size = 44}: {label: string; seed: string; size?: number}) {
-  return (
-    <View
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        overflow: 'hidden',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}>
-      <GradientFill colors={avatarGradient(seed)} angle={135} />
-      <Text style={{color: '#FFFFFF', fontWeight: '800', fontSize: size * 0.4}}>{label}</Text>
-    </View>
-  );
 }
 
 export default function HomeScreen() {
@@ -110,8 +54,7 @@ export default function HomeScreen() {
 
   const [refreshing, setRefreshing] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [balanceHidden, setBalanceHidden] = useState(false);
-  const [reducedMotion, setReducedMotion] = useState(false);
+  const [hidden, setHidden] = useState(false);
   const [recentTx, setRecentTx] = useState<TransactionRecord[]>([]);
   const [nfcReady, setNfcReady] = useState(false);
   const [sendSheet, setSendSheet] = useState(false);
@@ -129,15 +72,10 @@ export default function HomeScreen() {
     return num.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
   }, [ausdBalance]);
 
-  const profileLetter = useMemo(() => {
-    if (username) {
-      return username.charAt(0).toUpperCase();
-    }
-    if (address) {
-      return address.slice(2, 3).toUpperCase();
-    }
-    return 'T';
-  }, [username, address]);
+  const initial = useMemo(
+    () => (username ? username.charAt(0) : address ? address.slice(2, 3) : 'T').toUpperCase(),
+    [username, address],
+  );
 
   const loadRecent = useCallback(() => {
     setRecentTx(getTransactionHistory().slice(0, 5));
@@ -147,20 +85,6 @@ export default function HomeScreen() {
     initHistory().then(() => loadRecent());
     preloadSounds();
   }, [loadRecent]);
-
-  useEffect(() => {
-    let mounted = true;
-    AccessibilityInfo.isReduceMotionEnabled().then(enabled => {
-      if (mounted) {
-        setReducedMotion(enabled);
-      }
-    });
-    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReducedMotion);
-    return () => {
-      mounted = false;
-      sub.remove();
-    };
-  }, []);
 
   useEffect(() => {
     (async () => {
@@ -191,88 +115,71 @@ export default function HomeScreen() {
 
   const onSelectSend = (method: SendMethod) => {
     setSendSheet(false);
-    // Let the sheet finish closing before the screen transition starts.
     setTimeout(() => {
       navigation.navigate(method === 'nfc' ? 'SendTap' : 'SendPayment');
     }, 120);
   };
 
-  const quick = [
-    {label: 'Send', colors: ['#3D7BFF', '#7C5CFF'], icon: <SendTapIcon size={22} color="#FFFFFF" />, onPress: () => setSendSheet(true)},
-    {label: 'Receive', colors: ['#14B8A6', '#2DD4A0'], icon: <ReceiveTapIcon size={22} color="#FFFFFF" />, onPress: () => navigation.navigate('ReceiveTap')},
-    {label: 'Activity', colors: ['#F59E0B', '#FF6B6B'], icon: <HistoryIcon size={22} color="#FFFFFF" />, onPress: () => navigation.navigate('History')},
-    {label: 'Profile', colors: ['#EC4899', '#8B5CF6'], icon: <UserIcon size={20} color="#FFFFFF" />, onPress: () => navigation.navigate('AccountInfo')},
-  ];
-
   return (
     <View style={styles.screen}>
       <ScrollView
-        contentContainerStyle={[styles.content, {paddingTop: insets.top + 12, paddingBottom: insets.bottom + 120}]}
+        contentContainerStyle={[
+          styles.content,
+          {paddingTop: insets.top + 8, paddingBottom: insets.bottom + 120},
+        ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={colors.accent}
+            tintColor={colors.textMuted}
             colors={[colors.accent]}
           />
         }>
         <FadeInView delay={0} translateY={6}>
-          <View style={styles.topBar}>
+          <View style={styles.titleRow}>
+            <Text style={styles.title}>Wallet</Text>
             <PressableScale
               onPress={() => navigation.navigate('AccountInfo')}
               accessibilityLabel="Open profile"
-              contentStyle={styles.who}>
-              <Avatar label={profileLetter} seed={username || address || 'tap'} />
-              <View>
-                <Text style={styles.hello}>Welcome back</Text>
-                <Text style={styles.handle}>{username ? `@${username}` : 'TapPay user'}</Text>
-              </View>
+              contentStyle={styles.avatar}>
+              <Text style={styles.avatarText}>{initial}</Text>
             </PressableScale>
-            <View style={styles.nfcPill} accessibilityLabel={nfcReady ? 'NFC ready' : 'NFC off'}>
-              <LivePulseDot active={nfcReady} size={7} />
-              <Text style={styles.nfcPillText}>{nfcReady ? 'NFC ready' : 'NFC off'}</Text>
-            </View>
           </View>
         </FadeInView>
 
-        <FadeInView delay={50} translateY={14}>
-          <View style={styles.hero}>
-            <GradientFill
-              colors={['#2B5BE8', '#5B4BFF', '#8B5CF6']}
-              angle={125}
-              glows={[
-                {color: '#64D2FF', cx: 0.95, cy: 0.05, r: 0.7, opacity: 0.55},
-                {color: '#FF7AC6', cx: 0.0, cy: 1.0, r: 0.6, opacity: 0.35},
-              ]}
-            />
-            <RippleRings size={280} style={styles.heroRipple} opacity={0.22} rings={6} />
-            <View style={styles.heroTop}>
-              <Text style={styles.heroLabel}>TOTAL BALANCE</Text>
+        <FadeInView delay={40} translateY={10}>
+          <View style={styles.card}>
+            <View style={styles.cardTop}>
+              <View style={styles.brandRow}>
+                <ContactlessWave size={20} color={colors.text} />
+                <Text style={styles.brand}>TapPay</Text>
+              </View>
               <PressableScale
+                hitSlop={12}
                 onPress={() => {
                   triggerHaptic.selection();
-                  setBalanceHidden(v => !v);
+                  setHidden(v => !v);
                 }}
-                hitSlop={12}
-                accessibilityLabel={balanceHidden ? 'Show balances' : 'Hide balances'}
-                contentStyle={styles.eye}>
-                <Text style={styles.eyeText}>{balanceHidden ? 'Show' : 'Hide'}</Text>
+                accessibilityLabel={hidden ? 'Show balance' : 'Hide balance'}>
+                <Text style={styles.link}>{hidden ? 'Show' : 'Hide'}</Text>
               </PressableScale>
             </View>
-            <View style={styles.heroAmountRow}>
-              <Text style={styles.heroAmount} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>
-                {balanceHidden ? '••••••' : displayAusd}
-              </Text>
-              <Text style={styles.heroUnit}>AUSD</Text>
-            </View>
-            <View style={styles.heroBottom}>
-              <View style={styles.heroChip}>
-                <Text style={styles.heroChipLabel}>MON</Text>
-                <Text style={styles.heroChipValue}>{balanceHidden ? '••••' : balanceMon}</Text>
+            <View>
+              <Text style={styles.cardLabel}>Balance</Text>
+              <View style={styles.amountRow}>
+                <Text style={styles.amount} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>
+                  {hidden ? '••••••' : displayAusd}
+                </Text>
+                <Text style={styles.unit}>AUSD</Text>
               </View>
-              <PressableScale onPress={copyAddress} accessibilityLabel="Copy wallet address" contentStyle={styles.heroChip}>
-                <Text style={styles.heroChipValue}>
+            </View>
+            <View style={styles.cardBottom}>
+              <Text style={styles.meta}>
+                {hidden ? '•••• MON' : `${balanceMon} MON`}
+              </Text>
+              <PressableScale onPress={copyAddress} accessibilityLabel="Copy wallet address">
+                <Text style={styles.meta}>
                   {copied ? 'Copied' : address ? truncateAddress(address, 6, 4) : '—'}
                 </Text>
               </PressableScale>
@@ -280,66 +187,77 @@ export default function HomeScreen() {
           </View>
         </FadeInView>
 
-        <FadeInView delay={100} translateY={12}>
-          <View style={styles.quickRow}>
-            {quick.map(q => (
-              <PressableScale
-                key={q.label}
-                style={styles.quickItem}
-                contentStyle={styles.quickInner}
-                accessibilityLabel={q.label}
-                onPress={() => {
-                  triggerHaptic.impactMedium();
-                  q.onPress();
-                }}>
-                <View style={styles.quickIcon}>
-                  <GradientFill colors={q.colors} angle={135} />
-                  {q.icon}
-                </View>
-                <Text style={styles.quickLabel}>{q.label}</Text>
-              </PressableScale>
-            ))}
+        <FadeInView delay={80} translateY={10}>
+          <View style={styles.actions}>
+            <PressableScale
+              style={styles.flex}
+              contentStyle={[styles.btn, styles.btnPrimary]}
+              accessibilityLabel="Send"
+              onPress={() => {
+                triggerHaptic.impactMedium();
+                setSendSheet(true);
+              }}>
+              <Text style={styles.btnPrimaryText}>Send</Text>
+            </PressableScale>
+            <PressableScale
+              style={styles.flex}
+              contentStyle={[styles.btn, styles.btnSecondary]}
+              accessibilityLabel="Receive"
+              onPress={() => {
+                triggerHaptic.impactMedium();
+                navigation.navigate('ReceiveTap');
+              }}>
+              <Text style={styles.btnSecondaryText}>Receive</Text>
+            </PressableScale>
+          </View>
+          <View style={styles.nfcRow}>
+            <View style={[styles.dot, {backgroundColor: nfcReady ? colors.success : colors.textSubtle}]} />
+            <Text style={styles.nfcText}>
+              {nfcReady ? 'Ready to tap' : 'NFC is off. Turn it on in Settings.'}
+            </Text>
           </View>
         </FadeInView>
 
-        <FadeInView delay={150} translateY={12}>
+        <FadeInView delay={120} translateY={10}>
           <View style={styles.sectionHead}>
-            <Text style={styles.sectionTitle}>Recent activity</Text>
-            <PressableScale onPress={() => navigation.navigate('History')}>
-              <Text style={styles.seeAll}>See all</Text>
+            <Text style={styles.sectionTitle}>Latest Transactions</Text>
+            <PressableScale onPress={() => navigation.navigate('History')} hitSlop={10}>
+              <Text style={styles.link}>See All</Text>
             </PressableScale>
           </View>
-          {recentTx.length === 0 ? (
-            <View style={styles.empty}>
-              <RippleRings size={120} color={colors.accent} opacity={0.5} rings={4} />
-              <Text style={styles.emptyTitle}>Nothing here yet</Text>
-              <Text style={styles.emptySub}>Make your first tap payment and it shows up here.</Text>
-            </View>
-          ) : (
-            <View style={styles.feed}>
-              {recentTx.map(tx => {
+          <View style={styles.group}>
+            {recentTx.length === 0 ? (
+              <View style={styles.empty}>
+                <Text style={styles.emptyTitle}>No Transactions</Text>
+                <Text style={styles.emptySub}>Your payments will appear here.</Text>
+              </View>
+            ) : (
+              recentTx.map((tx, i) => {
                 const received = tx.direction === 'received';
-                const title = getTxTitle(tx);
                 return (
-                  <View key={tx.id} style={styles.txRow}>
-                    <Avatar
-                      label={received ? '↓' : title.replace('@', '').charAt(0).toUpperCase() || '↑'}
-                      seed={tx.counterparty}
-                      size={44}
-                    />
-                    <View style={styles.txMeta}>
-                      <Text style={styles.txTitle} numberOfLines={1}>{title}</Text>
-                      <Text style={styles.txSub} numberOfLines={1}>{getTxSubtitle(tx)}</Text>
+                  <View key={tx.id} style={[styles.txRow, i > 0 && styles.txBorder]}>
+                    <View style={styles.txIcon}>
+                      <Text style={[styles.txIconText, {color: received ? colors.success : colors.text}]}>
+                        {received ? '↓' : '↑'}
+                      </Text>
                     </View>
-                    <Text style={[styles.txAmount, received && styles.txAmountIn]}>
+                    <View style={styles.flex}>
+                      <Text style={styles.txTitle} numberOfLines={1}>
+                        {txTitle(tx)}
+                      </Text>
+                      <Text style={styles.txSub} numberOfLines={1}>
+                        {txSubtitle(tx)}
+                      </Text>
+                    </View>
+                    <Text style={[styles.txAmount, received && {color: colors.success}]}>
                       {received ? '+' : '−'}
                       {tx.amount} {getTxTokenSymbol(tx)}
                     </Text>
                   </View>
                 );
-              })}
-            </View>
-          )}
+              })
+            )}
+          </View>
         </FadeInView>
       </ScrollView>
 
@@ -351,61 +269,52 @@ export default function HomeScreen() {
 function createStyles(c: AppColors) {
   return StyleSheet.create({
     screen: {flex: 1, backgroundColor: c.background},
-    content: {paddingHorizontal: 20, gap: 22},
-    topBar: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'},
-    who: {flexDirection: 'row', alignItems: 'center', gap: 12},
-    hello: {fontSize: 12, color: c.textMuted, fontWeight: '500'},
-    handle: {fontSize: 17, color: c.text, fontWeight: '700', letterSpacing: -0.3},
-    nfcPill: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      paddingHorizontal: 12,
-      paddingVertical: 7,
-      borderRadius: 999,
+    flex: {flex: 1},
+    content: {paddingHorizontal: 20, gap: 18},
+    titleRow: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'},
+    title: {fontSize: 34, fontWeight: '700', color: c.text, letterSpacing: 0.4},
+    avatar: {width: 36, height: 36, borderRadius: 18, backgroundColor: c.surfaceElevated, alignItems: 'center', justifyContent: 'center'},
+    avatarText: {fontSize: 15, fontWeight: '600', color: c.text},
+    card: {
+      height: 190,
+      borderRadius: 20,
+      padding: 20,
+      justifyContent: 'space-between',
       backgroundColor: c.surfaceSolid,
-      borderWidth: 1,
+      borderWidth: StyleSheet.hairlineWidth * 2,
       borderColor: c.border,
     },
-    nfcPillText: {fontSize: 12, fontWeight: '600', color: c.text},
-    hero: {borderRadius: 30, overflow: 'hidden', padding: 22, minHeight: 200, justifyContent: 'space-between'},
-    heroRipple: {position: 'absolute', right: -90, top: -90},
-    heroTop: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'},
-    heroLabel: {fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.75)', letterSpacing: 1.6},
-    eye: {paddingHorizontal: 12, paddingVertical: 5, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.16)'},
-    eyeText: {fontSize: 12, fontWeight: '600', color: '#FFFFFF'},
-    heroAmountRow: {flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 10},
-    heroAmount: {flexShrink: 1, fontSize: 46, fontWeight: '800', color: '#FFFFFF', letterSpacing: -2},
-    heroUnit: {fontSize: 16, fontWeight: '700', color: 'rgba(255,255,255,0.8)'},
-    heroBottom: {flexDirection: 'row', gap: 8, marginTop: 18},
-    heroChip: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      borderRadius: 999,
-      backgroundColor: 'rgba(10,11,30,0.28)',
-    },
-    heroChipLabel: {fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.7)', letterSpacing: 1},
-    heroChipValue: {fontSize: 13, fontWeight: '700', color: '#FFFFFF'},
-    quickRow: {flexDirection: 'row', justifyContent: 'space-between'},
-    quickItem: {flex: 1},
-    quickInner: {alignItems: 'center', gap: 8},
-    quickIcon: {width: 60, height: 60, borderRadius: 22, overflow: 'hidden', alignItems: 'center', justifyContent: 'center'},
-    quickLabel: {fontSize: 12, fontWeight: '600', color: c.text},
-    sectionHead: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12},
-    sectionTitle: {fontSize: 18, fontWeight: '800', color: c.text, letterSpacing: -0.4},
-    seeAll: {fontSize: 13, fontWeight: '600', color: c.accent},
-    feed: {gap: 4},
-    txRow: {flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10},
-    txMeta: {flex: 1},
-    txTitle: {fontSize: 15, fontWeight: '600', color: c.text},
-    txSub: {fontSize: 12, color: c.textMuted, marginTop: 2},
-    txAmount: {fontSize: 15, fontWeight: '700', color: c.text},
-    txAmountIn: {color: c.success},
-    empty: {alignItems: 'center', paddingVertical: 26, gap: 6},
-    emptyTitle: {fontSize: 16, fontWeight: '700', color: c.text, marginTop: -60},
-    emptySub: {fontSize: 13, color: c.textMuted, textAlign: 'center', maxWidth: 240, marginTop: 2, marginBottom: 40},
+    cardTop: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'},
+    brandRow: {flexDirection: 'row', alignItems: 'center', gap: 8},
+    brand: {fontSize: 17, fontWeight: '600', color: c.text, letterSpacing: -0.2},
+    link: {fontSize: 15, color: c.accent, fontWeight: '400'},
+    cardLabel: {fontSize: 13, color: c.textMuted, marginBottom: 2},
+    amountRow: {flexDirection: 'row', alignItems: 'baseline', gap: 8},
+    amount: {flexShrink: 1, fontSize: 40, fontWeight: '700', color: c.text, letterSpacing: -0.8},
+    unit: {fontSize: 17, fontWeight: '500', color: c.textMuted},
+    cardBottom: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'},
+    meta: {fontSize: 13, color: c.textMuted},
+    actions: {flexDirection: 'row', gap: 12},
+    btn: {height: 50, borderRadius: 14, alignItems: 'center', justifyContent: 'center'},
+    btnPrimary: {backgroundColor: c.text},
+    btnPrimaryText: {fontSize: 17, fontWeight: '600', color: c.background},
+    btnSecondary: {backgroundColor: c.surfaceElevated},
+    btnSecondaryText: {fontSize: 17, fontWeight: '600', color: c.text},
+    nfcRow: {flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 14},
+    dot: {width: 7, height: 7, borderRadius: 4},
+    nfcText: {fontSize: 13, color: c.textMuted},
+    sectionHead: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8, marginTop: 6},
+    sectionTitle: {fontSize: 22, fontWeight: '700', color: c.text, letterSpacing: 0.3},
+    group: {borderRadius: 14, backgroundColor: c.surfaceSolid, overflow: 'hidden'},
+    txRow: {flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12},
+    txBorder: {borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.separator},
+    txIcon: {width: 40, height: 40, borderRadius: 20, backgroundColor: c.surfaceElevated, alignItems: 'center', justifyContent: 'center'},
+    txIconText: {fontSize: 18, fontWeight: '600'},
+    txTitle: {fontSize: 17, fontWeight: '400', color: c.text},
+    txSub: {fontSize: 13, color: c.textMuted, marginTop: 1},
+    txAmount: {fontSize: 17, fontWeight: '400', color: c.text},
+    empty: {alignItems: 'center', paddingVertical: 32, gap: 4},
+    emptyTitle: {fontSize: 17, fontWeight: '600', color: c.text},
+    emptySub: {fontSize: 13, color: c.textMuted},
   });
 }

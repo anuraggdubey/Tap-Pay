@@ -3,17 +3,11 @@ import {
   Radio,
   Check,
   RotateCcw,
-  Zap,
   ExternalLink,
   Wifi,
   Battery,
-  Smartphone,
-  ShieldCheck,
-  ChevronRight,
   Play,
   Pause,
-  ArrowDownLeft,
-  ArrowUpRight,
 } from 'lucide-react';
 import {
   TapPayMockHome,

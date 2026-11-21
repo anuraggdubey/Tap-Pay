@@ -16,7 +16,7 @@ import {formatMon, truncateAddress} from '../utils/format';
 import {MONAD_CONFIG} from '../config/monad';
 import PressableScale from './PressableScale';
 import {useTheme} from '../context/ThemeContext';
-import {motion, shadows} from '../theme';
+import {motion} from '../theme';
 import type {AppColors, AppGlass} from '../theme';
 
 interface Props {

@@ -39,7 +39,7 @@ import SendMethodSheet, {SendMethod} from '../components/SendMethodSheet';
 import {triggerHaptic} from '../utils/haptics';
 import PressableScale from '../components/PressableScale';
 import {shadows} from '../theme';
-import type {AppColors, AppGlass} from '../theme';
+import type {AppColors} from '../theme';
 
 export type RootStackParamList = {
   WalletSetup: undefined;
@@ -84,10 +84,10 @@ const Tab = createBottomTabNavigator<TabParamList>();
  */
 function FloatingTabBar({state, descriptors, navigation}: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
-  const {colors, glass, isDark} = useTheme();
+  const {colors} = useTheme();
   const styles = useMemo(
-    () => createTabStyles(colors, glass, isDark),
-    [colors, glass, isDark],
+    () => createTabStyles(colors),
+    [colors],
   );
   const stackNav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [sheet, setSheet] = useState(false);
@@ -290,7 +290,7 @@ export default function AppNavigator() {
   );
 }
 
-function createTabStyles(colors: AppColors, glass: AppGlass, isDark: boolean) {
+function createTabStyles(colors: AppColors) {
   return StyleSheet.create({
     floatingContainer: {
       position: 'absolute',

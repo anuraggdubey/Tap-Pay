@@ -25,7 +25,6 @@ import {triggerHaptic} from '../utils/haptics';
 import {updateTransactionStatus} from '../services/history';
 import {ExternalLinkIcon, ContactlessWave} from '../components/AppIcons';
 import PressableScale from '../components/PressableScale';
-import {GradientFill} from '../components/Gradient';
 import AmbientBackground from '../components/AmbientBackground';
 import SuccessBurst from '../components/SuccessBurst';
 import {playSound} from '../utils/sounds';
@@ -80,7 +79,7 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
     navigation.setOptions({headerShown: false});
   }, [navigation]);
 
-  const markConfirmed = () => {
+  const markConfirmed = useCallback(() => {
     triggerHaptic.notificationSuccess();
     if (isRealTxHash) {
       updateTransactionStatus(txHash, 'confirmed');
@@ -93,7 +92,7 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
       useNativeDriver: true,
     }).start();
     refreshBalance();
-  };
+  }, [isRealTxHash, txHash, checkmarkScale, refreshBalance]);
 
   // Timed out without a receipt: keep the history row pending (it is reconciled later).
   const markDelayed = () => {
@@ -106,14 +105,14 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
     setAttempt(n => n + 1);
   };
 
-  const markFailed = (message: string) => {
+  const markFailed = useCallback((message: string) => {
     triggerHaptic.notificationError();
     if (isRealTxHash) {
       updateTransactionStatus(txHash, 'failed');
     }
     setStatus('failed');
     setErrorMessage(message);
-  };
+  }, [isRealTxHash, txHash]);
 
   useEffect(() => {
     // History / already-finalized txs: show the stored outcome, don't re-enter waiting UI.
@@ -187,7 +186,7 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
     return () => {
       isMounted = false;
     };
-  }, [txHash, waitForBalance, expectedAmountWei, address, balance, refreshBalance, initialStatus, attempt]);
+  }, [txHash, waitForBalance, expectedAmountWei, address, balance, refreshBalance, initialStatus, attempt, checkmarkScale, isRealTxHash, markConfirmed, markFailed]);
 
   const openExplorer = () => {
     if (isRealTxHash) {
@@ -250,14 +249,10 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
   }, [completedAt]);
 
   const tokenInfo = getTokenBySymbol(tokenSymbol);
-  const tokenName = tokenInfo?.name || 'Monad';
   const displaySymbol = tokenInfo?.symbol || 'MON';
-  const badgeLetter = displaySymbol.charAt(0);
 
-  const signedAmount = `${isReceived ? '+' : '-'}${amount} ${displaySymbol}`;
   const sentAmountColor = colors.text;
   const amountColor = isReceived ? colors.success : sentAmountColor;
-  const iconMuted = colors.textSubtle;
 
   const onSuccessStart = useCallback(() => {
     // Replaying a stored receipt from History should stay quiet.

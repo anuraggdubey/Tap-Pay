@@ -3,7 +3,7 @@
  * recovery phrase (phone-authentication protected, view-only) as iOS grouped lists.
  */
 
-import React, {useState, useEffect, useRef, useMemo} from 'react';
+import React, {useState, useEffect, useRef, useMemo, useCallback} from 'react';
 import {
   View,
   Text,
@@ -45,6 +45,17 @@ export default function AccountInfoScreen(_props: Props) {
   const [claimInput, setClaimInput] = useState('');
   const [claiming, setClaiming] = useState(false);
 
+  const hideSecretKey = useCallback(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => {
+      setShowSecretKey(false);
+      setRevealedPhrase(null);
+    });
+  }, [fadeAnim]);
+
   useEffect(() => {
     if (showSecretKey) {
       Animated.timing(fadeAnim, {toValue: 1, duration: 300, useNativeDriver: true}).start();
@@ -57,8 +68,7 @@ export default function AccountInfoScreen(_props: Props) {
         clearTimeout(autoHideTimer.current);
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showSecretKey]);
+  }, [showSecretKey, fadeAnim, hideSecretKey]);
 
   // Never leave the phrase on screen when the app is backgrounded.
   useEffect(() => {
@@ -70,13 +80,6 @@ export default function AccountInfoScreen(_props: Props) {
     });
     return () => sub.remove();
   }, []);
-
-  const hideSecretKey = () => {
-    Animated.timing(fadeAnim, {toValue: 0, duration: 200, useNativeDriver: true}).start(() => {
-      setShowSecretKey(false);
-      setRevealedPhrase(null);
-    });
-  };
 
   const copyAddress = () => {
     if (!address) {

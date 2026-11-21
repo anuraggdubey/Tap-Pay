@@ -33,7 +33,6 @@ const SCAN_TIMEOUT_MS = 15_000;
 let _continuousUnsubscribe: (() => void) | null = null;
 let _nativeReaderRunning = false;
 let _scanResolver: ((text: string) => void) | null = null;
-let _scanRejecter: ((error: Error) => void) | null = null;
 let _scanTimer: ReturnType<typeof setTimeout> | null = null;
 
 export {isNativeTapReaderAvailable} from './tapNfcNative';
@@ -44,7 +43,6 @@ function clearScanWaiter() {
     _scanTimer = null;
   }
   _scanResolver = null;
-  _scanRejecter = null;
 }
 
 function isUserCancelled(error: any): boolean {
@@ -160,7 +158,6 @@ async function waitForHceNdefText(timeoutMs = SCAN_TIMEOUT_MS): Promise<string> 
 
     return await new Promise<string>((resolve, reject) => {
       _scanResolver = resolve;
-      _scanRejecter = reject;
       _scanTimer = setTimeout(() => {
         clearScanWaiter();
         reject(new Error('NFC scan timeout'));

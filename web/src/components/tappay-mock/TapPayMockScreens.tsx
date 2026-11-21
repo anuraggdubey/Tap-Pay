@@ -17,7 +17,6 @@ import {
   Key,
   Globe,
   Info,
-  Copy,
   ArrowLeft,
 } from 'lucide-react';
 import '../../styles/tappay-mock-ui.css';

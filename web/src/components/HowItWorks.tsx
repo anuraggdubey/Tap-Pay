@@ -1,5 +1,5 @@
 import React from 'react';
-import { Smartphone, UserPlus, Droplets, Radio, CheckCircle, ArrowRight } from 'lucide-react';
+import { Smartphone, UserPlus, Droplets, Radio, CheckCircle } from 'lucide-react';
 
 export const HowItWorks: React.FC = () => {
   const steps = [

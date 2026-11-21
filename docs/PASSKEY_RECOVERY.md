@@ -48,7 +48,7 @@ The passkey is bound to a **relying party id**, and the credential only works fo
 - Android needs Digital Asset Links: serve `https://<rp-id>/.well-known/assetlinks.json` granting `delegate_permission/common.get_login_creds` to package `com.tappay` and the SHA-256 fingerprints of the **release** signing certificate (and the debug one for development builds).
 - Changing the RP id later orphans every existing passkey. Pick it once.
 
-The id is configured in `src/config/passkey.ts` (`PASSKEY_RP_ID`). It ships **empty**, and passkey recovery stays hidden and disabled until the owner sets it and publishes `assetlinks.json`.
+The id is configured in `src/config/passkey.ts` (`PASSKEY_RP_ID`). It ships **empty**. Until the owner sets it and publishes `assetlinks.json`, the Settings row shows "Unavailable" and the welcome screen hides "Recover with Passkey".
 
 ## Where the blob lives
 

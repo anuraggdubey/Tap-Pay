@@ -28,6 +28,7 @@ import TransactionHistoryScreen from '../screens/TransactionHistoryScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import AccountInfoScreen from '../screens/AccountInfoScreen';
 import AboutScreen from '../screens/AboutScreen';
+import PasskeyRecoveryScreen from '../screens/PasskeyRecoveryScreen';
 import NetworkScreen from '../screens/NetworkScreen';
 import {useWallet} from '../context/WalletContext';
 import {useTheme} from '../context/ThemeContext';
@@ -60,6 +61,7 @@ export type RootStackParamList = {
     completedAt?: string;
   };
   AccountInfo: undefined;
+  PasskeyRecovery: undefined;
   AboutTapPay: undefined;
   NetworkInfo: undefined;
   History: undefined;
@@ -267,6 +269,11 @@ export default function AppNavigator() {
           name="AccountInfo"
           component={AccountInfoScreen}
           options={{title: 'Account Info', headerBackTitle: 'Back'}}
+        />
+        <Stack.Screen
+          name="PasskeyRecovery"
+          component={PasskeyRecoveryScreen}
+          options={{title: 'Passkey Recovery', headerBackTitle: 'Back'}}
         />
         <Stack.Screen
           name="AboutTapPay"

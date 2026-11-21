@@ -15,6 +15,8 @@ import {truncateAddress} from '../utils/format';
 import {MONAD_CONFIG} from '../config/monad';
 import {WalletError} from '../services/wallet';
 import {getSoundEnabled, setSoundEnabled, playSound} from '../utils/sounds';
+import {isPasskeyRecoveryConfigured} from '../config/passkey';
+import {getPasskeyStatus} from '../services/passkeyRecovery';
 import {Group, Row, ToggleRow, LargeTitle, tileColors} from '../components/IosList';
 import PressableScale from '../components/PressableScale';
 import GlassSurface from '../components/GlassSurface';
@@ -32,10 +34,19 @@ export default function SettingsScreen({navigation}: Props) {
   const {colors, isDark, setDarkMode} = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [soundOn, setSoundOn] = useState(true);
+  const [passkeyLinked, setPasskeyLinked] = useState(false);
 
   useEffect(() => {
     getSoundEnabled().then(setSoundOn);
   }, []);
+
+  useEffect(() => {
+    const refresh = () => {
+      getPasskeyStatus().then(st => setPasskeyLinked(st.linked));
+    };
+    refresh();
+    return navigation.addListener('focus', refresh);
+  }, [navigation]);
 
   const handleResetWallet = () => {
     triggerHaptic.notificationError();
@@ -108,6 +119,12 @@ export default function SettingsScreen({navigation}: Props) {
             icon={{bg: tileColors.red, glyph: '⚿'}}
             title="Recovery Phrase"
             onPress={() => navigation.navigate('AccountInfo')}
+          />
+          <Row
+            icon={{bg: tileColors.indigo, glyph: '◉'}}
+            title="Passkey Recovery"
+            value={!isPasskeyRecoveryConfigured() ? 'Unavailable' : passkeyLinked ? 'Linked' : 'Not set up'}
+            onPress={() => navigation.navigate('PasskeyRecovery')}
           />
           <Row
             icon={{bg: tileColors.green, glyph: '◍'}}

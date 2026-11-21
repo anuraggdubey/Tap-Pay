@@ -12,6 +12,11 @@ export type VerifySignature = (message: string, signature: string) => string | n
 
 const GENERIC = {error: 'Unable to complete the request. Please try again.'};
 
+async function sha256Hex(text: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
+}
+
 export function createHandler(
   config: Config | null,
   verify: VerifySignature,
@@ -93,6 +98,20 @@ export function createHandler(
       });
 
     try {
+      // Single-use proofs: a captured {message, signature} pair is accepted at most once, so it
+      // cannot be replayed inside the freshness window. The wallet signs a new proof per request.
+      const consume = await rest('rpc/consume_username_proof', {
+        method: 'POST',
+        body: JSON.stringify({p_proof_hash: await sha256Hex(`${message}\n${req.signature.toLowerCase()}`)}),
+      });
+      if (!consume.ok) {
+        log(`register-username: proof check failed (${consume.status})`);
+        return reply(503);
+      }
+      if ((await consume.json().catch(() => null)) !== true) {
+        return reply(409, {error: 'This request was already used. Please try again.', reason: 'replayed'});
+      }
+
       if (req.action === 'release') {
         // Release exactly what the wallet signed: the delete is scoped to the signed username,
         // not to whatever username the wallet currently holds.

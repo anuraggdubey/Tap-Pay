@@ -94,13 +94,20 @@ export function createHandler(
 
     try {
       if (req.action === 'release') {
+        // Release exactly what the wallet signed: the delete is scoped to the signed username,
+        // not to whatever username the wallet currently holds.
         const del = await rest(
-          `usernames?wallet_address=eq.${req.walletAddress}&chain_id=eq.143`,
-          {method: 'DELETE', headers: {Prefer: 'return=minimal'}},
+          `usernames?wallet_address=eq.${req.walletAddress}` +
+            `&normalized_username=eq.${normalizeUsername(req.username)}&chain_id=eq.143`,
+          {method: 'DELETE', headers: {Prefer: 'return=representation'}},
         );
         if (!del.ok) {
           log(`register-username: release failed (${del.status})`);
           return reply(503);
+        }
+        const removed = await del.json().catch(() => null);
+        if (!Array.isArray(removed) || removed.length === 0) {
+          return reply(404, {error: 'That username is not registered to this wallet.', reason: 'not_found'});
         }
         return reply(200, {ok: true});
       }

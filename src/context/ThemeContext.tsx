@@ -37,7 +37,7 @@ type ThemeContextValue = {
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
 export function ThemeProvider({children}: {children: ReactNode}) {
-  const [isDark, setIsDark] = useState(false);
+  const [isDark, setIsDark] = useState(true);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -45,11 +45,11 @@ export function ThemeProvider({children}: {children: ReactNode}) {
     (async () => {
       try {
         const stored = await AsyncStorage.getItem(STORAGE_KEY);
-        if (mounted && stored === '1') {
-          setIsDark(true);
+        if (mounted && stored === '0') {
+          setIsDark(false);
         }
       } catch {
-        // keep light default
+        // keep dark default
       } finally {
         if (mounted) {
           setReady(true);

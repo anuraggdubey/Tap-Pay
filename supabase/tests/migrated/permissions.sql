@@ -34,7 +34,7 @@ select pg_temp.expect_denied('select public.purge_waitlist_rate_limits()');
 do $$
 begin
   if public.resolve_username('alice') is distinct from '0x1111111111111111111111111111111111111111' then raise exception 'Public username resolution failed'; end if;
-  if public.resolve_username('al1ce') is distinct from '0x1111111111111111111111111111111111111111' then raise exception 'Look-alike normalization failed'; end if;
+  if public.resolve_username('A1ice') is distinct from '0x1111111111111111111111111111111111111111' then raise exception 'Look-alike normalization failed'; end if;
   if public.reverse_resolve_address('0x1111111111111111111111111111111111111111') is distinct from 'alice' then raise exception 'Public reverse resolution failed'; end if;
   if public.resolve_username('nobody') is not null then raise exception 'Unknown username must resolve to null'; end if;
   if (select count(*) from public.waitlist) <> 0 then raise exception 'Waitlist data exposed'; end if;

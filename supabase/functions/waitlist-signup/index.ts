@@ -18,7 +18,21 @@ function readConfig(): Config | null {
     if (!['https:', 'http:'].includes(new URL(supabaseUrl).protocol)) {
       return null;
     }
-    return {origins, supabaseUrl: supabaseUrl.replace(/\/$/, ''), serviceKey, turnstileSecret, ipSalt, limit};
+    // Optional confirmation email. All-or-nothing: a half-configured provider fails closed instead
+    // of silently storing signups nobody can confirm.
+    const apiKey = Deno.env.get('EMAIL_API_KEY') || '';
+    const from = Deno.env.get('WAITLIST_FROM_EMAIL') || '';
+    const confirmUrl = Deno.env.get('WAITLIST_CONFIRM_URL') || '';
+    const apiUrl = Deno.env.get('EMAIL_API_URL') || 'https://api.resend.com/emails';
+    let email: Config['email'];
+    if (apiKey || from || confirmUrl) {
+      if (!apiKey || !from || !confirmUrl || new URL(confirmUrl).protocol !== 'https:' ||
+          new URL(apiUrl).protocol !== 'https:') {
+        return null;
+      }
+      email = {apiUrl, apiKey, from, confirmUrl};
+    }
+    return {origins, supabaseUrl: supabaseUrl.replace(/\/$/, ''), serviceKey, turnstileSecret, ipSalt, limit, email};
   } catch {
     return null;
   }

@@ -4,14 +4,14 @@
  * 100% responsive across Google Pixel, Samsung One UI, Xiaomi/Redmi, and iOS.
  */
 
-import React, {useMemo} from 'react';
+import React, {useMemo, useState} from 'react';
 import {
   View,
   Text,
   StyleSheet,
 } from 'react-native';
-import {NavigationContainer, DefaultTheme, DarkTheme} from '@react-navigation/native';
-import {createNativeStackNavigator} from '@react-navigation/native-stack';
+import {NavigationContainer, DefaultTheme, DarkTheme, useNavigation} from '@react-navigation/native';
+import {createNativeStackNavigator, NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {
   createBottomTabNavigator,
   BottomTabBarProps,
@@ -28,14 +28,18 @@ import TransactionHistoryScreen from '../screens/TransactionHistoryScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import AccountInfoScreen from '../screens/AccountInfoScreen';
 import AboutScreen from '../screens/AboutScreen';
+import PasskeyRecoveryScreen from '../screens/PasskeyRecoveryScreen';
 import NetworkScreen from '../screens/NetworkScreen';
 import {useWallet} from '../context/WalletContext';
 import {useTheme} from '../context/ThemeContext';
 import {HomeIcon, PayIcon, HistoryIcon, SettingsIcon} from '../components/AppIcons';
+import TapFab from '../components/TapFab';
+import GlassSurface from '../components/GlassSurface';
+import SendMethodSheet, {SendMethod} from '../components/SendMethodSheet';
 import {triggerHaptic} from '../utils/haptics';
 import PressableScale from '../components/PressableScale';
 import {shadows} from '../theme';
-import type {AppColors, AppGlass} from '../theme';
+import type {AppColors} from '../theme';
 
 export type RootStackParamList = {
   WalletSetup: undefined;
@@ -57,6 +61,7 @@ export type RootStackParamList = {
     completedAt?: string;
   };
   AccountInfo: undefined;
+  PasskeyRecovery: undefined;
   AboutTapPay: undefined;
   NetworkInfo: undefined;
   History: undefined;
@@ -74,76 +79,88 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<TabParamList>();
 
 /**
- * FloatingTabBar — Capsule navigation floating in the air (Image 1)
- * Uses dynamic insets so it will NEVER collide with Android 3-button nav or iOS gesture pill.
+ * FloatingTabBar — floating dock with a pulsing center Tap button.
+ * Tap opens the "how do you want to send" sheet (NFC / @username / address).
  */
 function FloatingTabBar({state, descriptors, navigation}: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
-  const {colors, glass, isDark} = useTheme();
+  const {colors} = useTheme();
   const styles = useMemo(
-    () => createTabStyles(colors, glass, isDark),
-    [colors, glass, isDark],
+    () => createTabStyles(colors),
+    [colors],
   );
-  // Lift above system navigation bar (3-button nav on Android is ~48dp, gesture pill is ~16-24dp)
+  const stackNav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const [sheet, setSheet] = useState(false);
   const bottomOffset = Math.max(insets.bottom, 12) + 8;
+  // Layout: Home, History, [Tap], Pay, Settings
+  const order = ['Home', 'History', 'TAP', 'Pay', 'Settings'];
+
+  const onSelect = (method: SendMethod) => {
+    setSheet(false);
+    setTimeout(() => {
+      stackNav.navigate(method === 'nfc' ? 'SendTap' : 'SendPayment');
+    }, 120);
+  };
 
   return (
-    <View
-      pointerEvents="box-none"
-      style={[styles.floatingContainer, {bottom: bottomOffset}]}>
-      <View style={styles.capsulePill}>
-        {state.routes.map((route, index) => {
-          const {options} = descriptors[route.key];
-          const label =
-            options.tabBarLabel !== undefined
-              ? options.tabBarLabel
-              : options.title !== undefined
-              ? options.title
-              : route.name;
-
-          const isFocused = state.index === index;
-
-          const onPress = () => {
-            triggerHaptic.selection();
-            const event = navigation.emit({
-              type: 'tabPress',
-              target: route.key,
-              canPreventDefault: true,
-            });
-
-            if (!isFocused && !event.defaultPrevented) {
-              navigation.navigate(route.name);
+    <>
+      <View pointerEvents="box-none" style={[styles.floatingContainer, {bottom: bottomOffset}]}>
+        <GlassSurface radius={33} strength={1.6} style={styles.capsulePill}>
+          {order.map(name => {
+            if (name === 'TAP') {
+              return (
+                <TapFab
+                  key="tap"
+                  onPress={() => {
+                    triggerHaptic.impactMedium();
+                    setSheet(true);
+                  }}
+                />
+              );
             }
-          };
-
-          return (
-            <PressableScale
-              key={route.key}
-              accessibilityState={{selected: isFocused}}
-              accessibilityLabel={options.tabBarAccessibilityLabel}
-              testID={`tab-${route.name.toLowerCase()}`}
-              onPress={onPress}
-              style={[styles.tabItem, isFocused && styles.tabItemFocused]}
-              contentStyle={styles.tabItemContent}
-              scaleTo={0.94}>
-              <View style={styles.iconWrapper}>
-                {route.name === 'Home' && <HomeIcon size={20} focused={isFocused} />}
-                {route.name === 'Pay' && <PayIcon size={20} focused={isFocused} />}
-                {route.name === 'History' && <HistoryIcon size={20} focused={isFocused} />}
-                {route.name === 'Settings' && <SettingsIcon size={20} focused={isFocused} />}
-              </View>
-              <Text
-                style={[
-                  styles.tabLabel,
-                  isFocused ? styles.tabLabelFocused : styles.tabLabelMuted,
-                ]}>
-                {label as string}
-              </Text>
-            </PressableScale>
-          );
-        })}
+            const index = state.routes.findIndex(r => r.name === name);
+            if (index < 0) {
+              return null;
+            }
+            const route = state.routes[index];
+            const {options} = descriptors[route.key];
+            const label = (options.tabBarLabel ?? options.title ?? route.name) as string;
+            const isFocused = state.index === index;
+            const onPress = () => {
+              triggerHaptic.selection();
+              const event = navigation.emit({type: 'tabPress', target: route.key, canPreventDefault: true});
+              if (!isFocused && !event.defaultPrevented) {
+                navigation.navigate(route.name);
+              }
+            };
+            const iconColor = isFocused ? colors.accent : colors.textMuted;
+            return (
+              <PressableScale
+                key={route.key}
+                accessibilityState={{selected: isFocused}}
+                accessibilityLabel={options.tabBarAccessibilityLabel}
+                testID={`tab-${route.name.toLowerCase()}`}
+                onPress={onPress}
+                style={[styles.tabItem, isFocused && styles.tabItemFocused]}
+                contentStyle={styles.tabItemContent}
+                scaleTo={0.94}>
+                <View style={styles.iconWrapper}>
+                  {route.name === 'Home' && <HomeIcon size={22} color={iconColor} focused={isFocused} />}
+                  {route.name === 'Pay' && <PayIcon size={22} color={iconColor} focused={isFocused} />}
+                  {route.name === 'History' && <HistoryIcon size={22} color={iconColor} focused={isFocused} />}
+                  {route.name === 'Settings' && <SettingsIcon size={22} color={iconColor} focused={isFocused} />}
+                </View>
+                <Text style={[styles.tabLabel, isFocused ? styles.tabLabelFocused : styles.tabLabelMuted]}>
+                  {label}
+                </Text>
+                {isFocused && <View style={styles.activeDot} />}
+              </PressableScale>
+            );
+          })}
+        </GlassSurface>
       </View>
-    </View>
+      <SendMethodSheet visible={sheet} onClose={() => setSheet(false)} onSelect={onSelect} />
+    </>
   );
 }
 
@@ -254,6 +271,11 @@ export default function AppNavigator() {
           options={{title: 'Account Info', headerBackTitle: 'Back'}}
         />
         <Stack.Screen
+          name="PasskeyRecovery"
+          component={PasskeyRecoveryScreen}
+          options={{title: 'Passkey Recovery', headerBackTitle: 'Back'}}
+        />
+        <Stack.Screen
           name="AboutTapPay"
           component={AboutScreen}
           options={{title: 'About TapPay', headerBackTitle: 'Back'}}
@@ -268,7 +290,7 @@ export default function AppNavigator() {
   );
 }
 
-function createTabStyles(colors: AppColors, glass: AppGlass, isDark: boolean) {
+function createTabStyles(colors: AppColors) {
   return StyleSheet.create({
     floatingContainer: {
       position: 'absolute',
@@ -281,14 +303,8 @@ function createTabStyles(colors: AppColors, glass: AppGlass, isDark: boolean) {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      backgroundColor: isDark
-        ? 'rgba(28, 36, 56, 0.96)'
-        : 'rgba(255, 255, 255, 0.94)',
-      paddingHorizontal: 6,
-      paddingVertical: 6,
-      borderRadius: 36,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: isDark ? glass.borderBright : 'rgba(10, 132, 255, 0.14)',
+      paddingHorizontal: 8,
+      height: 66,
       width: '92%',
       maxWidth: 420,
       ...shadows.heavy,
@@ -300,11 +316,17 @@ function createTabStyles(colors: AppColors, glass: AppGlass, isDark: boolean) {
     tabItemContent: {
       alignItems: 'center',
       justifyContent: 'center',
-      paddingVertical: 8,
+      paddingVertical: 6,
       paddingHorizontal: 4,
     },
-    tabItemFocused: {
-      backgroundColor: colors.accentWash,
+    tabItemFocused: {backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: 28},
+    activeDot: {
+      position: 'absolute',
+      bottom: 3,
+      width: 4,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: colors.accent,
     },
     iconWrapper: {
       width: 24,

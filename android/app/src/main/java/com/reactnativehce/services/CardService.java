@@ -27,11 +27,30 @@ public class CardService extends HostApduService {
 
     @Override
     public byte[] processCommandApdu(byte[] command, Bundle extras) {
+      try {
+        return dispatchCommand(command);
+      } catch (Exception error) {
+        Log.w(TAG, "Command failed", error);
+        return ApduHelper.R_APDU_UNKNOWN_ERROR;
+      }
+    }
+
+    private byte[] dispatchCommand(byte[] command) {
       if (currentHCEApplication != null) {
         return currentHCEApplication.processCommand(command);
       }
 
+      if (command == null || command.length < 4) {
+        return ApduHelper.R_APDU_WRONG_LENGTH;
+      }
       if (ApduHelper.commandByRangeEquals(command, 0, 4, ApduHelper.C_APDU_SELECT_APP)) {
+        if (command.length < 5) {
+          return ApduHelper.R_APDU_WRONG_LENGTH;
+        }
+        int length = command[4] & 0xFF;
+        if (length == 0 || (command.length != 5 + length && command.length != 6 + length)) {
+          return ApduHelper.R_APDU_WRONG_LENGTH;
+        }
         for (IHCEApplication app : registeredHCEApplications) {
           if (app.assertSelectCommand(command)) {
             currentHCEApplication = app;

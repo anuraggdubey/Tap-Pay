@@ -1,6 +1,7 @@
 import React from 'react';
 import TestRenderer, {act} from 'react-test-renderer';
-import {Alert, Animated, Text, TouchableOpacity} from 'react-native';
+import {Alert, Animated, Text} from 'react-native';
+import PressableScale from '../src/components/PressableScale';
 import AccountInfoScreen from '../src/screens/AccountInfoScreen';
 import TransactionStatusScreen from '../src/screens/TransactionStatusScreen';
 
@@ -20,12 +21,13 @@ jest.mock('../src/services/wallet', () => ({waitForReceipt: (...args: unknown[])
 jest.mock('../src/services/history', () => ({updateTransactionStatus: (...args: unknown[]) => mockUpdateStatus(...args)}));
 jest.mock('../src/services/registry', () => ({resolveUsername: jest.fn(), registerUsername: jest.fn()}));
 jest.mock('../src/utils/haptics', () => ({triggerHaptic: {impactMedium: jest.fn(), notificationError: jest.fn(), notificationSuccess: jest.fn()}}));
+jest.mock('../src/utils/sounds', () => ({playSound: jest.fn()}));
 
 const navigation = {setOptions: jest.fn(), goBack: jest.fn(), navigate: jest.fn(), popToTop: jest.fn()};
 let tree: TestRenderer.ReactTestRenderer | undefined;
 
 beforeEach(() => {
-  jest.useFakeTimers();
+  jest.useFakeTimers({doNotFake: ['queueMicrotask']});
   jest.clearAllMocks();
   mockWallet.username = 'alice';
   mockWallet.revealRecoveryPhrase.mockResolvedValue(PHRASE);
@@ -37,6 +39,7 @@ beforeEach(() => {
   };
   jest.spyOn(Animated, 'timing').mockReturnValue(animation);
   jest.spyOn(Animated, 'spring').mockReturnValue(animation);
+  jest.spyOn(Animated, 'loop').mockReturnValue(animation);
 });
 
 afterEach(async () => {
@@ -49,7 +52,7 @@ afterEach(async () => {
 
 async function revealPhrase() {
   await act(async () => { tree = TestRenderer.create(<AccountInfoScreen navigation={navigation as never} />); });
-  const button = tree!.root.findAllByType(TouchableOpacity).find(node =>
+  const button = tree!.root.findAllByType(PressableScale).find(node =>
     node.findAllByType(Text).some(text => text.props.children === 'Show Recovery Phrase'))!;
   act(() => { button.props.onPress(); });
   const buttons = jest.mocked(Alert.alert).mock.calls[0][2]!;
@@ -104,7 +107,7 @@ it('does not poll a finalized placeholder transaction', async () => {
 });
 
 it('records a rejected receipt once without restarting the effect', async () => {
-  mockWaitForReceipt.mockResolvedValueOnce({confirmed: false, error: 'Receipt rejected'});
+  mockWaitForReceipt.mockResolvedValueOnce({confirmed: false, reverted: true, error: 'Receipt rejected'});
   await act(async () => { tree = TestRenderer.create(transactionScreen()); });
   await act(async () => { tree!.update(transactionScreen()); });
   expect(mockWaitForReceipt).toHaveBeenCalledTimes(1);
@@ -113,12 +116,11 @@ it('records a rejected receipt once without restarting the effect', async () => 
   expect(JSON.stringify(tree!.toJSON())).toContain('Receipt rejected');
 });
 
-it('handles receipt polling errors without an effect loop', async () => {
+it('keeps receipt polling errors pending without an effect loop', async () => {
   mockWaitForReceipt.mockRejectedValueOnce(new Error('RPC unavailable'));
   await act(async () => { tree = TestRenderer.create(transactionScreen()); });
   await act(async () => { tree!.update(transactionScreen()); });
   expect(mockWaitForReceipt).toHaveBeenCalledTimes(1);
-  expect(mockUpdateStatus).toHaveBeenCalledTimes(1);
-  expect(mockUpdateStatus).toHaveBeenCalledWith(HASH, 'failed');
-  expect(JSON.stringify(tree!.toJSON())).toContain('RPC unavailable');
+  expect(mockUpdateStatus).not.toHaveBeenCalled();
+  expect(JSON.stringify(tree!.toJSON())).toContain('Still confirming');
 });

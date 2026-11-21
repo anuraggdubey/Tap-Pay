@@ -6,7 +6,6 @@
 import React, {useCallback, useRef} from 'react';
 import {
   Animated,
-  Easing,
   Pressable,
   StyleProp,
   ViewStyle,
@@ -29,13 +28,6 @@ type Props = {
   scaleTo?: number;
 };
 
-const EASE_OUT = Easing.bezier(
-  motion.easeOut.x1,
-  motion.easeOut.y1,
-  motion.easeOut.x2,
-  motion.easeOut.y2,
-);
-
 export default function PressableScale({
   children,
   onPress,
@@ -53,11 +45,12 @@ export default function PressableScale({
   const scale = useRef(new Animated.Value(1)).current;
 
   const animateTo = useCallback(
-    (to: number, duration: number) => {
-      Animated.timing(scale, {
+    (to: number) => {
+      // Spring gives the slightly springy, fluid press feel of iOS.
+      Animated.spring(scale, {
         toValue: to,
-        duration,
-        easing: EASE_OUT,
+        speed: to < 1 ? 60 : 24,
+        bounciness: to < 1 ? 0 : 9,
         useNativeDriver: true,
       }).start();
     },
@@ -71,10 +64,10 @@ export default function PressableScale({
       onLongPress={onLongPress}
       onPressIn={() => {
         if (!disabled) {
-          animateTo(scaleTo, motion.pressMs);
+          animateTo(scaleTo);
         }
       }}
-      onPressOut={() => animateTo(1, motion.pressMs + 20)}
+      onPressOut={() => animateTo(1)}
       hitSlop={hitSlop}
       pressRetentionOffset={12}
       accessibilityRole={accessibilityRole}

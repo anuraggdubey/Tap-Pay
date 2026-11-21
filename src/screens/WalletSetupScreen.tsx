@@ -40,7 +40,16 @@ import {
   verifyRecoveryAnswers,
 } from '../utils/recovery';
 import {triggerHaptic} from '../utils/haptics';
-import BrandLogo from '../components/BrandLogo';
+import WelcomeHero from '../components/WelcomeHero';
+import {isPasskeyRecoveryConfigured} from '../config/passkey';
+import {
+  getPasskeyStatus,
+  linkPasskey,
+  passkeyErrorMessage,
+  recoverWithPasskey,
+} from '../services/passkeyRecovery';
+import AmbientBackground from '../components/AmbientBackground';
+import PressableScale from '../components/PressableScale';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'WalletSetup'>;
@@ -77,6 +86,7 @@ export default function WalletSetupScreen({navigation}: Props) {
     unlockWallet,
     resetWallet,
     saveUsername,
+    address,
   } = useWallet();
   const {colors} = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -183,6 +193,67 @@ export default function WalletSetupScreen({navigation}: Props) {
     }
   };
 
+  const handleRecoverWithPasskey = async () => {
+    if (loading) {
+      return;
+    }
+    triggerHaptic.impactMedium();
+    setLoading(true);
+    try {
+      const {secret} = await recoverWithPasskey();
+      if (secret.t === 'phrase') {
+        await restoreFromPhrase(secret.v);
+      } else {
+        await importPrivateKey(secret.v);
+      }
+      enterApp();
+    } catch (error) {
+      triggerHaptic.notificationError();
+      Alert.alert('Recovery failed', passkeyErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Optional nudge once the backup is verified. Skippable; the phrase stays the primary backup.
+  const offerPasskeyRecovery = async (secretPhrase: string) => {
+    if (!isPasskeyRecoveryConfigured() || !address) {
+      return;
+    }
+    if ((await getPasskeyStatus()).linked) {
+      return;
+    }
+    let held: string | null = secretPhrase;
+    Alert.alert(
+      'Also set up passkey recovery?',
+      'Optional. Use your fingerprint or face to recover this wallet on a new phone. Your recovery phrase stays your primary backup.',
+      [
+        {
+          text: 'Not now',
+          style: 'cancel',
+          onPress: () => {
+            held = null;
+          },
+        },
+        {
+          text: 'Set up',
+          onPress: async () => {
+            try {
+              if (held) {
+                await linkPasskey({t: 'phrase', v: held}, address);
+                triggerHaptic.notificationSuccess();
+              }
+            } catch (error) {
+              Alert.alert('Passkey recovery was not set up', passkeyErrorMessage(error));
+            } finally {
+              held = null;
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const handleImportKey = async () => {
     if (loading || !privateKeyInput.trim()) {
       return;
@@ -220,6 +291,7 @@ export default function WalletSetupScreen({navigation}: Props) {
       triggerHaptic.notificationSuccess();
       setAnswers({});
       setStep('username');
+      offerPasskeyRecovery(phrase);
     } catch {
       Alert.alert('Error', 'Could not save your backup status. Please try again.');
     }
@@ -273,11 +345,15 @@ export default function WalletSetupScreen({navigation}: Props) {
           text: 'Reset wallet',
           style: 'destructive',
           onPress: async () => {
-            const done = await resetWallet();
-            if (done) {
-              setStep('welcome');
-            } else {
-              Alert.alert('Reset failed', 'Could not remove the wallet. Please try again.');
+            try {
+              const done = await resetWallet();
+              if (done) {
+                setStep('welcome');
+              } else {
+                Alert.alert('Reset failed', 'Could not remove the wallet. Please try again.');
+              }
+            } catch (error) {
+              Alert.alert('Wallet not reset', errorMessage(error));
             }
           },
         },
@@ -601,44 +677,39 @@ export default function WalletSetupScreen({navigation}: Props) {
 
   // ── Welcome ──────────────────────────────────────────────────────────────
   return (
-    <View style={[styles.screenWrapper, {paddingTop: insets.top + 40, paddingBottom: insets.bottom + 20}]}>
-      <View style={styles.welcomeHeroContainer}>
-        <BrandLogo size={56} color={colors.accent} style={{marginBottom: 30}} />
-        <Text style={styles.welcomeSubtitle}>Welcome to</Text>
-        <Text style={styles.welcomeTitle}>TapPay</Text>
-        <Text style={styles.welcomeNote}>
-          Your wallet is protected by your phone's fingerprint, face or screen lock.
-        </Text>
-      </View>
-
-      <View style={styles.bottomCtaSection}>
-        <TouchableOpacity
-          style={styles.primaryPillButton}
+    <View style={[styles.welcomeRoot, {paddingTop: insets.top + 12, paddingBottom: insets.bottom + 20}]}>
+      <AmbientBackground />
+      <WelcomeHero />
+      <View style={styles.welcomeCta}>
+        <PressableScale
+          style={styles.welcomePrimary}
+          contentStyle={styles.welcomePrimaryInner}
           onPress={handleCreate}
-          disabled={loading}
-          activeOpacity={0.85}>
+          disabled={loading}>
           {loading ? (
-            <ActivityIndicator color={colors.textOnAccent} />
+            <ActivityIndicator color="#000000" />
           ) : (
-            <Text style={styles.primaryPillText}>Create Wallet</Text>
+            <Text style={styles.welcomePrimaryText}>Create Wallet</Text>
           )}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.secondaryPillButton}
+        </PressableScale>
+        <PressableScale
+          style={styles.welcomeSecondary}
+          contentStyle={styles.welcomeSecondaryInner}
           onPress={() => setStep('restore')}
-          disabled={loading}
-          activeOpacity={0.85}>
-          <Text style={styles.secondaryPillText}>Restore with Recovery Phrase</Text>
+          disabled={loading}>
+          <Text style={styles.welcomeSecondaryText}>I Have a Recovery Phrase</Text>
+        </PressableScale>
+        {isPasskeyRecoveryConfigured() ? (
+          <TouchableOpacity onPress={handleRecoverWithPasskey} disabled={loading} activeOpacity={0.7}>
+            <Text style={styles.welcomeAdvanced}>Recover with Passkey</Text>
+          </TouchableOpacity>
+        ) : null}
+        <TouchableOpacity onPress={() => setStep('import')} disabled={loading} activeOpacity={0.7}>
+          <Text style={styles.welcomeAdvanced}>Import private key (advanced)</Text>
         </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.secondaryTextButton}
-          onPress={() => setStep('import')}
-          disabled={loading}
-          activeOpacity={0.7}>
-          <Text style={styles.secondaryText}>Import private key (advanced)</Text>
-        </TouchableOpacity>
+        <Text style={styles.welcomeFine}>
+          Secured by your phone's fingerprint, face or screen lock.
+        </Text>
       </View>
     </View>
   );
@@ -646,6 +717,16 @@ export default function WalletSetupScreen({navigation}: Props) {
 
 function createStyles(colors: AppColors) {
   return StyleSheet.create({
+  welcomeRoot: {flex: 1, backgroundColor: '#000000', paddingHorizontal: 24},
+  welcomeCta: {gap: 12, alignItems: 'center'},
+  welcomePrimary: {width: '100%', borderRadius: 28, overflow: 'hidden', backgroundColor: '#FFFFFF'},
+  welcomePrimaryInner: {height: 56, alignItems: 'center', justifyContent: 'center'},
+  welcomePrimaryText: {fontSize: 17, fontWeight: '600', color: '#000000'},
+  welcomeSecondary: {width: '100%', borderRadius: 28, backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)'},
+  welcomeSecondaryInner: {height: 56, alignItems: 'center', justifyContent: 'center'},
+  welcomeSecondaryText: {fontSize: 17, fontWeight: '600', color: '#FFFFFF'},
+  welcomeAdvanced: {fontSize: 15, fontWeight: '400', color: '#0A84FF', paddingVertical: 6},
+  welcomeFine: {fontSize: 12, color: '#636366', textAlign: 'center'},
   screenWrapper: {
     flex: 1,
     backgroundColor: colors.background,

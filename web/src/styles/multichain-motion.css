@@ -5,15 +5,7 @@
   --mc-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* Aurora ambient drift */
-.ambient-orb { animation: mc-orb-drift 18s ease-in-out infinite alternate; will-change: transform; }
-.ambient-orb-b { animation-duration: 24s; animation-delay: -6s; }
-.ambient-orb-c { animation-duration: 30s; animation-delay: -12s; }
-@keyframes mc-orb-drift {
-  0%   { transform: translate3d(0, 0, 0) scale(1); }
-  50%  { transform: translate3d(5vw, -4vh, 0) scale(1.12); }
-  100% { transform: translate3d(-4vw, 5vh, 0) scale(0.94); }
-}
+/* Ambient orbs — static gradients, no animation for performance */
 
 /* Flowing gradient on the hero headline */
 .hero-headline-line2 {
@@ -106,8 +98,7 @@
 /* Phone mock: soft breathing glow */
 .tp-mock-nfc-dot, .sim-chip-dot { animation: mc-pulse 2s ease-in-out infinite; }
 
-/* Entrance polish for revealed blocks */
-.scroll-reveal, .scroll-reveal-scale { will-change: transform, opacity; }
+/* Entrance polish for revealed blocks — no will-change for perf */
 
 @media (prefers-reduced-motion: reduce), (hover: none) {
   .ambient-orb, .hero-headline-line2, .hero-floating-card, .play-bento-icon,

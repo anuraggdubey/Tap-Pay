@@ -12,9 +12,9 @@ contract NoReturnToken {
         balanceOf[to] += amount;
     }
 
-    function approve(address spender, uint256 amount) external returns (bool) {
+    function approve(address spender, uint256 amount) external {
+        require(amount == 0 || allowance[msg.sender][spender] == 0, "Reset allowance first");
         allowance[msg.sender][spender] = amount;
-        return true;
     }
 
     function transfer(address to, uint256 amount) external {

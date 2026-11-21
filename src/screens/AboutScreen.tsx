@@ -1,26 +1,16 @@
 /**
- * AboutScreen — App information, version, features, and architecture
+ * AboutScreen — app info, features and security in iOS grouped lists.
  */
 
 import React, {useMemo} from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-} from 'react-native';
+import {View, Text, StyleSheet, ScrollView} from 'react-native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import {useTheme} from '../context/ThemeContext';
+import AmbientBackground from '../components/AmbientBackground';
+import {Group, Row, tileColors} from '../components/IosList';
+import {ContactlessWave} from '../components/AppIcons';
 import type {AppColors} from '../theme';
-import BrandLogo from '../components/BrandLogo';
-
-import {
-  ContactlessWave,
-  UserIcon,
-  KeyIcon,
-  GlobeIcon,
-} from '../components/AppIcons';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'AboutTapPay'>;
@@ -31,274 +21,67 @@ export default function AboutScreen(_props: Props) {
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* App Header */}
-      <View style={styles.appHeader}>
-        <View style={styles.logoBox}>
-          <BrandLogo size={44} natural />
+    <View style={styles.container}>
+      <AmbientBackground />
+      <ScrollView contentContainerStyle={styles.content}>
+      <View style={styles.header}>
+        <View style={styles.icon}>
+          <ContactlessWave size={44} color="#FFFFFF" />
         </View>
-        <Text style={styles.appName}>TapPay</Text>
-        <Text style={styles.appVersion}>Version 0.0.1 • Monad Native</Text>
-        <View style={styles.tagline}>
-          <Text style={styles.taglineText}>
-            Tap to pay. Search to send. Powered by Monad.
-          </Text>
-        </View>
+        <Text style={styles.name}>TapPay</Text>
+        <Text style={styles.version}>Version 0.0.1</Text>
+        <Text style={styles.tagline}>Tap to pay. Search to send. Powered by Monad.</Text>
       </View>
 
-      {/* Features */}
-      <Text style={styles.sectionHeader}>FEATURES</Text>
-      <View style={styles.card}>
-        <View style={styles.featureRow}>
-          <View style={styles.featureIconBox}>
-            <ContactlessWave size={18} color={colors.accent} />
-          </View>
-          <View style={styles.featureMeta}>
-            <Text style={styles.featureTitle}>Contactless Tap-to-Pay</Text>
-            <Text style={styles.featureDesc}>
-              Send crypto by tapping devices via ISO 7816-4 NFC Host Card Emulation
-            </Text>
-          </View>
-        </View>
+      <Group title="Features">
+        <Row
+          icon={{bg: tileColors.blue, glyph: '◉'}}
+          title="Contactless Tap to Pay"
+          subtitle="Send crypto by tapping phones over NFC"
+          chevron={false}
+        />
+        <Row
+          icon={{bg: tileColors.green, glyph: '@'}}
+          title="Username Pay"
+          subtitle="Pay human-readable TapPay handles"
+          chevron={false}
+        />
+        <Row
+          icon={{bg: tileColors.red, glyph: '⚿'}}
+          title="Hardware Keystore"
+          subtitle="Keys are protected by your phone's secure hardware"
+          chevron={false}
+        />
+        <Row
+          icon={{bg: tileColors.purple, glyph: '⚡'}}
+          title="Monad Speed"
+          subtitle="Sub-second finality, parallel EVM execution"
+          chevron={false}
+        />
+      </Group>
 
-        <View style={styles.featureDivider} />
+      <Group title="Security">
+        <Row title="Key Storage" value="Android Keystore" />
+        <Row title="Authentication" value="Biometric / Passcode" />
+        <Row title="Encryption" value="AES-GCM 256" />
+        <Row title="Data Policy" value="Keys stay on device" />
+      </Group>
 
-        <View style={styles.featureRow}>
-          <View style={styles.featureIconBox}>
-            <UserIcon size={18} color={colors.accent} />
-          </View>
-          <View style={styles.featureMeta}>
-            <Text style={styles.featureTitle}>Username Pay</Text>
-            <Text style={styles.featureDesc}>
-              Pay direct to human-readable handles via TapPay username registry
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.featureDivider} />
-
-        <View style={styles.featureRow}>
-          <View style={styles.featureIconBox}>
-            <KeyIcon size={18} color={colors.accent} />
-          </View>
-          <View style={styles.featureMeta}>
-            <Text style={styles.featureTitle}>Hardware Keystore</Text>
-            <Text style={styles.featureDesc}>
-              Private keys secured in Android Hardware Keystore (TEE) with biometrics
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.featureDivider} />
-
-        <View style={styles.featureRow}>
-          <View style={styles.featureIconBox}>
-            <GlobeIcon size={18} color={colors.accent} />
-          </View>
-          <View style={styles.featureMeta}>
-            <Text style={styles.featureTitle}>Monad Throughput</Text>
-            <Text style={styles.featureDesc}>
-              Sub-second block finality with parallelized EVM execution
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      {/* Security */}
-      <Text style={styles.sectionHeader}>SECURITY</Text>
-      <View style={styles.card}>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoKey}>Key Storage</Text>
-          <Text style={styles.infoVal}>Android Keystore (TEE)</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoKey}>Authentication</Text>
-          <Text style={styles.infoVal}>Biometric / Device Passcode</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoKey}>Encryption</Text>
-          <Text style={styles.infoVal}>AES-GCM 256-bit</Text>
-        </View>
-        <View style={[styles.infoRow, {borderBottomWidth: 0}]}>
-          <Text style={styles.infoKey}>Data Policy</Text>
-          <Text style={styles.infoVal}>Keys never leave device</Text>
-        </View>
-      </View>
-
-      {/* Footer */}
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>
-          TapPay • Open-Source Contactless Payments
-        </Text>
-        <Text style={styles.footerSubtext}>
-          Built for the Monad Ecosystem
-        </Text>
-      </View>
-    </ScrollView>
+      <Text style={styles.footer}>TapPay · Open-source contactless payments{'\n'}Built for the Monad ecosystem</Text>
+      </ScrollView>
+    </View>
   );
 }
 
-function createStyles(colors: AppColors) {
+function createStyles(c: AppColors) {
   return StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
-    padding: 18,
-    paddingBottom: 40,
-  },
-  appHeader: {
-    alignItems: 'center',
-    paddingVertical: 20,
-    marginBottom: 8,
-  },
-  logoBox: {
-    width: 76,
-    height: 76,
-    borderRadius: 22,
-    backgroundColor: '#000000',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 14,
-    overflow: 'hidden',
-  },
-  appName: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: colors.text,
-    letterSpacing: -0.5,
-    marginBottom: 4,
-  },
-  appVersion: {
-    fontSize: 13,
-    color: colors.textMuted,
-    fontWeight: '500',
-    marginBottom: 14,
-  },
-  tagline: {
-    backgroundColor: colors.surfaceSolid,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 12,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.borderStrong,
-  },
-  taglineText: {
-    fontSize: 13,
-    color: colors.text,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  sectionHeader: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.textSubtle,
-    letterSpacing: 0.8,
-    marginTop: 12,
-    marginBottom: 8,
-    marginLeft: 4,
-  },
-  card: {
-    backgroundColor: colors.surfaceSolid,
-    borderRadius: 20,
-    padding: 16,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.borderSubtle,
-    marginBottom: 10,
-    shadowColor: colors.accent,
-    shadowOffset: {width: 0, height: 6},
-    shadowOpacity: 0.08,
-    shadowRadius: 14,
-    elevation: 2,
-  },
-  featureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    paddingVertical: 6,
-  },
-  featureIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: colors.accentWash,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  featureMeta: {
-    flex: 1,
-  },
-  featureTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: 2,
-  },
-  featureDesc: {
-    fontSize: 12,
-    color: colors.textMuted,
-    lineHeight: 16,
-  },
-  featureDivider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.separator,
-    marginVertical: 10,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.separator,
-  },
-  infoKey: {
-    color: colors.textMuted,
-    fontSize: 14,
-  },
-  infoVal: {
-    color: colors.text,
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  linkRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 6,
-  },
-  linkLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-  },
-  linkTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 2,
-  },
-  linkSubtitle: {
-    fontSize: 12,
-    color: colors.accent,
-  },
-  chevron: {
-    fontSize: 18,
-    color: colors.accent,
-    fontWeight: '600',
-  },
-  footer: {
-    alignItems: 'center',
-    paddingVertical: 28,
-  },
-  footerText: {
-    fontSize: 13,
-    color: colors.textMuted,
-    marginBottom: 4,
-  },
-  footerSubtext: {
-    fontSize: 12,
-    color: colors.textSubtle,
-  },
+    container: {flex: 1, backgroundColor: c.background},
+    content: {padding: 20, paddingBottom: 48},
+    header: {alignItems: 'center', paddingVertical: 12, gap: 4},
+    icon: {width: 88, height: 88, borderRadius: 20, backgroundColor: '#0A84FF', alignItems: 'center', justifyContent: 'center', marginBottom: 10},
+    name: {fontSize: 26, fontWeight: '700', color: c.text},
+    version: {fontSize: 15, color: c.textMuted},
+    tagline: {fontSize: 14, color: c.textMuted, textAlign: 'center', marginTop: 8, maxWidth: 260, lineHeight: 20},
+    footer: {fontSize: 12, color: c.textSubtle, textAlign: 'center', marginTop: 28, lineHeight: 18},
   });
 }

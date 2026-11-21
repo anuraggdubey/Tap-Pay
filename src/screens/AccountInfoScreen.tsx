@@ -1,5 +1,6 @@
 /**
- * AccountInfoScreen — Username (with claim), wallet address, recovery phrase (phone-authentication protected, view-only)
+ * AccountInfoScreen — profile header, username (with claim), wallet address and
+ * recovery phrase (phone-authentication protected, view-only) as iOS grouped lists.
  */
 
 import React, {useState, useEffect, useRef, useMemo, useCallback} from 'react';
@@ -7,7 +8,6 @@ import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
   StyleSheet,
   ScrollView,
   Alert,
@@ -23,7 +23,9 @@ import {RootStackParamList} from '../navigation/AppNavigator';
 import {triggerHaptic} from '../utils/haptics';
 import {validateUsername} from '../utils/validation';
 import {resolveUsername, registerUsername} from '../services/registry';
-import {KeyIcon} from '../components/AppIcons';
+import AmbientBackground from '../components/AmbientBackground';
+import {Group, Row, tileColors} from '../components/IosList';
+import PressableScale from '../components/PressableScale';
 import type {AppColors} from '../theme';
 
 type Props = {
@@ -40,7 +42,6 @@ export default function AccountInfoScreen(_props: Props) {
   const autoHideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  // Username claim state
   const [claimInput, setClaimInput] = useState('');
   const [claiming, setClaiming] = useState(false);
 
@@ -57,12 +58,7 @@ export default function AccountInfoScreen(_props: Props) {
 
   useEffect(() => {
     if (showSecretKey) {
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-
+      Animated.timing(fadeAnim, {toValue: 1, duration: 300, useNativeDriver: true}).start();
       autoHideTimer.current = setTimeout(() => {
         hideSecretKey();
       }, 30000);
@@ -95,7 +91,6 @@ export default function AccountInfoScreen(_props: Props) {
     setTimeout(() => setCopiedAddr(false), 2000);
   };
 
-  // Claim username flow
   const handleClaimUsername = async () => {
     const trimmed = claimInput.trim().toLowerCase();
     const validation = validateUsername(trimmed);
@@ -107,7 +102,6 @@ export default function AccountInfoScreen(_props: Props) {
 
     setClaiming(true);
     try {
-      // Check availability
       const existing = await resolveUsername(trimmed);
       if (existing) {
         setClaiming(false);
@@ -116,10 +110,8 @@ export default function AccountInfoScreen(_props: Props) {
         return;
       }
 
-      // Try on-chain registration
       try {
         await registerUsername(trimmed);
-        // Success or fail, save locally
       } catch {
         // Contract not deployed — save locally anyway
       }
@@ -131,7 +123,6 @@ export default function AccountInfoScreen(_props: Props) {
       Alert.alert('Success', `@${trimmed} is now your username!`);
     } catch {
       setClaiming(false);
-      // Still save locally
       if (trimmed) {
         await saveUsername(trimmed);
         setClaimInput('');
@@ -178,50 +169,29 @@ export default function AccountInfoScreen(_props: Props) {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Profile Header */}
-      <View style={styles.profileHeader}>
-        <View style={styles.avatarLarge}>
-          <Text style={styles.avatarLargeText}>
-            {(username || 'U').charAt(0).toUpperCase()}
-          </Text>
+    <View style={styles.container}>
+      <AmbientBackground />
+      <ScrollView contentContainerStyle={styles.content}>
+      <View style={styles.header}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{(username || 'U').charAt(0).toUpperCase()}</Text>
         </View>
-        <Text style={styles.profileUsername}>
-          {username ? `@${username}` : 'No Username'}
-        </Text>
-        <Text style={styles.profileSubtitle}>
-          {username ? 'Monad On-Chain Identity' : 'Claim a username below'}
-        </Text>
+        <Text style={styles.name}>{username ? `@${username}` : 'No Username'}</Text>
+        <Text style={styles.sub}>{username ? 'Your TapPay identity' : 'Claim a username below'}</Text>
       </View>
 
-      {/* Username Section */}
-      <Text style={styles.sectionHeader}>USERNAME</Text>
       {username ? (
-        <View style={styles.card}>
-          <View style={styles.infoRow}>
-            <View style={styles.infoRowLeft}>
-              <View style={styles.infoIconBox}>
-                <Text style={styles.infoIconText}>@</Text>
-              </View>
-              <View>
-                <Text style={styles.infoLabel}>Username</Text>
-                <Text style={styles.infoValue}>@{username}</Text>
-              </View>
-            </View>
-          </View>
-        </View>
+        <Group title="Username">
+          <Row icon={{bg: tileColors.green, glyph: '@'}} title="Username" value={`@${username}`} />
+        </Group>
       ) : (
-        <View style={styles.card}>
-          <Text style={styles.claimTitle}>Claim Your Username</Text>
-          <Text style={styles.claimSubtitle}>
-            Choose a unique identity for easy payments on Monad.
-          </Text>
-          <View style={styles.claimInputRow}>
-            <View style={styles.claimPrefix}>
-              <Text style={styles.claimPrefixText}>@</Text>
-            </View>
+        <Group
+          title="Claim a Username"
+          footer="Pick a unique handle so people can pay you without an address.">
+          <View style={styles.claimRow}>
+            <Text style={styles.at}>@</Text>
             <TextInput
-              style={styles.claimInput}
+              style={styles.input}
               placeholder="username"
               placeholderTextColor={colors.textSubtle}
               value={claimInput}
@@ -231,349 +201,79 @@ export default function AccountInfoScreen(_props: Props) {
               underlineColorAndroid="transparent"
             />
           </View>
-          <TouchableOpacity
-            style={[styles.claimButton, claiming && {opacity: 0.6}]}
-            onPress={handleClaimUsername}
-            disabled={claiming}
-            activeOpacity={0.8}>
-            {claiming ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
-            ) : (
-              <Text style={styles.claimButtonText}>Claim Username</Text>
-            )}
-          </TouchableOpacity>
-        </View>
+          <PressableScale onPress={handleClaimUsername} disabled={claiming}>
+            <View style={styles.actionRow}>
+              {claiming ? (
+                <ActivityIndicator color={colors.accent} size="small" />
+              ) : (
+                <Text style={styles.actionText}>Claim Username</Text>
+              )}
+            </View>
+          </PressableScale>
+        </Group>
       )}
 
-      {/* Wallet Address */}
-      <Text style={styles.sectionHeader}>WALLET ADDRESS</Text>
-      <View style={styles.card}>
-        <Text style={styles.addressLabel}>Public Address</Text>
-        <View style={styles.addressBox}>
-          <Text selectable style={styles.addressMono}>
+      <Group title="Wallet Address" footer="This is your public address. It is safe to share.">
+        <View style={styles.addressRow}>
+          <Text selectable style={styles.address}>
             {address || 'Not connected'}
           </Text>
         </View>
-        <TouchableOpacity
-          style={styles.copyButton}
-          onPress={copyAddress}
-          activeOpacity={0.7}>
-          <Text style={styles.copyButtonText}>
-            {copiedAddr ? 'Copied to Clipboard' : 'Copy Address'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Recovery phrase */}
-      <Text style={styles.sectionHeader}>RECOVERY PHRASE</Text>
-      <View style={[styles.card, styles.secretKeyCard]}>
-        <View style={styles.secretKeyHeader}>
-          <View style={styles.lockIconBox}>
-            <KeyIcon size={16} color={colors.danger} />
+        <PressableScale onPress={copyAddress} disabled={!address}>
+          <View style={styles.actionRow}>
+            <Text style={styles.actionText}>{copiedAddr ? 'Copied' : 'Copy Address'}</Text>
           </View>
-          <View style={styles.secretKeyMeta}>
-            <Text style={styles.secretKeyTitle}>12-word recovery phrase</Text>
-            <Text style={styles.secretKeySubtitle}>
-              {showSecretKey
-                ? 'Phrase visible — auto-hides in 30s'
-                : 'Protected by your phone fingerprint, face or screen lock'}
+        </PressableScale>
+      </Group>
+
+      <Group
+        title="Recovery Phrase"
+        footer="Protected by your phone's fingerprint, face or screen lock. There is no copy button on purpose.">
+        <Row
+          icon={{bg: tileColors.red, glyph: '⚿'}}
+          title="12-Word Recovery Phrase"
+          subtitle={showSecretKey ? 'Visible. Hides in 30 seconds.' : 'Hidden'}
+          chevron={false}
+        />
+        <PressableScale onPress={handleUnlockSecretKey}>
+          <View style={styles.actionRow}>
+            <Text style={[styles.actionText, showSecretKey && {color: colors.danger}]}>
+              {showSecretKey ? 'Hide Recovery Phrase' : 'Show Recovery Phrase'}
             </Text>
           </View>
-        </View>
-
-        <TouchableOpacity
-          style={[styles.unlockButton, showSecretKey && styles.unlockButtonActive]}
-          onPress={handleUnlockSecretKey}
-          activeOpacity={0.7}>
-          <Text style={[styles.unlockButtonText, showSecretKey && styles.unlockButtonTextActive]}>
-            {showSecretKey ? 'Hide Recovery Phrase' : 'Show Recovery Phrase'}
-          </Text>
-        </TouchableOpacity>
-
-        {showSecretKey && revealedPhrase && (
-          <Animated.View style={[styles.revealedKeyBox, {opacity: fadeAnim}]}>
-            <View style={styles.warningBanner}>
-              <Text style={styles.warningBannerText}>
-                NEVER share your recovery phrase. Anyone with these words has
-                full control over your funds. There is no copy button on purpose.
-              </Text>
-            </View>
-            <Text style={styles.secretKeyMono}>{revealedPhrase}</Text>
+        </PressableScale>
+        {showSecretKey && revealedPhrase ? (
+          <Animated.View style={[styles.phraseBox, {opacity: fadeAnim}]}>
+            <Text style={styles.warn}>
+              Never share this. Anyone with these words controls your funds.
+            </Text>
+            <Text style={styles.phrase}>{revealedPhrase}</Text>
           </Animated.View>
-        )}
-      </View>
-    </ScrollView>
+        ) : null}
+      </Group>
+      </ScrollView>
+    </View>
   );
 }
 
-function createStyles(colors: AppColors) {
+function createStyles(c: AppColors) {
   return StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: colors.background,
-    },
-    content: {
-      padding: 18,
-      paddingBottom: 40,
-    },
-    profileHeader: {
-      alignItems: 'center',
-      paddingVertical: 20,
-      marginBottom: 6,
-    },
-    avatarLarge: {
-      width: 68,
-      height: 68,
-      borderRadius: 24,
-      backgroundColor: colors.accent,
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginBottom: 12,
-    },
-    avatarLargeText: {
-      fontSize: 26,
-      fontWeight: '800',
-      color: colors.textOnAccent,
-    },
-    profileUsername: {
-      fontSize: 20,
-      fontWeight: '700',
-      color: colors.text,
-      marginBottom: 4,
-      letterSpacing: -0.3,
-    },
-    profileSubtitle: {
-      fontSize: 13,
-      color: colors.textMuted,
-    },
-    sectionHeader: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: colors.textSubtle,
-      letterSpacing: 0.8,
-      marginTop: 12,
-      marginBottom: 8,
-      marginLeft: 2,
-    },
-    card: {
-      backgroundColor: colors.surfaceSolid,
-      borderRadius: 20,
-      padding: 16,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.borderSubtle,
-      marginBottom: 12,
-      shadowColor: colors.accent,
-      shadowOffset: {width: 0, height: 6},
-      shadowOpacity: 0.08,
-      shadowRadius: 14,
-      elevation: 2,
-    },
-    infoRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-    },
-    infoRowLeft: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-    },
-    infoIconBox: {
-      width: 38,
-      height: 38,
-      borderRadius: 12,
-      backgroundColor: colors.accentWash,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    infoIconText: {
-      fontSize: 16,
-      fontWeight: '800',
-      color: colors.accent,
-    },
-    infoLabel: {
-      fontSize: 11,
-      color: colors.textSubtle,
-      marginBottom: 2,
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
-    },
-    infoValue: {
-      fontSize: 15,
-      fontWeight: '600',
-      color: colors.text,
-    },
-    claimTitle: {
-      fontSize: 15,
-      fontWeight: '700',
-      color: colors.text,
-      marginBottom: 4,
-    },
-    claimSubtitle: {
-      fontSize: 12,
-      color: colors.textMuted,
-      marginBottom: 14,
-      lineHeight: 18,
-    },
-    claimInputRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: colors.surfaceSolid,
-      borderRadius: 12,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.borderStrong,
-      marginBottom: 12,
-    },
-    claimPrefix: {
-      paddingHorizontal: 12,
-      paddingVertical: 12,
-      borderRightWidth: StyleSheet.hairlineWidth,
-      borderRightColor: colors.borderSubtle,
-    },
-    claimPrefixText: {
-      fontSize: 15,
-      fontWeight: '700',
-      color: colors.accent,
-    },
-    claimInput: {
-      flex: 1,
-      fontSize: 14,
-      color: colors.text,
-      paddingHorizontal: 12,
-      paddingVertical: 12,
-      backgroundColor: 'transparent',
-    },
-    claimButton: {
-      backgroundColor: colors.accent,
-      paddingVertical: 14,
-      borderRadius: 12,
-      alignItems: 'center',
-    },
-    claimButtonText: {
-      fontSize: 14,
-      fontWeight: '700',
-      color: colors.textOnAccent,
-    },
-    addressLabel: {
-      fontSize: 11,
-      color: colors.textSubtle,
-      marginBottom: 8,
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
-    },
-    addressBox: {
-      backgroundColor: colors.surfaceSolidElevated,
-      padding: 12,
-      borderRadius: 12,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.borderSubtle,
-      marginBottom: 12,
-    },
-    addressMono: {
-      fontSize: 12,
-      color: colors.text,
-      fontFamily: 'monospace',
-      lineHeight: 18,
-    },
-    copyButton: {
-      backgroundColor: colors.accentWash,
-      borderColor: colors.borderStrong,
-      borderWidth: StyleSheet.hairlineWidth,
-      paddingVertical: 12,
-      borderRadius: 12,
-      alignItems: 'center',
-    },
-    copyButtonText: {
-      color: colors.accent,
-      fontWeight: '700',
-      fontSize: 13,
-    },
-    secretKeyCard: {
-      borderColor: 'rgba(255, 59, 48, 0.18)',
-    },
-    secretKeyHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-      marginBottom: 14,
-    },
-    lockIconBox: {
-      width: 38,
-      height: 38,
-      borderRadius: 12,
-      backgroundColor: 'rgba(255, 59, 48, 0.12)',
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: 'rgba(255, 59, 48, 0.2)',
-    },
-    lockIconText: {
-      fontSize: 15,
-      color: colors.danger,
-      fontWeight: '800',
-    },
-    secretKeyMeta: {
-      flex: 1,
-    },
-    secretKeyTitle: {
-      fontSize: 15,
-      fontWeight: '700',
-      color: colors.text,
-      marginBottom: 2,
-    },
-    secretKeySubtitle: {
-      fontSize: 12,
-      color: colors.textMuted,
-    },
-    unlockButton: {
-      backgroundColor: colors.surfaceSolidElevated,
-      borderColor: colors.borderSubtle,
-      borderWidth: StyleSheet.hairlineWidth,
-      paddingVertical: 12,
-      borderRadius: 12,
-      alignItems: 'center',
-    },
-    unlockButtonActive: {
-      backgroundColor: 'rgba(255, 59, 48, 0.08)',
-      borderColor: 'rgba(255, 59, 48, 0.28)',
-    },
-    unlockButtonText: {
-      color: colors.text,
-      fontWeight: '700',
-      fontSize: 13,
-    },
-    unlockButtonTextActive: {
-      color: colors.danger,
-    },
-    revealedKeyBox: {
-      marginTop: 14,
-    },
-    warningBanner: {
-      backgroundColor: 'rgba(255, 59, 48, 0.08)',
-      borderColor: 'rgba(255, 59, 48, 0.28)',
-      borderWidth: 1,
-      borderRadius: 12,
-      padding: 12,
-      marginBottom: 10,
-    },
-    warningBannerText: {
-      color: colors.danger,
-      fontSize: 12,
-      fontWeight: '600',
-      lineHeight: 16,
-    },
-    secretKeyMono: {
-      fontSize: 12,
-      color: colors.danger,
-      fontFamily: 'monospace',
-      lineHeight: 18,
-      backgroundColor: 'rgba(255, 59, 48, 0.06)',
-      padding: 12,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: 'rgba(255, 59, 48, 0.2)',
-      marginBottom: 10,
-      overflow: 'hidden',
-    },
+    container: {flex: 1, backgroundColor: c.background},
+    content: {padding: 20, paddingBottom: 48},
+    header: {alignItems: 'center', paddingVertical: 12, gap: 4},
+    avatar: {width: 88, height: 88, borderRadius: 44, backgroundColor: c.surfaceElevated, alignItems: 'center', justifyContent: 'center', marginBottom: 8},
+    avatarText: {fontSize: 38, fontWeight: '500', color: c.text},
+    name: {fontSize: 24, fontWeight: '700', color: c.text},
+    sub: {fontSize: 15, color: c.textMuted},
+    claimRow: {flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, minHeight: 48},
+    at: {fontSize: 17, color: c.textMuted, marginRight: 4},
+    input: {flex: 1, fontSize: 17, color: c.text, paddingVertical: 12},
+    actionRow: {alignItems: 'center', justifyContent: 'center', minHeight: 48, paddingHorizontal: 16},
+    actionText: {fontSize: 17, color: c.accent},
+    addressRow: {paddingHorizontal: 16, paddingVertical: 14},
+    address: {fontSize: 15, color: c.text, fontFamily: 'monospace', lineHeight: 22},
+    phraseBox: {paddingHorizontal: 16, paddingVertical: 14, gap: 10},
+    warn: {fontSize: 13, color: c.danger, lineHeight: 18},
+    phrase: {fontSize: 17, color: c.text, fontFamily: 'monospace', lineHeight: 28},
   });
 }

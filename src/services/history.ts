@@ -26,87 +26,134 @@ export function getTxTokenSymbol(tx: Pick<TransactionRecord, 'tokenSymbol'>): st
   return symbol ? symbol.toUpperCase() : 'MON';
 }
 
-let historyCache: TransactionRecord[] = [];
-let isLoaded = false;
-const listeners: Array<() => void> = [];
+type Mutation = (rows: TransactionRecord[]) => TransactionRecord[];
+type Persistence = {load: () => Promise<string | null>; save: (json: string) => Promise<void>};
+type HistoryState = {
+  cache: TransactionRecord[];
+  loaded: boolean;
+  loading?: Promise<void>;
+  mutations: Mutation[];
+  writes: Promise<void>;
+  persistence: Persistence;
+};
 
-/**
- * Load history from AsyncStorage (called once on first access)
- */
-async function ensureLoaded(): Promise<void> {
-  if (isLoaded) {
-    return;
-  }
-  try {
-    // Encrypted at rest; a legacy plaintext copy is migrated on first read.
-    const stored = await loadHistoryJson();
-    if (stored) {
-      historyCache = JSON.parse(stored);
-    }
-  } catch {
-    // If parse fails, start fresh
-    historyCache = [];
-  }
-  isLoaded = true;
+function createState(persistence: Persistence): HistoryState {
+  return {cache: [], loaded: false, mutations: [], writes: Promise.resolve(), persistence};
 }
 
-// Writes run one at a time, each with the snapshot taken when it was requested, so the last
-// change always wins and older snapshots can never overwrite newer ones.
-let writeChain: Promise<void> = Promise.resolve();
+const histories = new Map<string, HistoryState>([
+  ['', createState({load: loadHistoryJson, save: saveHistoryJson})],
+]);
+let activeScope = '';
+const listeners: Array<() => void> = [];
 
-/**
- * Persist current cache, encrypted (see secureHistoryStore). Never falls back to plaintext.
- */
-function persistHistory(): Promise<void> {
-  const snapshot = JSON.stringify(historyCache);
-  writeChain = writeChain
-    .then(() => saveHistoryJson(snapshot))
+function notify(state: HistoryState) {
+  if (histories.get(activeScope) === state) {
+    listeners.forEach(fn => fn());
+  }
+}
+
+async function ensureLoaded(state: HistoryState): Promise<void> {
+  if (state.loaded) {
+    return;
+  }
+  if (!state.loading) {
+    state.loading = (async () => {
+      let rows: TransactionRecord[] = [];
+      try {
+        const stored = await state.persistence.load();
+        const parsed = stored ? JSON.parse(stored) : [];
+        if (Array.isArray(parsed)) {
+          rows = parsed.filter(row => row && typeof row.txHash === 'string');
+        }
+      } catch {
+        // Unreadable storage must not discard payments recorded during the read.
+      }
+      for (const mutation of state.mutations) {
+        rows = mutation(rows);
+      }
+      state.cache = rows;
+      state.mutations = [];
+      state.loaded = true;
+    })();
+  }
+  await state.loading;
+}
+
+function persistHistory(state: HistoryState): Promise<void> {
+  state.writes = state.writes
+    .then(async () => {
+      await ensureLoaded(state);
+      await state.persistence.save(JSON.stringify(state.cache));
+    })
     .catch(() => {
       // Silently fail — history is non-critical
     });
-  return writeChain;
+  return state.writes;
+}
+
+function mutate(state: HistoryState, mutation: Mutation) {
+  state.cache = mutation(state.cache);
+  if (!state.loaded) {
+    state.mutations.push(mutation);
+  }
+  persistHistory(state);
+  notify(state);
+}
+
+/** Switch the visible history without redirecting in-flight reads or writes. */
+export async function setHistoryScope(scope: string | null, persistence: Persistence): Promise<void> {
+  activeScope = scope?.toLowerCase() ?? 'signed-out';
+  let state = histories.get(activeScope);
+  if (!state) {
+    state = createState(persistence);
+    histories.set(activeScope, state);
+  }
+  notify(state);
+  await ensureLoaded(state);
+  notify(state);
 }
 
 export function getTransactionHistory(): TransactionRecord[] {
-  // Trigger async load if not loaded yet
-  if (!isLoaded) {
-    ensureLoaded().then(() => {
-      listeners.forEach(fn => fn());
-    });
+  const state = histories.get(activeScope)!;
+  if (!state.loaded) {
+    ensureLoaded(state).then(() => notify(state));
   }
-  return [...historyCache];
+  return [...state.cache];
 }
 
 /**
  * Initialize history — call this on app start to load from storage
  */
 export async function initHistory(): Promise<void> {
-  await ensureLoaded();
-  listeners.forEach(fn => fn());
+  const state = histories.get(activeScope)!;
+  await ensureLoaded(state);
+  notify(state);
 }
 
-export function recordTransaction(tx: Omit<TransactionRecord, 'id' | 'timestamp'>): TransactionRecord {
+export function recordTransaction(tx: Omit<TransactionRecord, 'id' | 'timestamp'> & {walletAddress?: string}): TransactionRecord {
+  const {walletAddress, ...payment} = tx;
   const newRecord: TransactionRecord = {
-    ...tx,
+    ...payment,
     id: `${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
     timestamp: new Date().toISOString(),
   };
 
-  historyCache = [newRecord, ...historyCache];
-  persistHistory();
-  listeners.forEach(fn => fn());
+  const state = histories.get(walletAddress?.toLowerCase() ?? activeScope);
+  if (state) {
+    mutate(state, rows => [newRecord, ...rows]);
+  }
   return newRecord;
 }
 
 export function updateTransactionStatus(txHash: string, status: 'confirmed' | 'failed') {
-  historyCache = historyCache.map(tx => {
+  const state = histories.get(activeScope)!;
+  mutate(state, rows => rows.map(tx => {
     if (tx.txHash.toLowerCase() === txHash.toLowerCase()) {
       return {...tx, status};
     }
     return tx;
-  });
-  persistHistory();
-  listeners.forEach(fn => fn());
+  }));
 }
 
 const REAL_TX_HASH = /^0x[0-9a-fA-F]{64}$/;
@@ -116,7 +163,7 @@ const REAL_TX_HASH = /^0x[0-9a-fA-F]{64}$/;
  * "tap-payment" have no receipt to look up).
  */
 export function getPendingTransactions(): TransactionRecord[] {
-  return historyCache.filter(tx => tx.status === 'pending' && REAL_TX_HASH.test(tx.txHash));
+  return histories.get(activeScope)!.cache.filter(tx => tx.status === 'pending' && REAL_TX_HASH.test(tx.txHash));
 }
 
 export function subscribeHistory(callback: () => void): () => void {

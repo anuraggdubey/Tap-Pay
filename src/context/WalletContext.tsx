@@ -308,7 +308,6 @@ export function WalletProvider({children}: {children: ReactNode}) {
     try {
       const deleted = await deleteWallet();
       if (deleted) {
-        await discardLegacyHistory();
         setHistoryWallet(null);
         setAddress(null);
         setBalance(0n);
@@ -317,9 +316,11 @@ export function WalletProvider({children}: {children: ReactNode}) {
         setBackupVerified(false);
         setWalletLocked(false);
         setUsername(null);
-        // Clear stored username and backup status
-        await AsyncStorage.removeItem(USERNAME_STORAGE_KEY);
-        await AsyncStorage.removeItem(BACKUP_VERIFIED_KEY);
+        await Promise.allSettled([
+          discardLegacyHistory(),
+          AsyncStorage.removeItem(USERNAME_STORAGE_KEY),
+          AsyncStorage.removeItem(BACKUP_VERIFIED_KEY),
+        ]);
         return true;
       }
       return false;

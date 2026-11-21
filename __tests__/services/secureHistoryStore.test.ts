@@ -295,6 +295,69 @@ describe('history service uses the encrypted store', () => {
     expect(JSON.parse((await store.loadHistoryJson(A))!)).toHaveLength(1);
   });
 
+  it.each(['throws', 'missing'])('retains scoped ciphertext when a key read is temporarily %s', async failure => {
+    let store = freshStore();
+    await store.saveHistoryJson(SAMPLE, A);
+    const ciphertext = mockAsync[`${ENC}:${A}`];
+    const keys = {...mockKeychain.items};
+    store = freshStore();
+    if (failure === 'throws') mockKeychain.failGet = true;
+    else mockKeychain.items = {};
+    await expect(store.loadHistoryJson(A)).rejects.toThrow('History key unavailable');
+    expect(mockAsync[`${ENC}:${A}`]).toBe(ciphertext);
+    mockKeychain.failGet = false;
+    mockKeychain.items = keys;
+    await expect(store.loadHistoryJson(A)).resolves.toBe(SAMPLE);
+  });
+
+  it.each(['with plaintext', 'without plaintext'])('drops corrupt encrypted legacy data %s without blocking payments', async format => {
+    const store = freshStore();
+    await store.saveHistoryJson(SAMPLE, A);
+    await store.saveHistoryJson(SAMPLE);
+    mockAsync[ENC] = 'corrupt encrypted history';
+    const plain = {...JSON.parse(SAMPLE)[0], id: 'plaintext', txHash: 'plaintext'};
+    if (format === 'with plaintext') mockAsync[LEGACY] = JSON.stringify([plain]);
+    const migrated = JSON.parse((await store.loadHistoryJson(A))!);
+    expect(migrated).toEqual(format === 'with plaintext' ? [JSON.parse(SAMPLE)[0], plain] : JSON.parse(SAMPLE));
+    expect(mockAsync[ENC]).toBeUndefined();
+    expect(mockAsync[LEGACY]).toBeUndefined();
+    const payment = {...plain, id: 'new-payment', txHash: 'new-payment'};
+    await store.saveHistoryJson(JSON.stringify([payment]), A);
+    expect(JSON.parse((await freshStore().loadHistoryJson(A))!)).toEqual([payment, ...migrated]);
+  });
+
+  it('persists a new scoped payment when a transient key read defers legacy migration', async () => {
+    let store = freshStore();
+    await store.saveHistoryJson(SAMPLE);
+    const legacy = mockAsync[ENC];
+    store = freshStore();
+    require('react-native-keychain').getGenericPassword.mockRejectedValueOnce(new Error('Temporarily unavailable'));
+    const payment = {...JSON.parse(SAMPLE)[0], id: 'new-payment', txHash: 'new-payment'};
+    await expect(store.saveHistoryJson(JSON.stringify([payment]), A)).resolves.toBeUndefined();
+    expect(mockAsync[`${ENC}:${A}`]).toBeTruthy();
+    expect(mockAsync[ENC]).toBe(legacy);
+    expect(JSON.parse((await freshStore().loadHistoryJson(A))!)).toEqual([payment, ...JSON.parse(SAMPLE)]);
+    expect(mockAsync[ENC]).toBeUndefined();
+  });
+
+  it('never replaces an unavailable legacy key to persist a new payment', async () => {
+    let store = freshStore();
+    await store.saveHistoryJson(SAMPLE);
+    const legacy = mockAsync[ENC];
+    const keys = {...mockKeychain.items};
+    const keyWrites = mockKeychain.setOptions.length;
+    store = freshStore();
+    mockKeychain.items = {};
+    const payment = {...JSON.parse(SAMPLE)[0], id: 'new-payment', txHash: 'new-payment'};
+    await expect(store.saveHistoryJson(JSON.stringify([payment]), A)).rejects.toThrow('History key unavailable');
+    expect(mockKeychain.setOptions).toHaveLength(keyWrites);
+    expect(mockAsync[ENC]).toBe(legacy);
+    expect(mockAsync[`${ENC}:${A}`]).toBeUndefined();
+    mockKeychain.items = keys;
+    await store.saveHistoryJson(JSON.stringify([payment]), A);
+    expect(JSON.parse((await freshStore().loadHistoryJson(A))!)).toEqual([payment, ...JSON.parse(SAMPLE)]);
+  });
+
   it('merges migration with an early payment during hydration and hides both after wallet reset/import', async () => {
     freshStore();
     const owned = JSON.parse(SAMPLE)[0];

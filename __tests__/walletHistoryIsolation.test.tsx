@@ -87,6 +87,40 @@ it.each(['cancelled', 'storage failure'])('preserves history when reset is %s', 
   expect(getTransactionHistory().map(tx => tx.txHash)).toEqual(['A-payment']);
 });
 
+it('reports a successful reset and clears state even if legacy cleanup fails', async () => {
+  await mount();
+  mockDiscard.mockRejectedValueOnce(new Error('Cleanup unavailable'));
+  await act(async () => { expect(await state.resetWallet()).toBe(true); });
+  expect(state.address).toBeNull();
+  expect(state.isInitialized).toBe(false);
+  expect(state.balance).toBe(0n);
+  expect(state.ausdBalance).toBe(0n);
+  expect(state.username).toBeNull();
+  expect(state.backupVerified).toBe(false);
+  expect(state.walletLocked).toBe(false);
+  expect(getTransactionHistory()).toEqual([]);
+  jest.mocked(wallet.hasWallet).mockResolvedValue(false);
+  await act(async () => { await state.importPrivateKey(KEY); });
+  expect(mockDiscard).toHaveBeenCalledTimes(2);
+  expect(state.address).toBe(B);
+  expect(getTransactionHistory()).toEqual([]);
+});
+
+it('clears wallet state before pending post-reset cleanup finishes', async () => {
+  await mount();
+  let finish!: () => void;
+  mockDiscard.mockImplementationOnce(() => new Promise<void>(resolve => { finish = resolve; }));
+  let reset!: Promise<boolean>;
+  await act(async () => { reset = state.resetWallet(); await drain(); });
+  try {
+    expect(state.address).toBeNull();
+    expect(getTransactionHistory()).toEqual([]);
+  } finally {
+    finish();
+    await act(async () => { await reset; });
+  }
+});
+
 it('keeps a late read and late broadcast from A out of B\'s cache and persisted history', async () => {
   let finish!: (json: string) => void;
   mockLoad.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));

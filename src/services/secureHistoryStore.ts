@@ -26,6 +26,12 @@ const AAD = ethers.toUtf8Bytes('tappay-history|v1');
 
 type Envelope = {v: number; n: string; c: string};
 
+class HistoryKeyUnavailableError extends Error {
+  constructor() {
+    super('History key unavailable');
+  }
+}
+
 let keyValue: Uint8Array | null = null;
 // Key operations run one at a time so a load and a save cannot race to create two keys.
 let keyChain: Promise<unknown> = Promise.resolve();
@@ -115,7 +121,7 @@ function decrypt(stored: string, key: Uint8Array, walletAddress?: string): strin
 async function writeHistoryJson(json: string, walletAddress?: string): Promise<void> {
   const key = await getKey(true);
   if (!key) {
-    throw new Error('History key unavailable');
+    throw new HistoryKeyUnavailableError();
   }
   await AsyncStorage.setItem(storageKey(walletAddress), encrypt(json, key, walletAddress));
   if (!walletAddress) {
@@ -127,11 +133,11 @@ async function writeHistoryJson(json: string, walletAddress?: string): Promise<v
  * Load the history JSON. Migrates a legacy plaintext copy on first run. Returns null when there
  * is nothing readable.
  */
-async function readHistoryJson(walletAddress?: string, preserveUnreadable = false): Promise<string | null> {
+async function readHistoryJson(walletAddress?: string, preserveUnreadable = Boolean(walletAddress)): Promise<string | null> {
   const stored = await AsyncStorage.getItem(storageKey(walletAddress));
   if (stored) {
     const key = await getKey(false);
-    if (!key && preserveUnreadable) throw new Error('History key unavailable');
+    if (!key && preserveUnreadable) throw new HistoryKeyUnavailableError();
     const json = key ? decrypt(stored, key, walletAddress) : null;
     if (json === null) {
       // Tampered, or the key is gone: unrecoverable. Drop it rather than crash or loop.
@@ -193,9 +199,9 @@ async function migrateLegacy(walletAddress: string): Promise<boolean> {
   let legacy: string | null = null;
   if (encrypted !== null) {
     const key = await getKey(false);
-    if (!key) throw new Error('History key unavailable');
+    if (!key) throw new HistoryKeyUnavailableError();
     legacy = decrypt(encrypted, key);
-    if (legacy === null) throw new Error('Legacy history unreadable');
+    if (legacy === null) await AsyncStorage.removeItem(ENCRYPTED_STORAGE_KEY);
   }
   const rows = mergeRows(rowsFrom(legacy), rowsFrom(plaintext));
   const current = rowsFrom(await readHistoryJson(walletAddress, true));
@@ -225,7 +231,12 @@ export function saveHistoryJson(json: string, walletAddress?: string): Promise<v
   return serialize(async () => {
     let snapshot = json;
     if (walletAddress) {
-      await migrateLegacy(walletAddress);
+      try {
+        await migrateLegacy(walletAddress);
+      } catch (error) {
+        if (!(error instanceof HistoryKeyUnavailableError)) throw error;
+        if (!(await getKey(false))) throw error;
+      }
       snapshot = JSON.stringify(mergeRows(rowsFrom(json), rowsFrom(await readHistoryJson(walletAddress, true))));
     }
     await writeHistoryJson(snapshot, walletAddress);

@@ -269,10 +269,69 @@ describe("MultiTokenLedger", function () {
   });
 
   describe("Validation", function () {
+    for (const [description, getRecipient] of [
+      ["the zero address", () => ethers.ZeroAddress],
+      ["the ledger itself", () => ledger.getAddress()],
+    ]) {
+      it(`should reject native payments to ${description} without consuming the session`, async function () {
+        const amount = 100n;
+        const recipientBalance = await ethers.provider.getBalance(recipient.address);
+
+        await expect(
+          ledger.connect(sender).payWithLog(await getRecipient(), sessionIdHash, { value: amount })
+        ).to.be.revertedWithCustomError(ledger, "InvalidRecipient");
+
+        expect(await ethers.provider.getBalance(await ledger.getAddress())).to.equal(0);
+        expect(await ledger.processedSessions(sender.address, sessionIdHash)).to.be.false;
+        await expect(
+          ledger.connect(sender).payWithLog(recipient.address, sessionIdHash, { value: amount })
+        ).to.emit(ledger, "PaymentLogged")
+          .withArgs(sender.address, recipient.address, ethers.ZeroAddress, amount, sessionIdHash);
+        expect(await ethers.provider.getBalance(recipient.address)).to.equal(recipientBalance + amount);
+      });
+
+      it(`should reject ERC-20 payments to ${description} without moving tokens or consuming allowance`, async function () {
+        const amount = ethers.parseUnits("10", 6);
+        const ledgerAddress = await ledger.getAddress();
+        const senderBalance = await ausd.balanceOf(sender.address);
+        await ausd.connect(sender).approve(ledgerAddress, amount);
+
+        await expect(
+          ledger.connect(sender).payERC20WithLog(await ausd.getAddress(), await getRecipient(), amount, sessionIdHash)
+        ).to.be.revertedWithCustomError(ledger, "InvalidRecipient");
+
+        expect(await ausd.balanceOf(sender.address)).to.equal(senderBalance);
+        expect(await ausd.balanceOf(ledgerAddress)).to.equal(0);
+        expect(await ausd.balanceOf(ethers.ZeroAddress)).to.equal(0);
+        expect(await ausd.allowance(sender.address, ledgerAddress)).to.equal(amount);
+        expect(await ledger.processedSessions(sender.address, sessionIdHash)).to.be.false;
+        await expect(
+          ledger.connect(sender).payERC20WithLog(await ausd.getAddress(), recipient.address, amount, sessionIdHash)
+        ).to.emit(ledger, "PaymentLogged")
+          .withArgs(sender.address, recipient.address, await ausd.getAddress(), amount, sessionIdHash);
+        expect(await ausd.balanceOf(recipient.address)).to.equal(amount);
+        expect(await ausd.allowance(sender.address, ledgerAddress)).to.equal(0);
+      });
+    }
+
     it("should reject self payments", async function () {
       await expect(
         ledger.connect(sender).payWithLog(sender.address, sessionIdHash, { value: 100 })
       ).to.be.revertedWithCustomError(ledger, "SelfPayment");
+    });
+
+    it("should reject ERC-20 payer-self payments without moving tokens", async function () {
+      const amount = ethers.parseUnits("10", 6);
+      const ledgerAddress = await ledger.getAddress();
+      const senderBalance = await ausd.balanceOf(sender.address);
+      await ausd.connect(sender).approve(ledgerAddress, amount);
+
+      await expect(
+        ledger.connect(sender).payERC20WithLog(await ausd.getAddress(), sender.address, amount, sessionIdHash)
+      ).to.be.revertedWithCustomError(ledger, "SelfPayment");
+      expect(await ausd.balanceOf(sender.address)).to.equal(senderBalance);
+      expect(await ausd.allowance(sender.address, ledgerAddress)).to.equal(amount);
+      expect(await ledger.processedSessions(sender.address, sessionIdHash)).to.be.false;
     });
 
     it("should reject zero amount payments", async function () {

@@ -10,6 +10,10 @@ TapPay uses **one** username table for **Monad Mainnet (chain ID 143)**. Wallet 
 | `supabase/waitlist.sql` | Fresh waitlist setup | Creates the hardened waitlist and rate limiter; no direct public inserts |
 | `supabase/migrations/002_harden_anon_writes.sql` | Yes, after 001 and waitlist setup | Idempotent; tightens new writes without rejecting legacy rows |
 | `supabase/migrations/004_username_ownership_proof.sql` | Yes, after 001/002 | Idempotent; revokes direct anon writes to `usernames` so only the signed Edge Function can write |
+| `supabase/migrations/005_passkey_recovery.sql` | Yes | Idempotent; creates the passkey recovery blob table (service role only). Deploy the `passkey-recovery` function after it |
+| `supabase/migrations/006_username_proof_single_use.sql` | Yes | Idempotent; makes username proofs single-use. Apply **before** deploying the updated `register-username` |
+| `supabase/migrations/007_username_rate_limit.sql` | Yes | Idempotent; rate limiter used by `register-username`. Apply before deploying the function |
+| `supabase/migrations/008_usernames_exact_lookup_only.sql` | Yes, **with the matching app release** | Revokes public `SELECT` on `usernames`; the app resolves handles through `resolve_username` / `reverse_resolve_address`. Older app builds read the table directly and will stop resolving handles |
 | `supabase functions deploy register-username` | After migration 004 | Verifies the wallet signature for register/release; set `ALLOWED_ORIGINS` and the service role is provided by Supabase |
 | `npm run deploy:mainnet` / `scripts/deploy-mainnet.js` | **No** unless redeploying contracts | Would deploy **new** contracts, not Supabase |
 | `scripts/deploy.js` (testnet) | **No** for production | Testnet-only Hardhat script |

@@ -57,11 +57,11 @@ function setup(responses: Response[], verify = goodVerify) {
 }
 
 Deno.test('registers when the signature matches the wallet', async () => {
-  const {handler, calls} = setup([json(true), json([]), new Response(null, {status: 201})]);
+  const {handler, calls} = setup([json(1), json(true), json([]), new Response(null, {status: 201})]);
   const res = await handler(request());
   assert(res.status === 200 && (await res.json()).ok === true);
   // Inserted row carries the recovered wallet and normalized username.
-  const inserted = JSON.parse(String(calls[2].init?.body));
+  const inserted = JSON.parse(String(calls[3].init?.body));
   assert(inserted.wallet_address === WALLET && inserted.username === 'alice');
 });
 
@@ -80,38 +80,38 @@ Deno.test('rejects a forged wallet (signature for a different address)', async (
 });
 
 Deno.test('refuses when the wallet already has a username', async () => {
-  const {handler} = setup([json(true), json([{username: 'bob'}])]);
+  const {handler} = setup([json(1), json(true), json([{username: 'bob'}])]);
   const res = await handler(request());
   assert(res.status === 409 && (await res.json()).reason === 'wallet_taken');
 });
 
 Deno.test('maps a unique-violation to taken', async () => {
-  const {handler} = setup([json(true), json([]), json({code: '23505', message: 'username unique'}, 409)]);
+  const {handler} = setup([json(1), json(true), json([]), json({code: '23505', message: 'username unique'}, 409)]);
   const res = await handler(request());
   assert(res.status === 409 && (await res.json()).reason === 'taken');
 });
 
 Deno.test('release deletes only the signed username owned by the signer', async () => {
-  const {handler, calls} = setup([json(true), json([{username: 'alice'}])]);
+  const {handler, calls} = setup([json(1), json(true), json([{username: 'alice'}])]);
   const res = await handler(request(body({action: 'release'})));
   assert(res.status === 200);
-  assert(calls[1].init?.method === 'DELETE');
-  assert(calls[1].url.includes(`wallet_address=eq.${WALLET}`));
+  assert(calls[2].init?.method === 'DELETE');
+  assert(calls[2].url.includes(`wallet_address=eq.${WALLET}`));
   // Scoped to the username in the signed proof, not just the wallet.
-  assert(calls[1].url.includes('normalized_username=eq.alice'));
+  assert(calls[2].url.includes('normalized_username=eq.alice'));
 });
 
 Deno.test('release normalizes look-alike characters like registration does', async () => {
-  const {handler, calls} = setup([json(true), json([{username: 'al1c3'}])]);
+  const {handler, calls} = setup([json(1), json(true), json([{username: 'al1c3'}])]);
   const res = await handler(request(body({action: 'release', username: 'al1c3'})));
   assert(res.status === 200);
   // 1 -> l, matching normalizeUsername() used at registration.
-  assert(calls[1].url.includes('normalized_username=eq.allc3'));
+  assert(calls[2].url.includes('normalized_username=eq.allc3'));
 });
 
 Deno.test('release succeeds only when a row was actually deleted', async () => {
   // A proof for a username the wallet does not hold deletes nothing and reports not found.
-  const {handler} = setup([json(true), json([])]);
+  const {handler} = setup([json(1), json(true), json([])]);
   const res = await handler(request(body({action: 'release', username: 'bob'})));
   assert(res.status === 404 && (await res.json()).reason === 'not_found');
 });
@@ -153,10 +153,10 @@ Deno.test('message is stable and deterministic', () => {
 
 Deno.test('a replayed proof is rejected before any database change', async () => {
   // The single-use check reports the proof was already consumed.
-  const {handler, calls} = setup([json(false)]);
+  const {handler, calls} = setup([json(1), json(false)]);
   const res = await handler(request(body({action: 'release'})));
   assert(res.status === 409 && (await res.json()).reason === 'replayed');
-  assert(calls.length === 1 && calls[0].url.includes('rpc/consume_username_proof'));
+  assert(calls.length === 2 && calls[1].url.includes('rpc/consume_username_proof'));
 });
 
 Deno.test('the same signed request cannot be used twice', async () => {
@@ -165,6 +165,9 @@ Deno.test('the same signed request cannot be used twice', async () => {
   const fetcher: typeof fetch = (input, init) => {
     const url = String(input);
     calls.push(url);
+    if (url.includes('rpc/consume_username_rate_limit')) {
+      return Promise.resolve(json(1));
+    }
     if (url.includes('rpc/consume_username_proof')) {
       const hash = JSON.parse(String(init?.body)).p_proof_hash;
       const first = !used.has(hash);
@@ -184,8 +187,66 @@ Deno.test('the same signed request cannot be used twice', async () => {
 });
 
 Deno.test('fails closed when the replay check is unavailable', async () => {
-  const {handler, calls} = setup([new Response(null, {status: 500})]);
+  const {handler, calls} = setup([json(1), new Response(null, {status: 500})]);
   const res = await handler(request());
   assert(res.status === 503);
+  assert(calls.length === 2);
+});
+
+Deno.test('over the registration limit is refused before any proof or table access', async () => {
+  const {handler, calls} = setup([json(11)]);
+  const res = await handler(request());
+  assert(res.status === 429 && (await res.json()).reason === 'rate_limited');
+  assert(calls.length === 1 && calls[0].url.includes('rpc/consume_username_rate_limit'));
+});
+
+Deno.test('the limit boundary: the 10th registration is allowed, the 11th is not', async () => {
+  const ok = setup([json(10), json(true), json([]), new Response(null, {status: 201})]);
+  assert((await ok.handler(request())).status === 200);
+  const over = setup([json(11)]);
+  assert((await over.handler(request())).status === 429);
+});
+
+Deno.test('releases use a separate, higher limit', async () => {
+  const {handler} = setup([json(15), json(true), json([{username: 'alice'}])]);
+  assert((await handler(request(body({action: 'release'})))).status === 200);
+  const over = setup([json(21)]);
+  assert((await over.handler(request(body({action: 'release'})))).status === 429);
+});
+
+Deno.test('fails closed when the rate limiter is unavailable', async () => {
+  const {handler, calls} = setup([new Response(null, {status: 500})]);
+  assert((await handler(request())).status === 503);
   assert(calls.length === 1);
+});
+
+Deno.test('buckets are per client address and never contain the raw address', async () => {
+  const bucketFor = async (ip: string) => {
+    const {handler, calls} = setup([json(99)]);
+    const req = new Request('https://edge.example.com/register-username', {
+      method: 'POST',
+      headers: {'content-type': 'application/json', 'x-forwarded-for': `${ip}, 10.0.0.1`},
+      body: JSON.stringify(body()),
+    });
+    await handler(req);
+    return JSON.parse(String(calls[0].init?.body)).p_bucket as string;
+  };
+  const a = await bucketFor('203.0.113.7');
+  const b = await bucketFor('203.0.113.8');
+  assert(/^[0-9a-f]{64}$/.test(a) && a !== b);
+  assert(!a.includes('203'));
+});
+
+Deno.test('reserved and look-alike reserved names cannot be registered', async () => {
+  for (const name of ['admin', 'tappay', 'tappayteam', 'supp0rt', 'wa11et', 'monad']) {
+    const {handler, calls} = setup([]);
+    const res = await handler(request(body({username: name})));
+    assert(res.status === 400 && (await res.json()).reason === 'reserved');
+    assert(calls.length === 0);
+  }
+});
+
+Deno.test('reserved names do not block releasing', async () => {
+  const {handler} = setup([json(1), json(true), json([{username: 'admin'}])]);
+  assert((await handler(request(body({action: 'release', username: 'admin'})))).status === 200);
 });

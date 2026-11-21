@@ -1,5 +1,6 @@
 import {buildUsernameAuthMessage, normalizeUsername} from './message.ts';
 import {validateUsernameRequest} from './validation.ts';
+import {isReservedUsername} from './reserved.ts';
 
 export type Config = {
   origins: string[];
@@ -11,6 +12,18 @@ export type Config = {
 export type VerifySignature = (message: string, signature: string) => string | null;
 
 const GENERIC = {error: 'Unable to complete the request. Please try again.'};
+
+const WINDOW_SECONDS = 3600;
+const REGISTER_LIMIT = 10; // registrations per client address per hour
+const RELEASE_LIMIT = 20; // releases per client address per hour
+
+function clientAddress(request: Request): string {
+  return (
+    request.headers.get('cf-connecting-ip') ||
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    'unknown'
+  );
+}
 
 async function sha256Hex(text: string): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
@@ -67,6 +80,10 @@ export function createHandler(
       return reply(400);
     }
 
+    if (req.action === 'register' && isReservedUsername(normalizeUsername(req.username))) {
+      return reply(400, {error: 'That username is reserved. Please choose another.', reason: 'reserved'});
+    }
+
     // Verify wallet ownership: the recovered signer must equal the claimed wallet.
     const message = buildUsernameAuthMessage({
       action: req.action,
@@ -98,6 +115,25 @@ export function createHandler(
       });
 
     try {
+      // Rate limit verified requests per client address. Wallets are free to generate, so a valid
+      // signature alone does not stop mass squatting. Fails closed if the limiter is down.
+      const isRegister = req.action === 'register';
+      const limiter = await rest('rpc/consume_username_rate_limit', {
+        method: 'POST',
+        body: JSON.stringify({
+          p_bucket: await sha256Hex(`${req.action}:${clientAddress(request)}`),
+          p_window_seconds: WINDOW_SECONDS,
+        }),
+      });
+      if (!limiter.ok) {
+        log(`register-username: rate limiter failed (${limiter.status})`);
+        return reply(503);
+      }
+      const hits = Number(await limiter.json().catch(() => NaN));
+      if (!Number.isFinite(hits) || hits > (isRegister ? REGISTER_LIMIT : RELEASE_LIMIT)) {
+        return reply(429, {error: 'Too many attempts. Please try again later.', reason: 'rate_limited'});
+      }
+
       // Single-use proofs: a captured {message, signature} pair is accepted at most once, so it
       // cannot be replayed inside the freshness window. The wallet signs a new proof per request.
       const consume = await rest('rpc/consume_username_proof', {

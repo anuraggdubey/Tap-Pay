@@ -159,6 +159,7 @@ export default function ReceiveTapScreen({navigation}: Props) {
           const counterpartyLabel = senderAddress || 'Unknown (Tap)';
 
           recordTransaction({
+            walletAddress: address,
             direction: 'received',
             counterparty: counterpartyLabel,
             counterpartyUsername: senderUsername,

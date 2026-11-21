@@ -1,4 +1,5 @@
 import {hashIp, validateSignup} from './validation.ts';
+import {EmailConfig, sendConfirmationEmail} from './email.ts';
 
 export type Config = {
   origins: string[];
@@ -7,7 +8,18 @@ export type Config = {
   turnstileSecret: string;
   ipSalt: string;
   limit: number;
+  /** Optional. Without it signups are stored unconfirmed and no email is sent. */
+  email?: EmailConfig;
 };
+
+function base64Url(bytes: Uint8Array): string {
+  return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+async function sha256Hex(text: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+}
 
 const FAILURE = {message: 'Unable to join the waitlist. Please try again later.'};
 const SUCCESS = {ok: true};
@@ -137,6 +149,28 @@ export function createHandler(config: Config | null, fetcher: typeof fetch = fet
         if (insert.status !== 409 || error.code !== '23505') {
           log(`waitlist: insert failed (${insert.status})`);
           return reply(503);
+        }
+      }
+      // Double opt-in: the address only counts once its owner clicks the emailed link. New,
+      // duplicate, confirmed and throttled signups all get the same response, so the endpoint
+      // cannot be used to learn which emails are on the list.
+      if (config.email) {
+        try {
+          const token = base64Url(crypto.getRandomValues(new Uint8Array(32)));
+          const issued = await fetcher(`${config.supabaseUrl}/rest/v1/rpc/issue_waitlist_confirmation`, {
+            method: 'POST', headers: apiHeaders,
+            body: JSON.stringify({p_email: signup.email, p_token_hash: await sha256Hex(token)}),
+            signal: AbortSignal.timeout(10000),
+          });
+          if (!issued.ok) {
+            log(`waitlist: confirmation issue failed (${issued.status})`);
+          } else if ((await issued.json()) === 'sent') {
+            if (!(await sendConfirmationEmail(config.email, signup.email, signup.name, token, fetcher))) {
+              log('waitlist: confirmation email was not accepted by the provider');
+            }
+          }
+        } catch {
+          log('waitlist: confirmation step failed');
         }
       }
       return new Response(JSON.stringify(SUCCESS), {status: 200, headers});

@@ -123,3 +123,104 @@ Deno.test('upstream failures are generic and fail closed', async () => {
     assert(logs.length > 0);
   }
 });
+
+// ---- Double opt-in (issue #28) ----
+const emailConfig: Config = {
+  ...config,
+  email: {
+    apiUrl: 'https://mail.example.com/emails', apiKey: 'mail-key',
+    from: 'TapPay <hello@tappay.example>', confirmUrl: 'https://tappay.example/confirm',
+  },
+};
+
+function setupEmail(responses: Response[], cfg: Config = emailConfig) {
+  const calls: {url: string; init?: RequestInit}[] = [];
+  const logs: string[] = [];
+  const fetcher: typeof fetch = (input, init) => {
+    calls.push({url: String(input), init});
+    const response = responses.shift();
+    if (!response) {
+      throw new Error('unexpected fetch');
+    }
+    return Promise.resolve(response);
+  };
+  return {handler: createHandler(cfg, fetcher, message => logs.push(message)), calls, logs};
+}
+async function sha256Hex(text: string): Promise<string> {
+  const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(d), b => b.toString(16).padStart(2, '0')).join('');
+}
+const SIGNUP_OK = () => [json(1), json(captcha), new Response(null, {status: 201})];
+
+Deno.test('a new signup stores only a hashed token and emails a single-use link', async () => {
+  const {handler, calls} = setupEmail([...SIGNUP_OK(), json('sent'), new Response(null, {status: 200})]);
+  const res = await handler(request());
+  assert(res.status === 200 && (await res.json()).ok === true);
+
+  const issue = calls[3];
+  assert(issue.url.endsWith('/rest/v1/rpc/issue_waitlist_confirmation'));
+  const issued = JSON.parse(String(issue.init?.body));
+  assert(issued.p_email === 'ada@example.com' && /^[0-9a-f]{64}$/.test(issued.p_token_hash));
+
+  const mail = calls[4];
+  assert(mail.url === 'https://mail.example.com/emails');
+  assert((mail.init?.headers as Record<string, string>).Authorization === 'Bearer mail-key');
+  const message = JSON.parse(String(mail.init?.body));
+  assert(message.from === 'TapPay <hello@tappay.example>' && message.to[0] === 'ada@example.com');
+  const link = /https:\/\/tappay\.example\/confirm\?token=([A-Za-z0-9_-]{43})/.exec(message.text);
+  assert(link);
+  // The database only ever sees the hash of the token that is in the email.
+  assert(await sha256Hex(link[1]) === issued.p_token_hash);
+  assert(!String(issue.init?.body).includes(link[1]));
+  assert(message.html.includes(`token=${link[1]}`));
+});
+
+Deno.test('new, duplicate, confirmed and throttled signups get the identical response', async () => {
+  const bodies: string[] = [];
+  for (const issued of ['sent', 'throttled', 'confirmed', 'missing']) {
+    const rows = [...SIGNUP_OK(), json(issued)];
+    if (issued === 'sent') {
+      rows.push(new Response(null, {status: 200}));
+    }
+    const res = await setupEmail(rows).handler(request());
+    assert(res.status === 200);
+    bodies.push(await res.text());
+  }
+  // a duplicate email (unique violation on insert) is also indistinguishable
+  const dup = await setupEmail([json(1), json(captcha), json({code: '23505'}, 409), json('throttled')]).handler(request());
+  assert(dup.status === 200);
+  bodies.push(await dup.text());
+  assert(new Set(bodies).size === 1);
+});
+
+Deno.test('no email is sent when the address is confirmed, throttled or unknown', async () => {
+  for (const issued of ['throttled', 'confirmed', 'missing']) {
+    const {handler, calls} = setupEmail([...SIGNUP_OK(), json(issued)]);
+    await handler(request());
+    assert(!calls.some(c => c.url === 'https://mail.example.com/emails'));
+  }
+});
+
+Deno.test('a duplicate signup can still be sent a fresh link (resend path)', async () => {
+  const {handler, calls} = setupEmail([json(1), json(captcha), json({code: '23505'}, 409), json('sent'), new Response(null, {status: 200})]);
+  assert((await handler(request())).status === 200);
+  assert(calls.some(c => c.url === 'https://mail.example.com/emails'));
+});
+
+Deno.test('email provider or token issue failures never leak and never fail the signup', async () => {
+  const a = setupEmail([...SIGNUP_OK(), json('sent'), new Response('boom', {status: 500})]);
+  const resA = await a.handler(request());
+  assert(resA.status === 200 && (await resA.json()).ok === true);
+  assert(a.logs.some(l => l.includes('not accepted')));
+
+  const b = setupEmail([...SIGNUP_OK(), new Response(null, {status: 500})]);
+  assert((await b.handler(request())).status === 200);
+  assert(b.logs.some(l => l.includes('confirmation issue failed')));
+  assert(!b.calls.some(c => c.url === 'https://mail.example.com/emails'));
+});
+
+Deno.test('without an email provider signups are stored unconfirmed and nothing is sent', async () => {
+  const {handler, calls} = setup([json(1), json(captcha), new Response(null, {status: 201})]);
+  assert((await handler(request())).status === 200);
+  assert(calls.length === 3);
+});

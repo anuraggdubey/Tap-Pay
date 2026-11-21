@@ -98,8 +98,8 @@ export default function WaitlistPage() {
             {done ? (
               <div className="waitlist-success">
                 <div className="waitlist-success-icon">✓</div>
-                <h3>You&apos;re on the list.</h3>
-                <p>We&apos;ll email you at launch. Keep NFC on — we&apos;re almost there.</p>
+                <h3>Check your inbox.</h3>
+                <p>We sent a confirmation link to your email. Click it to finish joining. The link expires in 24 hours.</p>
               </div>
             ) : (
               <>
@@ -158,8 +158,8 @@ export default function WaitlistPage() {
                   </button>
                 </form>
                 <p className="waitlist-fine">
-                  By joining, you agree to receive one launch email from TapPay. Unsubscribe anytime. Stored securely in
-                  our Supabase backend.
+                  By joining, you agree to receive a confirmation email and one launch email from TapPay. You are only added
+                  after you confirm. Stored securely in our Supabase backend.
                 </p>
               </>
             )}

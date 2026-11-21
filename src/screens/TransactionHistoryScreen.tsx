@@ -23,6 +23,7 @@ import {
   initHistory,
   TransactionRecord,
 } from '../services/history';
+import {reconcilePendingTransactions} from '../services/txReconcile';
 import {triggerHaptic} from '../utils/haptics';
 import {truncateAddress, formatTimestamp} from '../utils/format';
 import {useWallet} from '../context/WalletContext';
@@ -54,7 +55,10 @@ export default function TransactionHistoryScreen() {
   }, []);
 
   useEffect(() => {
-    initHistory().then(() => loadHistory());
+    initHistory().then(() => {
+      loadHistory();
+      reconcilePendingTransactions();
+    });
     const unsubscribe = subscribeHistory(() => loadHistory());
     return () => unsubscribe();
   }, [loadHistory]);
@@ -62,6 +66,7 @@ export default function TransactionHistoryScreen() {
   const onRefresh = async () => {
     triggerHaptic.impactMedium();
     setRefreshing(true);
+    await reconcilePendingTransactions();
     setTimeout(() => {
       loadHistory();
       setRefreshing(false);

@@ -30,6 +30,7 @@ import GlassSurface from '../components/GlassSurface';
 import AmbientBackground from '../components/AmbientBackground';
 import SendMethodSheet, {SendMethod} from '../components/SendMethodSheet';
 import {preloadSounds} from '../utils/sounds';
+import {reconcilePendingTransactions} from '../services/txReconcile';
 import type {AppColors} from '../theme';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -84,7 +85,15 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => {
-    initHistory().then(() => loadRecent());
+    initHistory().then(() => {
+      loadRecent();
+      // Settle payments that were still pending when the app last stopped waiting.
+      reconcilePendingTransactions().then(updated => {
+        if (updated > 0) {
+          loadRecent();
+        }
+      });
+    });
     preloadSounds();
   }, [loadRecent]);
 
@@ -101,6 +110,7 @@ export default function HomeScreen() {
     triggerHaptic.impactMedium();
     setRefreshing(true);
     await refreshBalance();
+    await reconcilePendingTransactions();
     loadRecent();
     setRefreshing(false);
   }, [refreshBalance, loadRecent]);

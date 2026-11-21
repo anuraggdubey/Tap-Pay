@@ -67,6 +67,20 @@ describe('wallet secret invariants', () => {
     }
   });
 
+  it('transaction history is only ever written through the encrypted store', () => {
+    for (const f of files) {
+      if (f.rel === 'services/secureHistoryStore.ts') {
+        continue;
+      }
+      const code = noComments(f.text);
+      const plaintext = /AsyncStorage\.setItem\(\s*(HISTORY_STORAGE_KEY|['"]@tappay_tx_history)/.test(code);
+      expect({file: f.rel, plaintext}).toEqual({file: f.rel, plaintext: false});
+    }
+    const store = files.find(f => f.rel === 'services/secureHistoryStore.ts')!;
+    expect(store.text).toMatch(/gcm\(/);
+    expect(store.text).toMatch(/Keychain\.setGenericPassword/);
+  });
+
   it('never copies secrets to the clipboard', () => {
     for (const f of files) {
       const calls = noComments(f.text).match(/Clipboard\.setString\(([^)]*)\)/g) || [];

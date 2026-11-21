@@ -31,8 +31,32 @@ const noComments = (text: string) =>
 describe('wallet secret invariants', () => {
   it('has no passkey-derived key code', () => {
     for (const f of files) {
-      expect(f.text).not.toMatch(/@category-labs\/mera|react-native-passkey/);
+      expect(f.text).not.toMatch(/@category-labs\/mera/);
       expect(f.text).not.toMatch(/getSessionPrivateKey|getMeraSigner|hasMeraSigner/);
+    }
+  });
+
+  it('confines the passkey library to the recovery provider (passkey is recovery, never the wallet key)', () => {
+    for (const f of files) {
+      if (f.rel === 'services/passkeyRecovery/provider.ts') {
+        continue;
+      }
+      expect({file: f.rel, uses: /react-native-passkey/.test(f.text)}).toEqual({file: f.rel, uses: false});
+    }
+    const wallet = files.find(f => f.rel === 'services/wallet.ts')!;
+    expect(wallet.text).not.toMatch(/passkey/i);
+  });
+
+  it('passkey recovery stores no secret locally and never touches the clipboard', () => {
+    const recovery = files.filter(f => f.rel.startsWith('services/passkeyRecovery/'));
+    expect(recovery.length).toBeGreaterThan(0);
+    for (const f of recovery) {
+      const code = noComments(f.text);
+      expect(code).not.toMatch(/Clipboard/);
+      const writes = code.match(/AsyncStorage\.setItem\([^;]*\)/g) || [];
+      for (const w of writes) {
+        expect(w).not.toMatch(/phrase|mnemonic|privateKey|secret|prf/i);
+      }
     }
   });
 

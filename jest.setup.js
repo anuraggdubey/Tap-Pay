@@ -151,3 +151,8 @@ jest.mock("react-native-sound", () => {
   Sound.MAIN_BUNDLE = "";
   return {__esModule: true, default: Sound};
 });
+
+// Passkeys are native-only; stub for tests (the passkey service tests inject a fake provider).
+jest.mock("react-native-passkey", () => ({
+  Passkey: {isSupported: jest.fn(() => false), create: jest.fn(), get: jest.fn()},
+}));

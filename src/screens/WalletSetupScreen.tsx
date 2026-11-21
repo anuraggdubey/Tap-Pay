@@ -41,6 +41,13 @@ import {
 } from '../utils/recovery';
 import {triggerHaptic} from '../utils/haptics';
 import WelcomeHero from '../components/WelcomeHero';
+import {isPasskeyRecoveryConfigured} from '../config/passkey';
+import {
+  getPasskeyStatus,
+  linkPasskey,
+  passkeyErrorMessage,
+  recoverWithPasskey,
+} from '../services/passkeyRecovery';
 import AmbientBackground from '../components/AmbientBackground';
 import PressableScale from '../components/PressableScale';
 
@@ -79,6 +86,7 @@ export default function WalletSetupScreen({navigation}: Props) {
     unlockWallet,
     resetWallet,
     saveUsername,
+    address,
   } = useWallet();
   const {colors} = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -185,6 +193,67 @@ export default function WalletSetupScreen({navigation}: Props) {
     }
   };
 
+  const handleRecoverWithPasskey = async () => {
+    if (loading) {
+      return;
+    }
+    triggerHaptic.impactMedium();
+    setLoading(true);
+    try {
+      const {secret} = await recoverWithPasskey();
+      if (secret.t === 'phrase') {
+        await restoreFromPhrase(secret.v);
+      } else {
+        await importPrivateKey(secret.v);
+      }
+      enterApp();
+    } catch (error) {
+      triggerHaptic.notificationError();
+      Alert.alert('Recovery failed', passkeyErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Optional nudge once the backup is verified. Skippable; the phrase stays the primary backup.
+  const offerPasskeyRecovery = async (secretPhrase: string) => {
+    if (!isPasskeyRecoveryConfigured() || !address) {
+      return;
+    }
+    if ((await getPasskeyStatus()).linked) {
+      return;
+    }
+    let held: string | null = secretPhrase;
+    Alert.alert(
+      'Also set up passkey recovery?',
+      'Optional. Use your fingerprint or face to recover this wallet on a new phone. Your recovery phrase stays your primary backup.',
+      [
+        {
+          text: 'Not now',
+          style: 'cancel',
+          onPress: () => {
+            held = null;
+          },
+        },
+        {
+          text: 'Set up',
+          onPress: async () => {
+            try {
+              if (held) {
+                await linkPasskey({t: 'phrase', v: held}, address);
+                triggerHaptic.notificationSuccess();
+              }
+            } catch (error) {
+              Alert.alert('Passkey recovery was not set up', passkeyErrorMessage(error));
+            } finally {
+              held = null;
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const handleImportKey = async () => {
     if (loading || !privateKeyInput.trim()) {
       return;
@@ -222,6 +291,7 @@ export default function WalletSetupScreen({navigation}: Props) {
       triggerHaptic.notificationSuccess();
       setAnswers({});
       setStep('username');
+      offerPasskeyRecovery(phrase);
     } catch {
       Alert.alert('Error', 'Could not save your backup status. Please try again.');
     }
@@ -629,6 +699,11 @@ export default function WalletSetupScreen({navigation}: Props) {
           disabled={loading}>
           <Text style={styles.welcomeSecondaryText}>I Have a Recovery Phrase</Text>
         </PressableScale>
+        {isPasskeyRecoveryConfigured() ? (
+          <TouchableOpacity onPress={handleRecoverWithPasskey} disabled={loading} activeOpacity={0.7}>
+            <Text style={styles.welcomeAdvanced}>Recover with Passkey</Text>
+          </TouchableOpacity>
+        ) : null}
         <TouchableOpacity onPress={() => setStep('import')} disabled={loading} activeOpacity={0.7}>
           <Text style={styles.welcomeAdvanced}>Import private key (advanced)</Text>
         </TouchableOpacity>

@@ -155,27 +155,30 @@ export default function SendTapScreen({navigation}: Props) {
 
     const result = await broadcastTapPayment(recipient.receiverAddress, amountWei);
 
-    if (!isMountedRef.current) {
-      return;
-    }
     clearCountdown();
-    setConfirming(false);
-    setConfirmVisible(false);
+    if (isMountedRef.current) {
+      setConfirming(false);
+      setConfirmVisible(false);
+
+      if (!result.txHash) {
+        triggerHaptic.notificationError();
+        setPhase('failed');
+        Alert.alert(
+          'Payment Failed',
+          result.error || 'Could not broadcast the payment.',
+          [{text: 'OK', onPress: () => handleCancel()}],
+        );
+        return;
+      }
+
+      triggerHaptic.notificationSuccess();
+      refreshBalance();
+      setPendingRecipient(null);
+    }
 
     if (!result.txHash) {
-      triggerHaptic.notificationError();
-      setPhase('failed');
-      Alert.alert(
-        'Payment Failed',
-        result.error || 'Could not broadcast the payment.',
-        [{text: 'OK', onPress: () => handleCancel()}],
-      );
       return;
     }
-
-    triggerHaptic.notificationSuccess();
-    refreshBalance();
-    setPendingRecipient(null);
 
     recordTransaction({
       direction: 'sent',
@@ -187,6 +190,9 @@ export default function SendTapScreen({navigation}: Props) {
       txHash: result.txHash,
     });
 
+    if (!isMountedRef.current) {
+      return;
+    }
     navigation.replace('TransactionStatus', {
       txHash: result.txHash,
       amount: amount,

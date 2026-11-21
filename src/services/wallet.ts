@@ -609,11 +609,22 @@ export async function sendPayment(
 }
 
 /**
+ * Outcome of waiting for a receipt. A receipt is the only authoritative signal:
+ *  - `confirmed`: a receipt with status 1.
+ *  - `reverted`: a receipt with status 0. The only case that may be reported as a failure.
+ *  - `timedOut`: no receipt yet. The transaction may still confirm, so it is NOT a failure.
+ */
+export type ReceiptOutcome = {
+  confirmed: boolean;
+  reverted?: boolean;
+  timedOut?: boolean;
+  error?: string;
+};
+
+/**
  * Poll for transaction receipt with Monad-optimized interval (500ms)
  */
-export async function waitForReceipt(
-  txHash: string,
-): Promise<{confirmed: boolean; error?: string}> {
+export async function waitForReceipt(txHash: string): Promise<ReceiptOutcome> {
   const startTime = Date.now();
 
   while (Date.now() - startTime < TX_MAX_WAIT_MS) {
@@ -624,7 +635,7 @@ export async function waitForReceipt(
         if (receipt.status === 1) {
           return {confirmed: true};
         } else {
-          return {confirmed: false, error: 'Transaction reverted on chain'};
+          return {confirmed: false, reverted: true, error: 'Transaction reverted on chain'};
         }
       }
     } catch {
@@ -635,7 +646,30 @@ export async function waitForReceipt(
     await new Promise(resolve => setTimeout(resolve, TX_POLL_INTERVAL_MS));
   }
 
-  return {confirmed: false, error: 'Confirmation timeout — transaction may still confirm'};
+  return {
+    confirmed: false,
+    timedOut: true,
+    error: 'Still confirming. The transaction may still go through.',
+  };
+}
+
+export type ReceiptStatus = 'confirmed' | 'reverted' | 'pending' | 'unknown';
+
+/**
+ * One-shot receipt lookup (no polling) used to reconcile pending history rows.
+ * `pending` = the node has no receipt (yet); `unknown` = the lookup itself failed, so nothing
+ * can be concluded.
+ */
+export async function getReceiptStatus(txHash: string): Promise<ReceiptStatus> {
+  try {
+    const receipt = await withRpcFailover(provider => provider.getTransactionReceipt(txHash));
+    if (!receipt) {
+      return 'pending';
+    }
+    return receipt.status === 1 ? 'confirmed' : 'reverted';
+  } catch {
+    return 'unknown';
+  }
 }
 
 /**

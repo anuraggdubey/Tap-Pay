@@ -104,6 +104,16 @@ export function updateTransactionStatus(txHash: string, status: 'confirmed' | 'f
   listeners.forEach(fn => fn());
 }
 
+const REAL_TX_HASH = /^0x[0-9a-fA-F]{64}$/;
+
+/**
+ * Rows that are still pending and have a real on-chain hash (placeholder hashes such as
+ * "tap-payment" have no receipt to look up).
+ */
+export function getPendingTransactions(): TransactionRecord[] {
+  return historyCache.filter(tx => tx.status === 'pending' && REAL_TX_HASH.test(tx.txHash));
+}
+
 export function subscribeHistory(callback: () => void): () => void {
   listeners.push(callback);
   return () => {

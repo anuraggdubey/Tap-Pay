@@ -55,9 +55,11 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
   const {colors} = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
-  const [status, setStatus] = useState<'pending' | 'confirmed' | 'failed'>(
+  // 'delayed' = no receipt yet after waiting. It is NOT a failure: the payment may still confirm.
+  const [status, setStatus] = useState<'pending' | 'delayed' | 'confirmed' | 'failed'>(
     initialStatus ?? 'pending',
   );
+  const [attempt, setAttempt] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const checkmarkScale = useRef(
     new Animated.Value(initialStatus === 'confirmed' ? 1 : 0),
@@ -91,6 +93,17 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
       useNativeDriver: true,
     }).start();
     refreshBalance();
+  };
+
+  // Timed out without a receipt: keep the history row pending (it is reconciled later).
+  const markDelayed = () => {
+    setStatus('delayed');
+  };
+
+  const checkAgain = () => {
+    triggerHaptic.selection();
+    setStatus('pending');
+    setAttempt(n => n + 1);
   };
 
   const markFailed = (message: string) => {
@@ -135,7 +148,7 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
         }
 
         if (isMounted) {
-          markFailed('Payment not detected yet. It may still arrive shortly.');
+          markDelayed();
         }
         return;
       }
@@ -157,12 +170,16 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
 
         if (result.confirmed) {
           markConfirmed();
-        } else {
+        } else if (result.reverted) {
+          // A reverted receipt is the only authoritative failure.
           markFailed(result.error || 'Transaction reverted');
+        } else {
+          markDelayed();
         }
-      } catch (err: any) {
+      } catch {
+        // Could not reach the network: nothing is known, so do not report a failure.
         if (isMounted) {
-          markFailed(err?.message || 'Failed to poll transaction receipt');
+          markDelayed();
         }
       }
     })();
@@ -170,7 +187,7 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
     return () => {
       isMounted = false;
     };
-  }, [txHash, waitForBalance, expectedAmountWei, address, balance, refreshBalance, initialStatus]);
+  }, [txHash, waitForBalance, expectedAmountWei, address, balance, refreshBalance, initialStatus, attempt]);
 
   const openExplorer = () => {
     if (isRealTxHash) {
@@ -277,6 +294,36 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
               {amount} {displaySymbol}
             </Text>
           </View>
+        </View>
+      </View>
+    );
+  }
+
+  if (status === 'delayed') {
+    return (
+      <View style={[styles.container, {paddingTop: insets.top + 40}]}>
+        {background}
+        <View style={styles.centerState}>
+          <PendingPulse accent={colors.accent} />
+          <Text style={styles.stateTitle}>Still confirming</Text>
+          <Text style={styles.stateHint}>
+            {isReceived
+              ? 'We have not seen this payment yet. It may still arrive. Check History in a moment.'
+              : 'This is taking longer than usual. Your payment may still go through, so please do not send it again. It will update in History once the network confirms it.'}
+          </Text>
+          <View style={styles.amountChip}>
+            <Text style={styles.amountChipText}>
+              {amount} {displaySymbol}
+            </Text>
+          </View>
+        </View>
+        <View style={[styles.actions, {paddingBottom: insets.bottom + 20}]}>
+          <PressableScale style={styles.secondaryBtn} contentStyle={styles.btnInner} onPress={checkAgain}>
+            <Text style={styles.secondaryBtnText}>Check Again</Text>
+          </PressableScale>
+          <PressableScale style={styles.primaryBtn} contentStyle={styles.btnInner} onPress={() => navigation.popToTop()}>
+            <Text style={styles.primaryBtnText}>Done</Text>
+          </PressableScale>
         </View>
       </View>
     );
@@ -434,6 +481,8 @@ function createStyles(colors: AppColors) {
     explorerLink: {flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 18},
     explorerLinkText: {fontSize: 15, fontWeight: '400', color: colors.accent},
     actions: {paddingHorizontal: 20, paddingTop: 8},
+    secondaryBtn: {borderRadius: 26, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginBottom: 12},
+    secondaryBtnText: {fontSize: 17, fontWeight: '600', color: colors.text},
     primaryBtn: {borderRadius: 26, overflow: 'hidden', backgroundColor: colors.text},
     btnInner: {height: 52, alignItems: 'center', justifyContent: 'center'},
     primaryBtnText: {fontSize: 17, fontWeight: '600', color: colors.background},

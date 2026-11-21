@@ -26,6 +26,7 @@ import {updateTransactionStatus} from '../services/history';
 import {ExternalLinkIcon, ContactlessWave} from '../components/AppIcons';
 import PressableScale from '../components/PressableScale';
 import {GradientFill} from '../components/Gradient';
+import AmbientBackground from '../components/AmbientBackground';
 import SuccessBurst from '../components/SuccessBurst';
 import {playSound} from '../utils/sounds';
 import {useTheme} from '../context/ThemeContext';
@@ -257,23 +258,7 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
     }
   }, [status, initialStatus]);
 
-  const background = (
-    <>
-      <GradientFill
-        colors={[colors.background, colors.background]}
-        angle={90}
-        glows={[
-          {
-            color: status === 'failed' ? '#FF5C5C' : isReceived ? '#2DD4A0' : '#3D7BFF',
-            cx: 0.5,
-            cy: 0.18,
-            r: 0.75,
-            opacity: 0.22,
-          },
-        ]}
-      />
-    </>
-  );
+  const background = <AmbientBackground />;
 
   if (status === 'pending') {
     return (
@@ -431,9 +416,11 @@ function createStyles(colors: AppColors) {
     heroSub: {fontSize: 14, color: colors.textMuted, marginTop: 4},
     ticket: {
       marginTop: 18,
-      borderRadius: 14,
-      backgroundColor: colors.surfaceSolid,
-      paddingHorizontal: 16,
+      borderRadius: 26,
+      backgroundColor: 'rgba(255,255,255,0.08)',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.18)',
+      paddingHorizontal: 18,
     },
     ticketRow: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingVertical: 15, gap: 16},
     ticketRowBorder: {borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.separator},
@@ -447,8 +434,8 @@ function createStyles(colors: AppColors) {
     explorerLink: {flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 18},
     explorerLinkText: {fontSize: 15, fontWeight: '400', color: colors.accent},
     actions: {paddingHorizontal: 20, paddingTop: 8},
-    primaryBtn: {borderRadius: 14, overflow: 'hidden', backgroundColor: colors.text},
-    btnInner: {height: 50, alignItems: 'center', justifyContent: 'center'},
+    primaryBtn: {borderRadius: 26, overflow: 'hidden', backgroundColor: colors.text},
+    btnInner: {height: 52, alignItems: 'center', justifyContent: 'center'},
     primaryBtnText: {fontSize: 17, fontWeight: '600', color: colors.background},
   });
 }

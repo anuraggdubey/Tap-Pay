@@ -8,6 +8,7 @@ import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import {MONAD_CONFIG} from '../config/monad';
 import {useTheme} from '../context/ThemeContext';
+import AmbientBackground from '../components/AmbientBackground';
 import {Group, Row} from '../components/IosList';
 import type {AppColors} from '../theme';
 
@@ -25,7 +26,9 @@ export default function NetworkScreen(_props: Props) {
   const rpc = MONAD_CONFIG.rpcUrls;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <View style={styles.container}>
+      <AmbientBackground />
+      <ScrollView contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <View style={styles.badge}>
           <Text style={styles.badgeText}>◍</Text>
@@ -67,7 +70,8 @@ export default function NetworkScreen(_props: Props) {
         <Row title="Fallback 1" subtitle={rpc.fallback1} chevron={false} right={<Dot color={colors.warning} />} />
         <Row title="Fallback 2" subtitle={rpc.fallback2} chevron={false} right={<Dot color={colors.warning} />} />
       </Group>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 

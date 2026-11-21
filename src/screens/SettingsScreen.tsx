@@ -17,6 +17,9 @@ import {WalletError} from '../services/wallet';
 import {getSoundEnabled, setSoundEnabled, playSound} from '../utils/sounds';
 import {Group, Row, ToggleRow, LargeTitle, tileColors} from '../components/IosList';
 import PressableScale from '../components/PressableScale';
+import GlassSurface from '../components/GlassSurface';
+import AmbientBackground from '../components/AmbientBackground';
+
 import type {AppColors} from '../theme';
 
 type Props = {
@@ -70,12 +73,13 @@ export default function SettingsScreen({navigation}: Props) {
 
   return (
     <View style={styles.screen}>
+      <AmbientBackground />
       <ScrollView
         contentContainerStyle={[styles.content, {paddingTop: insets.top + 8, paddingBottom: insets.bottom + 120}]}
         showsVerticalScrollIndicator={false}>
         <LargeTitle>Settings</LargeTitle>
 
-        <View style={styles.profileGroup}>
+        <GlassSurface radius={26} style={styles.profileGroup}>
           <PressableScale scaleTo={0.99} onPress={() => navigation.navigate('AccountInfo')}>
             <View style={styles.profile}>
               <View style={styles.avatar}>
@@ -90,7 +94,7 @@ export default function SettingsScreen({navigation}: Props) {
               <Text style={styles.chevron}>›</Text>
             </View>
           </PressableScale>
-        </View>
+        </GlassSurface>
 
         <Group title="Wallet">
           <Row
@@ -160,7 +164,7 @@ function createStyles(c: AppColors) {
     screen: {flex: 1, backgroundColor: c.background},
     flex: {flex: 1},
     content: {paddingHorizontal: 20},
-    profileGroup: {marginTop: 12, borderRadius: 14, backgroundColor: c.surfaceSolid, overflow: 'hidden'},
+    profileGroup: {marginTop: 12},
     profile: {flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16},
     avatar: {width: 60, height: 60, borderRadius: 30, backgroundColor: c.surfaceElevated, alignItems: 'center', justifyContent: 'center'},
     avatarText: {fontSize: 26, fontWeight: '500', color: c.text},

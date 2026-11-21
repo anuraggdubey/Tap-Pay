@@ -26,6 +26,8 @@ import {
 import {initNfc, isNfcEnabled, isNfcSupported} from '../services/nfcReader';
 import PressableScale from '../components/PressableScale';
 import FadeInView from '../components/FadeInView';
+import GlassSurface from '../components/GlassSurface';
+import AmbientBackground from '../components/AmbientBackground';
 import SendMethodSheet, {SendMethod} from '../components/SendMethodSheet';
 import {preloadSounds} from '../utils/sounds';
 import type {AppColors} from '../theme';
@@ -122,6 +124,7 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.screen}>
+      <AmbientBackground />
       <ScrollView
         contentContainerStyle={[
           styles.content,
@@ -149,7 +152,7 @@ export default function HomeScreen() {
         </FadeInView>
 
         <FadeInView delay={40} translateY={10}>
-          <View style={styles.card}>
+          <GlassSurface radius={30} style={styles.card}>
             <View style={styles.cardTop}>
               <View style={styles.brandRow}>
                 <ContactlessWave size={20} color={colors.text} />
@@ -184,7 +187,7 @@ export default function HomeScreen() {
                 </Text>
               </PressableScale>
             </View>
-          </View>
+          </GlassSurface>
         </FadeInView>
 
         <FadeInView delay={80} translateY={10}>
@@ -225,7 +228,7 @@ export default function HomeScreen() {
               <Text style={styles.link}>See All</Text>
             </PressableScale>
           </View>
-          <View style={styles.group}>
+          <GlassSurface radius={24} style={styles.group}>
             {recentTx.length === 0 ? (
               <View style={styles.empty}>
                 <Text style={styles.emptyTitle}>No Transactions</Text>
@@ -257,7 +260,7 @@ export default function HomeScreen() {
                 );
               })
             )}
-          </View>
+          </GlassSurface>
         </FadeInView>
       </ScrollView>
 
@@ -277,12 +280,8 @@ function createStyles(c: AppColors) {
     avatarText: {fontSize: 15, fontWeight: '600', color: c.text},
     card: {
       height: 190,
-      borderRadius: 20,
-      padding: 20,
+      padding: 22,
       justifyContent: 'space-between',
-      backgroundColor: c.surfaceSolid,
-      borderWidth: StyleSheet.hairlineWidth * 2,
-      borderColor: c.border,
     },
     cardTop: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'},
     brandRow: {flexDirection: 'row', alignItems: 'center', gap: 8},
@@ -295,17 +294,17 @@ function createStyles(c: AppColors) {
     cardBottom: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'},
     meta: {fontSize: 13, color: c.textMuted},
     actions: {flexDirection: 'row', gap: 12},
-    btn: {height: 50, borderRadius: 14, alignItems: 'center', justifyContent: 'center'},
+    btn: {height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center'},
     btnPrimary: {backgroundColor: c.text},
     btnPrimaryText: {fontSize: 17, fontWeight: '600', color: c.background},
-    btnSecondary: {backgroundColor: c.surfaceElevated},
+    btnSecondary: {backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)'},
     btnSecondaryText: {fontSize: 17, fontWeight: '600', color: c.text},
     nfcRow: {flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 14},
     dot: {width: 7, height: 7, borderRadius: 4},
     nfcText: {fontSize: 13, color: c.textMuted},
     sectionHead: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8, marginTop: 6},
     sectionTitle: {fontSize: 22, fontWeight: '700', color: c.text, letterSpacing: 0.3},
-    group: {borderRadius: 14, backgroundColor: c.surfaceSolid, overflow: 'hidden'},
+    group: {},
     txRow: {flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12},
     txBorder: {borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.separator},
     txIcon: {width: 40, height: 40, borderRadius: 20, backgroundColor: c.surfaceElevated, alignItems: 'center', justifyContent: 'center'},

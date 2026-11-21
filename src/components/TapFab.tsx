@@ -60,6 +60,6 @@ export default function TapFab({onPress, reduced = false}: {onPress: () => void;
 const s = StyleSheet.create({
   wrap: {width: 68, height: 68, alignItems: 'center', justifyContent: 'center', marginTop: -28},
   ring: {position: 'absolute', width: 68, height: 68, borderRadius: 34, backgroundColor: '#0A84FF'},
-  btn: {width: 68, height: 68, borderRadius: 34, overflow: 'hidden'},
+  btn: {width: 68, height: 68, borderRadius: 34, overflow: 'hidden', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.5)'},
   btnInner: {width: 68, height: 68, alignItems: 'center', justifyContent: 'center'},
 });

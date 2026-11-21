@@ -41,6 +41,7 @@ import {
 } from '../utils/recovery';
 import {triggerHaptic} from '../utils/haptics';
 import WelcomeHero from '../components/WelcomeHero';
+import AmbientBackground from '../components/AmbientBackground';
 import PressableScale from '../components/PressableScale';
 
 type Props = {
@@ -607,6 +608,7 @@ export default function WalletSetupScreen({navigation}: Props) {
   // ── Welcome ──────────────────────────────────────────────────────────────
   return (
     <View style={[styles.welcomeRoot, {paddingTop: insets.top + 12, paddingBottom: insets.bottom + 20}]}>
+      <AmbientBackground />
       <WelcomeHero />
       <View style={styles.welcomeCta}>
         <PressableScale
@@ -642,11 +644,11 @@ function createStyles(colors: AppColors) {
   return StyleSheet.create({
   welcomeRoot: {flex: 1, backgroundColor: '#000000', paddingHorizontal: 24},
   welcomeCta: {gap: 12, alignItems: 'center'},
-  welcomePrimary: {width: '100%', borderRadius: 14, overflow: 'hidden', backgroundColor: '#FFFFFF'},
-  welcomePrimaryInner: {height: 52, alignItems: 'center', justifyContent: 'center'},
+  welcomePrimary: {width: '100%', borderRadius: 28, overflow: 'hidden', backgroundColor: '#FFFFFF'},
+  welcomePrimaryInner: {height: 56, alignItems: 'center', justifyContent: 'center'},
   welcomePrimaryText: {fontSize: 17, fontWeight: '600', color: '#000000'},
-  welcomeSecondary: {width: '100%', borderRadius: 14, backgroundColor: '#1C1C1E'},
-  welcomeSecondaryInner: {height: 52, alignItems: 'center', justifyContent: 'center'},
+  welcomeSecondary: {width: '100%', borderRadius: 28, backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)'},
+  welcomeSecondaryInner: {height: 56, alignItems: 'center', justifyContent: 'center'},
   welcomeSecondaryText: {fontSize: 17, fontWeight: '600', color: '#FFFFFF'},
   welcomeAdvanced: {fontSize: 15, fontWeight: '400', color: '#0A84FF', paddingVertical: 6},
   welcomeFine: {fontSize: 12, color: '#636366', textAlign: 'center'},

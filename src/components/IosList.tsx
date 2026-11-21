@@ -7,6 +7,7 @@ import React, {useMemo} from 'react';
 import {StyleSheet, Switch, Text, View} from 'react-native';
 import {useTheme} from '../context/ThemeContext';
 import PressableScale from './PressableScale';
+import GlassSurface from './GlassSurface';
 import {triggerHaptic} from '../utils/haptics';
 import type {AppColors} from '../theme';
 
@@ -34,14 +35,14 @@ export function Group({
   return (
     <View style={s.groupWrap}>
       {!!title && <Text style={s.groupTitle}>{title}</Text>}
-      <View style={s.group}>
+      <GlassSurface radius={22} style={s.group}>
         {items.map((child, i) => (
           <React.Fragment key={i}>
             {i > 0 && <View style={s.sep} />}
             {child}
           </React.Fragment>
         ))}
-      </View>
+      </GlassSurface>
       {!!footer && <Text style={s.footer}>{footer}</Text>}
     </View>
   );
@@ -162,11 +163,11 @@ function createStyles(c: AppColors) {
     flex: {flex: 1},
     groupWrap: {marginTop: 22},
     groupTitle: {fontSize: 13, color: c.textMuted, textTransform: 'uppercase', marginLeft: 16, marginBottom: 7, letterSpacing: 0.2},
-    group: {borderRadius: 14, backgroundColor: c.surfaceSolid, overflow: 'hidden'},
-    sep: {height: StyleSheet.hairlineWidth, backgroundColor: c.separator, marginLeft: 16},
+    group: {},
+    sep: {height: StyleSheet.hairlineWidth, backgroundColor: c.separator, marginLeft: 18, marginRight: 18},
     footer: {fontSize: 13, color: c.textMuted, marginHorizontal: 16, marginTop: 7, lineHeight: 18},
     row: {flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 11, minHeight: 48},
-    tile: {width: 30, height: 30, borderRadius: 7, alignItems: 'center', justifyContent: 'center'},
+    tile: {width: 30, height: 30, borderRadius: 9, borderWidth: 1, borderColor: 'rgba(255,255,255,0.28)', alignItems: 'center', justifyContent: 'center'},
     glyph: {fontSize: 16, color: '#FFFFFF', fontWeight: '600'},
     title: {fontSize: 17, color: c.text},
     subtitle: {fontSize: 13, color: c.textMuted, marginTop: 1},

@@ -23,6 +23,7 @@ import {RootStackParamList} from '../navigation/AppNavigator';
 import {triggerHaptic} from '../utils/haptics';
 import {validateUsername} from '../utils/validation';
 import {resolveUsername, registerUsername} from '../services/registry';
+import AmbientBackground from '../components/AmbientBackground';
 import {Group, Row, tileColors} from '../components/IosList';
 import PressableScale from '../components/PressableScale';
 import type {AppColors} from '../theme';
@@ -165,7 +166,9 @@ export default function AccountInfoScreen(_props: Props) {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <View style={styles.container}>
+      <AmbientBackground />
+      <ScrollView contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{(username || 'U').charAt(0).toUpperCase()}</Text>
@@ -245,7 +248,8 @@ export default function AccountInfoScreen(_props: Props) {
           </Animated.View>
         ) : null}
       </Group>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 

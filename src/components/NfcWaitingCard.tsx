@@ -11,6 +11,7 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {ContactlessWave, CrossIcon, ReceiveTapIcon} from './AppIcons';
 import PressableScale from './PressableScale';
 import {GradientFill} from './Gradient';
+import AmbientBackground from './AmbientBackground';
 import SuccessBurst from './SuccessBurst';
 import {useTheme} from '../context/ThemeContext';
 import {triggerHaptic} from '../utils/haptics';
@@ -237,14 +238,7 @@ export default function NfcWaitingCard({
 
   return (
     <View style={[s2.root, {paddingTop: insets.top}]}>
-      <GradientFill
-        colors={[colors.background, colors.background]}
-        angle={90}
-        glows={[
-          {color: gradient[0], cx: 0.5, cy: 0.45, r: 0.7, opacity: 0.2},
-          {color: gradient[1], cx: 0.9, cy: 0.05, r: 0.5, opacity: 0.14},
-        ]}
-      />
+      <AmbientBackground />
 
       <View style={s2.header}>
         <PressableScale
@@ -319,10 +313,10 @@ function createStyles(c: AppColors) {
   return StyleSheet.create({
     root: {flex: 1, backgroundColor: c.background, paddingHorizontal: 20, overflow: 'hidden'},
     header: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12},
-    closeBtn: {width: 32, height: 32, borderRadius: 16, backgroundColor: c.surfaceElevated, overflow: 'hidden'},
+    closeBtn: {width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', overflow: 'hidden'},
     closeBtnInner: {width: 32, height: 32, alignItems: 'center', justifyContent: 'center'},
     headerTitle: {fontSize: 16, fontWeight: '700', color: c.text, letterSpacing: -0.2},
-    badge: {flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: c.surfaceElevated},
+    badge: {flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)'},
     badgeDot: {width: 7, height: 7, borderRadius: 4},
     badgeText: {fontSize: 12, fontWeight: '600', color: c.text},
     amountWrap: {alignItems: 'center', marginTop: 18},
@@ -333,7 +327,7 @@ function createStyles(c: AppColors) {
     title: {marginTop: 6, fontSize: 22, fontWeight: '700', color: c.text, textAlign: 'center', letterSpacing: 0.3},
     sub: {marginTop: 6, fontSize: 14, color: c.textMuted, textAlign: 'center', lineHeight: 20, maxWidth: 280},
     footer: {paddingTop: 8},
-    gasRow: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: c.surfaceSolid, borderRadius: 14, paddingVertical: 14, paddingHorizontal: 16, marginBottom: 12},
+    gasRow: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.16)', borderRadius: 22, paddingVertical: 14, paddingHorizontal: 16, marginBottom: 12},
     gasText: {fontSize: 12, fontWeight: '600', color: c.textMuted},
   });
 }

@@ -7,6 +7,7 @@ import {View, Text, StyleSheet, ScrollView} from 'react-native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import {useTheme} from '../context/ThemeContext';
+import AmbientBackground from '../components/AmbientBackground';
 import {Group, Row, tileColors} from '../components/IosList';
 import {ContactlessWave} from '../components/AppIcons';
 import type {AppColors} from '../theme';
@@ -20,7 +21,9 @@ export default function AboutScreen(_props: Props) {
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <View style={styles.container}>
+      <AmbientBackground />
+      <ScrollView contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <View style={styles.icon}>
           <ContactlessWave size={44} color="#FFFFFF" />
@@ -65,7 +68,8 @@ export default function AboutScreen(_props: Props) {
       </Group>
 
       <Text style={styles.footer}>TapPay · Open-source contactless payments{'\n'}Built for the Monad ecosystem</Text>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 

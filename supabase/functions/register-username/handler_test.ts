@@ -91,11 +91,29 @@ Deno.test('maps a unique-violation to taken', async () => {
   assert(res.status === 409 && (await res.json()).reason === 'taken');
 });
 
-Deno.test('release deletes only the signer-owned row', async () => {
-  const {handler, calls} = setup([new Response(null, {status: 204})]);
+Deno.test('release deletes only the signed username owned by the signer', async () => {
+  const {handler, calls} = setup([json([{username: 'alice'}])]);
   const res = await handler(request(body({action: 'release'})));
   assert(res.status === 200);
-  assert(calls[0].url.includes(`wallet_address=eq.${WALLET}`) && calls[0].init?.method === 'DELETE');
+  assert(calls[0].init?.method === 'DELETE');
+  assert(calls[0].url.includes(`wallet_address=eq.${WALLET}`));
+  // Scoped to the username in the signed proof, not just the wallet.
+  assert(calls[0].url.includes('normalized_username=eq.alice'));
+});
+
+Deno.test('release normalizes look-alike characters like registration does', async () => {
+  const {handler, calls} = setup([json([{username: 'al1c3'}])]);
+  const res = await handler(request(body({action: 'release', username: 'al1c3'})));
+  assert(res.status === 200);
+  // 1 -> l, matching normalizeUsername() used at registration.
+  assert(calls[0].url.includes('normalized_username=eq.allc3'));
+});
+
+Deno.test('release succeeds only when a row was actually deleted', async () => {
+  // A proof for a username the wallet does not hold deletes nothing and reports not found.
+  const {handler} = setup([json([])]);
+  const res = await handler(request(body({action: 'release', username: 'bob'})));
+  assert(res.status === 404 && (await res.json()).reason === 'not_found');
 });
 
 Deno.test('rejects malformed, stale and wrong-chain requests without db or verify', async () => {

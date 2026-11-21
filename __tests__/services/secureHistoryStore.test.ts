@@ -15,6 +15,7 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   __esModule: true,
   default: {
     getItem: jest.fn(async (k: string) => (k in mockAsync ? mockAsync[k] : null)),
+    getAllKeys: jest.fn(async () => Object.keys(mockAsync)),
     setItem: jest.fn(async (k: string, v: string) => {
       mockAsync[k] = v;
     }),
@@ -192,6 +193,41 @@ describe('secureHistoryStore', () => {
 });
 
 describe('history service uses the encrypted store', () => {
+  const A = '0x1111111111111111111111111111111111111111';
+  const B = '0x2222222222222222222222222222222222222222';
+
+  it('separates wallets across restart and authenticates the owning address', async () => {
+    let store = freshStore();
+    await store.saveHistoryJson(SAMPLE, A);
+    await expect(store.loadHistoryJson(B)).resolves.toBeNull();
+    const other = SAMPLE.replace('rhea', 'bob');
+    await store.saveHistoryJson(other, B);
+    store = freshStore();
+    await expect(store.loadHistoryJson(A)).resolves.toBe(SAMPLE);
+    await expect(store.loadHistoryJson(B)).resolves.toBe(other);
+    mockAsync[`${ENC}:${B}`] = mockAsync[`${ENC}:${A}`];
+    await expect(store.loadHistoryJson(B)).resolves.toBeNull();
+    await expect(store.loadHistoryJson(A)).resolves.toBe(SAMPLE);
+  });
+
+  it('does not assign unowned encrypted or legacy rows to an imported wallet', async () => {
+    const store = freshStore();
+    await store.saveHistoryJson(SAMPLE);
+    mockAsync[LEGACY] = SAMPLE;
+    await expect(store.loadHistoryJson(B)).resolves.toBeNull();
+    expect(mockAsync[ENC]).toBeUndefined();
+    expect(mockAsync[LEGACY]).toBeUndefined();
+  });
+
+  it('removes wallet-scoped ciphertexts as well when clearing all history', async () => {
+    const store = freshStore();
+    await store.saveHistoryJson(SAMPLE, A);
+    await store.saveHistoryJson(SAMPLE, B);
+    await store.clearHistoryStore();
+    expect(mockAsync[`${ENC}:${A}`]).toBeUndefined();
+    expect(mockAsync[`${ENC}:${B}`]).toBeUndefined();
+  });
+
   it('recordTransaction persists encrypted and a restart reads it back', async () => {
     jest.resetModules();
     const history = require('../../src/services/history');

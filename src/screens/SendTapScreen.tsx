@@ -178,6 +178,7 @@ export default function SendTapScreen({navigation}: Props) {
     setPendingRecipient(null);
 
     recordTransaction({
+      walletAddress: address,
       direction: 'sent',
       counterparty: recipient.receiverAddress,
       counterpartyUsername: recipient.receiverUsername,

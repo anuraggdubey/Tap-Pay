@@ -27,6 +27,7 @@ import {
 } from '../utils/recovery';
 import {reverseResolve} from '../services/registry';
 import {getTokenBalance} from '../services/tokens/tokenBalance';
+import {setHistoryWallet} from '../services/walletHistory';
 
 const USERNAME_STORAGE_KEY = '@tappay_username';
 const BACKUP_VERIFIED_KEY = '@tappay_backup_verified';
@@ -97,6 +98,7 @@ export function WalletProvider({children}: {children: ReactNode}) {
 
   // Load the wallet from secure storage (on mount, and when the user retries unlocking)
   const initWallet = useCallback(async () => {
+    setHistoryWallet(null);
     setWalletLocked(false);
     try {
       const exists = await hasWallet();
@@ -109,6 +111,7 @@ export function WalletProvider({children}: {children: ReactNode}) {
           setWalletLocked(true);
           return;
         }
+        setHistoryWallet(addr);
         setAddress(addr);
         setIsInitialized(true);
 
@@ -209,6 +212,7 @@ export function WalletProvider({children}: {children: ReactNode}) {
       } else {
         await AsyncStorage.removeItem(BACKUP_VERIFIED_KEY);
       }
+      setHistoryWallet(newAddress);
       setBackupVerified(verified);
       setAddress(newAddress);
       setIsInitialized(true);
@@ -292,6 +296,7 @@ export function WalletProvider({children}: {children: ReactNode}) {
     try {
       const deleted = await deleteWallet();
       if (deleted) {
+        setHistoryWallet(null);
         setAddress(null);
         setBalance(0n);
         setAusdBalance(0n);

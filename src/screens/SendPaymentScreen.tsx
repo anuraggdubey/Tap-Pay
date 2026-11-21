@@ -264,7 +264,7 @@ export default function SendPaymentScreen({navigation}: Props) {
 
   // Confirm and broadcast
   const handleConfirmSend = async () => {
-    if (!resolvedAddress || !balanceCheckData) {
+    if (!resolvedAddress || !balanceCheckData || !address) {
       return;
     }
 
@@ -281,6 +281,7 @@ export default function SendPaymentScreen({navigation}: Props) {
       if (result.success && result.txHash) {
         refreshBalance();
         recordTransaction({
+          walletAddress: address,
           direction: 'sent',
           counterparty: resolvedAddress,
           counterpartyUsername: resolvedUsername || undefined,

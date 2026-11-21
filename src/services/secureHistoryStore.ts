@@ -77,14 +77,22 @@ function getKey(create: boolean): Promise<Uint8Array | null> {
   return run;
 }
 
-function encrypt(json: string, key: Uint8Array): string {
+function storageKey(walletAddress?: string): string {
+  return walletAddress ? `${ENCRYPTED_STORAGE_KEY}:${walletAddress.toLowerCase()}` : ENCRYPTED_STORAGE_KEY;
+}
+
+function additionalData(walletAddress?: string): Uint8Array {
+  return walletAddress ? ethers.toUtf8Bytes(`tappay-history|v1|${walletAddress.toLowerCase()}`) : AAD;
+}
+
+function encrypt(json: string, key: Uint8Array, walletAddress?: string): string {
   const nonce = ethers.randomBytes(NONCE_BYTES);
-  const ciphertext = gcm(key, nonce, AAD).encrypt(ethers.toUtf8Bytes(json));
+  const ciphertext = gcm(key, nonce, additionalData(walletAddress)).encrypt(ethers.toUtf8Bytes(json));
   const envelope: Envelope = {v: FORMAT_VERSION, n: ethers.encodeBase64(nonce), c: ethers.encodeBase64(ciphertext)};
   return JSON.stringify(envelope);
 }
 
-function decrypt(stored: string, key: Uint8Array): string | null {
+function decrypt(stored: string, key: Uint8Array, walletAddress?: string): string | null {
   try {
     const envelope = JSON.parse(stored) as Envelope;
     if (envelope?.v !== FORMAT_VERSION || typeof envelope.n !== 'string' || typeof envelope.c !== 'string') {
@@ -94,7 +102,7 @@ function decrypt(stored: string, key: Uint8Array): string | null {
     if (nonce.length !== NONCE_BYTES) {
       return null;
     }
-    return ethers.toUtf8String(gcm(key, nonce, AAD).decrypt(ethers.decodeBase64(envelope.c)));
+    return ethers.toUtf8String(gcm(key, nonce, additionalData(walletAddress)).decrypt(ethers.decodeBase64(envelope.c)));
   } catch {
     return null;
   }
@@ -104,31 +112,42 @@ function decrypt(stored: string, key: Uint8Array): string | null {
  * Persist the history JSON encrypted. Throws if it cannot be encrypted (nothing is written in
  * plaintext). Removes the legacy plaintext copy once the encrypted copy is stored.
  */
-export async function saveHistoryJson(json: string): Promise<void> {
+export async function saveHistoryJson(json: string, walletAddress?: string): Promise<void> {
   const key = await getKey(true);
   if (!key) {
     throw new Error('History key unavailable');
   }
-  await AsyncStorage.setItem(ENCRYPTED_STORAGE_KEY, encrypt(json, key));
+  await AsyncStorage.setItem(storageKey(walletAddress), encrypt(json, key, walletAddress));
   await AsyncStorage.removeItem(LEGACY_STORAGE_KEY);
+  if (walletAddress) {
+    await AsyncStorage.removeItem(ENCRYPTED_STORAGE_KEY);
+  }
 }
 
 /**
  * Load the history JSON. Migrates a legacy plaintext copy on first run. Returns null when there
  * is nothing readable.
  */
-export async function loadHistoryJson(): Promise<string | null> {
-  const stored = await AsyncStorage.getItem(ENCRYPTED_STORAGE_KEY);
+export async function loadHistoryJson(walletAddress?: string): Promise<string | null> {
+  if (walletAddress) {
+    // Unscoped rows have no provable owner; never assign them to the next imported wallet.
+    await AsyncStorage.removeItem(LEGACY_STORAGE_KEY);
+    await AsyncStorage.removeItem(ENCRYPTED_STORAGE_KEY);
+  }
+  const stored = await AsyncStorage.getItem(storageKey(walletAddress));
   if (stored) {
     const key = await getKey(false);
-    const json = key ? decrypt(stored, key) : null;
+    const json = key ? decrypt(stored, key, walletAddress) : null;
     if (json === null) {
       // Tampered, or the key is gone: unrecoverable. Drop it rather than crash or loop.
-      await AsyncStorage.removeItem(ENCRYPTED_STORAGE_KEY);
+      await AsyncStorage.removeItem(storageKey(walletAddress));
     }
     return json;
   }
 
+  if (walletAddress) {
+    return null;
+  }
   const legacy = await AsyncStorage.getItem(LEGACY_STORAGE_KEY);
   if (!legacy) {
     return null;
@@ -144,6 +163,8 @@ export async function loadHistoryJson(): Promise<string | null> {
 /** Remove every stored copy of the history and its key. */
 export async function clearHistoryStore(): Promise<void> {
   keyValue = null;
+  const keys = await AsyncStorage.getAllKeys();
+  await Promise.all(keys.filter(key => key.startsWith(`${ENCRYPTED_STORAGE_KEY}:`)).map(key => AsyncStorage.removeItem(key)));
   await AsyncStorage.removeItem(ENCRYPTED_STORAGE_KEY);
   await AsyncStorage.removeItem(LEGACY_STORAGE_KEY);
   try {

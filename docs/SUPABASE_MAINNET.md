@@ -10,6 +10,8 @@ TapPay uses **one** username table for **Monad Mainnet (chain ID 143)**. Wallet 
 | `supabase/waitlist.sql` | Fresh waitlist setup | Creates the hardened waitlist and rate limiter; no direct public inserts |
 | `supabase/migrations/002_harden_anon_writes.sql` | Yes, after 001 and waitlist setup | Idempotent; tightens new writes without rejecting legacy rows |
 | `supabase/migrations/004_username_ownership_proof.sql` | Yes, after 001/002 | Idempotent; revokes direct anon writes to `usernames` so only the signed Edge Function can write |
+| `supabase/migrations/009_waitlist_double_opt_in.sql` | Yes | Idempotent; adds waitlist confirmation columns, the `waitlist_subscribers` view (confirmed only) and the issue/confirm functions. **Existing signups are not subscribers until they confirm** |
+| `supabase functions deploy waitlist-signup waitlist-confirm` | After migration 009 | Set `EMAIL_API_KEY`, `WAITLIST_FROM_EMAIL` and `WAITLIST_CONFIRM_URL` (https page, e.g. `https://<site>/confirm`) on `waitlist-signup` to send confirmation emails (optional `EMAIL_API_URL`, default Resend). Without them signups are stored unconfirmed and no email is sent. `waitlist-confirm` needs `ALLOWED_ORIGINS` and `WAITLIST_IP_SALT` |
 | `supabase functions deploy register-username` | After migration 004 | Verifies the wallet signature for register/release; set `ALLOWED_ORIGINS` and the service role is provided by Supabase |
 | `npm run deploy:mainnet` / `scripts/deploy-mainnet.js` | **No** unless redeploying contracts | Would deploy **new** contracts, not Supabase |
 | `scripts/deploy.js` (testnet) | **No** for production | Testnet-only Hardhat script |

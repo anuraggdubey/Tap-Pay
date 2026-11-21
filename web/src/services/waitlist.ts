@@ -45,3 +45,35 @@ export async function joinWaitlist(name: string, email: string, token: string): 
 
   return { ok: true };
 }
+
+export type ConfirmWaitlistResult =
+  | { ok: true }
+  | { ok: false; error: 'invalid' | 'network'; message: string };
+
+const TOKEN_RE = /^[A-Za-z0-9_-]{43}$/;
+
+/** Completes double opt-in with the token from the confirmation email. */
+export async function confirmWaitlist(token: string): Promise<ConfirmWaitlistResult> {
+  const invalid: ConfirmWaitlistResult = {
+    ok: false, error: 'invalid', message: 'This confirmation link is invalid or has expired.',
+  };
+  if (!TOKEN_RE.test(token)) {
+    return invalid;
+  }
+  const failure: ConfirmWaitlistResult = {
+    ok: false, error: 'network', message: 'Unable to confirm right now. Please try again later.',
+  };
+  if (!supabase) {
+    return failure;
+  }
+  try {
+    const { data, error } = await supabase.functions.invoke('waitlist-confirm', { body: { token } });
+    if (!error && data?.ok === true) {
+      return { ok: true };
+    }
+    const status = (error as { context?: { status?: number } } | null)?.context?.status;
+    return status === 400 ? invalid : failure;
+  } catch {
+    return failure;
+  }
+}

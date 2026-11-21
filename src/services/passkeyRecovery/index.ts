@@ -146,7 +146,7 @@ export async function linkPasskey(
  */
 export async function recoverWithPasskey(
   deps: Deps = defaultDeps(),
-): Promise<{secret: RecoverySecret; address: string}> {
+): Promise<{secret: RecoverySecret; address: string; credentialId: string}> {
   if (!isPasskeyRecoveryConfigured()) {
     throw new PasskeyRecoveryError('NOT_CONFIGURED', 'Passkey recovery is not available yet.');
   }
@@ -170,7 +170,8 @@ export async function recoverWithPasskey(
     if (!address || address.toLowerCase() !== stored.walletAddress.toLowerCase()) {
       throw new PasskeyRecoveryError('DECRYPT_FAILED', 'Could not unlock the recovery data.');
     }
-    return {secret, address};
+    await setStatus({credentialId, updatedAt: stored.updatedAt ?? deps.now().toISOString()});
+    return {secret, address, credentialId};
   } finally {
     prfOutput.fill(0);
   }

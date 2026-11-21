@@ -194,6 +194,8 @@ describe('link and recover', () => {
     const recovered = await recoverWithPasskey(t.deps);
     expect(recovered.address).toBe(t.address);
     expect(recovered.secret).toEqual({t: 'phrase', v: t.phrase});
+    // The recovered phone knows a passkey is linked, so it can update or remove it.
+    expect((await getPasskeyStatus()).linked).toBe(true);
   });
 
   it('supports wallets imported from a raw private key', async () => {

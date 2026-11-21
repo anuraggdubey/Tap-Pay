@@ -143,7 +143,7 @@ export default function ConfirmPaymentModal({
             onPress={onConfirm}
             disabled={loading}>
             {loading ? (
-              <ActivityIndicator color="#FFFFFF" />
+              <ActivityIndicator color={colors.background} />
             ) : (
               <Text style={styles.confirmText}>Confirm & Pay</Text>
             )}
@@ -162,140 +162,53 @@ export default function ConfirmPaymentModal({
   );
 }
 
-function createStyles(colors: AppColors, glass: AppGlass, isDark: boolean) {
+function createStyles(colors: AppColors, _glass: AppGlass, isDark: boolean) {
+  const glass = isDark ? 'rgba(255,255,255,0.08)' : colors.surfaceElevated;
+  const rim = isDark ? 'rgba(255,255,255,0.2)' : colors.border;
   return StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: isDark ? 'rgba(0, 0, 0, 0.55)' : 'rgba(11, 18, 32, 0.35)',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'flex-end',
   },
   sheetContainer: {
-    backgroundColor: glass.fillHeavy,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    backgroundColor: isDark ? 'rgba(40,40,44,0.97)' : '#FFFFFF',
+    borderTopLeftRadius: 38,
+    borderTopRightRadius: 38,
     paddingHorizontal: 20,
-    paddingTop: 12,
+    paddingTop: 10,
     paddingBottom: 36,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderColor: glass.borderBright,
-    ...shadows.heavy,
+    borderTopWidth: 1,
+    borderColor: rim,
   },
   grabber: {
-    width: 36,
-    height: 5,
-    backgroundColor: 'rgba(60, 60, 67, 0.22)',
-    borderRadius: 3,
+    width: 40,
+    height: 4,
+    backgroundColor: isDark ? '#48484A' : '#C7C7CC',
+    borderRadius: 2,
     alignSelf: 'center',
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.text,
-    textAlign: 'center',
-    marginBottom: 4,
-    letterSpacing: -0.4,
-  },
-  networkBadge: {
-    fontSize: 13,
-    color: colors.textMuted,
-    textAlign: 'center',
-    marginBottom: 18,
-    fontWeight: '500',
-  },
-  amountBox: {
-    alignItems: 'center',
     marginBottom: 18,
   },
-  amountNumber: {
-    fontSize: 40,
-    fontWeight: '700',
-    color: colors.accent,
-    letterSpacing: -1,
-  },
-  card: {
-    backgroundColor: colors.surfaceSolidElevated,
-    borderRadius: 18,
-    padding: 16,
-    marginBottom: 20,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: glass.borderSubtle,
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.separator,
-    marginVertical: 10,
-  },
-  label: {
-    fontSize: 13,
-    color: colors.textMuted,
-  },
-  value: {
-    fontSize: 13,
-    color: colors.text,
-    fontWeight: '600',
-  },
-  recipientContainer: {
-    alignItems: 'flex-end',
-  },
-  username: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.accent,
-  },
-  address: {
-    fontSize: 12,
-    color: colors.textMuted,
-    fontFamily: 'monospace',
-  },
-  totalLabel: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  totalValue: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.accent,
-  },
-  confirmButton: {
-    backgroundColor: colors.accent,
-    borderRadius: 16,
-    marginBottom: 10,
-    overflow: 'hidden',
-  },
-  confirmButtonInner: {
-    paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 52,
-  },
-  disabledButton: {
-    opacity: 0.55,
-  },
-  confirmText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.textOnAccent,
-    letterSpacing: -0.2,
-  },
-  cancelButton: {
-    borderRadius: 12,
-  },
-  cancelButtonInner: {
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  cancelText: {
-    fontSize: 15,
-    color: colors.textMuted,
-    fontWeight: '600',
-  },
+  title: {fontSize: 22, fontWeight: '700', color: colors.text, textAlign: 'center', marginBottom: 4, letterSpacing: 0.3},
+  networkBadge: {fontSize: 13, color: colors.textMuted, textAlign: 'center', marginBottom: 18},
+  amountBox: {alignItems: 'center', marginBottom: 18},
+  amountNumber: {fontSize: 44, fontWeight: '700', color: colors.text, letterSpacing: -1},
+  card: {backgroundColor: glass, borderRadius: 24, paddingHorizontal: 16, paddingVertical: 6, marginBottom: 20, borderWidth: 1, borderColor: rim},
+  row: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12},
+  divider: {height: StyleSheet.hairlineWidth, backgroundColor: colors.separator},
+  label: {fontSize: 15, color: colors.textMuted},
+  value: {fontSize: 15, color: colors.text, fontWeight: '500'},
+  recipientContainer: {alignItems: 'flex-end'},
+  username: {fontSize: 15, fontWeight: '600', color: colors.text},
+  address: {fontSize: 12, color: colors.textMuted, fontFamily: 'monospace'},
+  totalLabel: {fontSize: 15, fontWeight: '600', color: colors.text},
+  totalValue: {fontSize: 15, fontWeight: '700', color: colors.text},
+  confirmButton: {backgroundColor: colors.text, borderRadius: 28, marginBottom: 6, overflow: 'hidden'},
+  confirmButtonInner: {paddingVertical: 16, alignItems: 'center', justifyContent: 'center', minHeight: 56},
+  disabledButton: {opacity: 0.55},
+  confirmText: {fontSize: 17, fontWeight: '600', color: colors.background},
+  cancelButton: {borderRadius: 12},
+  cancelButtonInner: {paddingVertical: 12, alignItems: 'center'},
+  cancelText: {fontSize: 17, color: colors.accent},
 });
 }

@@ -1,21 +1,16 @@
 /**
- * InsufficientBalanceModal — Warns user when MON balance is lower than amount + gas fee.
- * Offers quick link to Monad faucet and address copy.
+ * InsufficientBalanceModal — iOS-style alert shown when the MON balance is lower than
+ * amount + gas. Offers the Monad faucet (when configured) and copying the wallet address.
  */
 
-import React from 'react';
-import {
-  View,
-  Text,
-  Modal,
-  TouchableOpacity,
-  StyleSheet,
-  Linking,
-  Clipboard,
-  Alert,
-} from 'react-native';
+import React, {useMemo} from 'react';
+import {View, Text, Modal, StyleSheet, Linking, Alert} from 'react-native';
+import Clipboard from '@react-native-clipboard/clipboard';
 import {MONAD_CONFIG} from '../config/monad';
 import {formatMon, truncateAddress} from '../utils/format';
+import {useTheme} from '../context/ThemeContext';
+import PressableScale from './PressableScale';
+import type {AppColors} from '../theme';
 
 interface Props {
   visible: boolean;
@@ -32,6 +27,8 @@ export default function InsufficientBalanceModal({
   currentBalanceWei,
   userAddress,
 }: Props) {
+  const {colors, isDark} = useTheme();
+  const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
   const faucetUrl = MONAD_CONFIG.faucetUrl?.trim();
 
   const handleOpenFaucet = () => {
@@ -52,178 +49,98 @@ export default function InsufficientBalanceModal({
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <View style={styles.modalCard}>
+        <View style={styles.card}>
           <View style={styles.iconCircle}>
-            <Text style={styles.iconBadgeText}>!</Text>
+            <Text style={styles.iconText}>!</Text>
           </View>
 
-          <Text style={styles.title}>Insufficient MON</Text>
+          <Text style={styles.title}>Not Enough MON</Text>
           <Text style={styles.subtitle}>
-            You do not have enough MON on {MONAD_CONFIG.chainName} to cover this transaction and network gas fee.
+            You do not have enough MON on {MONAD_CONFIG.chainName} to cover this payment and the network fee.
           </Text>
 
-          <View style={styles.breakdownCard}>
-            <View style={styles.breakdownRow}>
-              <Text style={styles.breakdownLabel}>Required (Total + Gas):</Text>
-              <Text style={styles.breakdownValue}>{formatMon(requiredWei)}</Text>
+          <View style={styles.breakdown}>
+            <View style={styles.row}>
+              <Text style={styles.label}>Needed (amount + fee)</Text>
+              <Text style={styles.value}>{formatMon(requiredWei)}</Text>
             </View>
-            <View style={styles.breakdownRow}>
-              <Text style={styles.breakdownLabel}>Available Balance:</Text>
-              <Text style={[styles.breakdownValue, {color: '#FF6B6B'}]}>
-                {formatMon(currentBalanceWei)}
-              </Text>
+            <View style={styles.sep} />
+            <View style={styles.row}>
+              <Text style={styles.label}>You have</Text>
+              <Text style={[styles.value, {color: colors.danger}]}>{formatMon(currentBalanceWei)}</Text>
             </View>
-            <View style={[styles.breakdownRow, styles.addressRow]}>
-              <Text style={styles.breakdownLabel}>Your Address:</Text>
-              <Text style={styles.addressValue}>{truncateAddress(userAddress)}</Text>
+            <View style={styles.sep} />
+            <View style={styles.row}>
+              <Text style={styles.label}>Your address</Text>
+              <Text style={styles.mono}>{truncateAddress(userAddress)}</Text>
             </View>
           </View>
 
           {faucetUrl ? (
-            <TouchableOpacity
-              style={[styles.actionButton, styles.primaryButton]}
-              onPress={handleOpenFaucet}>
-              <Text style={styles.primaryButtonText}>Get MON (Faucet)</Text>
-            </TouchableOpacity>
+            <PressableScale style={styles.primary} contentStyle={styles.buttonInner} onPress={handleOpenFaucet}>
+              <Text style={styles.primaryText}>Get MON (Faucet)</Text>
+            </PressableScale>
           ) : null}
 
-          <TouchableOpacity
-            style={[styles.actionButton, styles.secondaryButton]}
-            onPress={handleCopyAddress}>
-            <Text style={styles.secondaryButtonText}>Copy Wallet Address</Text>
-          </TouchableOpacity>
+          <PressableScale style={styles.secondary} contentStyle={styles.buttonInner} onPress={handleCopyAddress}>
+            <Text style={styles.secondaryText}>Copy Wallet Address</Text>
+          </PressableScale>
 
-          <TouchableOpacity style={styles.dismissButton} onPress={onClose}>
+          <PressableScale onPress={onClose} contentStyle={styles.dismiss}>
             <Text style={styles.dismissText}>Dismiss</Text>
-          </TouchableOpacity>
+          </PressableScale>
         </View>
       </View>
     </Modal>
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  modalCard: {
-    backgroundColor: '#15151E',
-    borderRadius: 16,
-    width: '100%',
-    maxWidth: 380,
-    padding: 22,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#242433',
-  },
-  iconCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: 'rgba(239, 68, 68, 0.12)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 14,
-  },
-  iconBadgeText: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#EF4444',
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    marginBottom: 6,
-    textAlign: 'center',
-    letterSpacing: -0.3,
-  },
-  subtitle: {
-    fontSize: 13,
-    color: '#8E8E93',
-    textAlign: 'center',
-    lineHeight: 18,
-    marginBottom: 18,
-  },
-  breakdownCard: {
-    width: '100%',
-    backgroundColor: '#1C1C26',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 18,
-    borderWidth: 1,
-    borderColor: '#242433',
-  },
-  breakdownRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  addressRow: {
-    marginBottom: 0,
-    marginTop: 4,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#242433',
-  },
-  breakdownLabel: {
-    fontSize: 12,
-    color: '#8E8E93',
-  },
-  breakdownValue: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  addressValue: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#6E54FF',
-    fontFamily: 'monospace',
-  },
-  actionButton: {
-    width: '100%',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  primaryButton: {
-    backgroundColor: '#6E54FF',
-  },
-  primaryButtonText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  secondaryButton: {
-    backgroundColor: '#1C1C26',
-    borderWidth: 1,
-    borderColor: '#242433',
-  },
-  secondaryButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  dismissButton: {
-    paddingVertical: 8,
-    marginTop: 2,
-  },
-  dismissText: {
-    fontSize: 14,
-    color: '#71717A',
-    fontWeight: '600',
-  },
-});
+function createStyles(c: AppColors, isDark: boolean) {
+  const glass = isDark ? 'rgba(255,255,255,0.08)' : c.surfaceElevated;
+  return StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 24,
+    },
+    card: {
+      backgroundColor: isDark ? 'rgba(40,40,44,0.97)' : '#FFFFFF',
+      borderRadius: 32,
+      width: '100%',
+      maxWidth: 380,
+      padding: 22,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255,255,255,0.2)' : c.border,
+    },
+    iconCircle: {
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: c.danger,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 14,
+    },
+    iconText: {fontSize: 26, fontWeight: '700', color: '#FFFFFF'},
+    title: {fontSize: 22, fontWeight: '700', color: c.text, marginBottom: 6, textAlign: 'center', letterSpacing: 0.3},
+    subtitle: {fontSize: 15, color: c.textMuted, textAlign: 'center', lineHeight: 21, marginBottom: 18},
+    breakdown: {width: '100%', backgroundColor: glass, borderRadius: 22, paddingHorizontal: 16, marginBottom: 18},
+    row: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 13},
+    sep: {height: StyleSheet.hairlineWidth, backgroundColor: c.separator},
+    label: {fontSize: 14, color: c.textMuted},
+    value: {fontSize: 15, fontWeight: '600', color: c.text},
+    mono: {fontSize: 13, color: c.text, fontFamily: 'monospace'},
+    primary: {width: '100%', borderRadius: 26, backgroundColor: c.text, marginBottom: 10, overflow: 'hidden'},
+    primaryText: {fontSize: 17, fontWeight: '600', color: c.background},
+    secondary: {width: '100%', borderRadius: 26, backgroundColor: glass, borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.18)' : c.border, marginBottom: 6, overflow: 'hidden'},
+    secondaryText: {fontSize: 17, fontWeight: '600', color: c.text},
+    buttonInner: {height: 52, alignItems: 'center', justifyContent: 'center'},
+    dismiss: {paddingVertical: 10},
+    dismissText: {fontSize: 17, color: c.accent},
+  });
+}

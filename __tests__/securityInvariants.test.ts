@@ -60,6 +60,13 @@ describe('wallet secret invariants', () => {
     }
   });
 
+  it('never reads the usernames table directly (exact-match RPCs only, no bulk scrape)', () => {
+    for (const f of files) {
+      const direct = /\.from\(\s*['"]usernames['"]/.test(noComments(f.text));
+      expect({file: f.rel, direct}).toEqual({file: f.rel, direct: false});
+    }
+  });
+
   it('transaction history is only ever written through the encrypted store', () => {
     for (const f of files) {
       if (f.rel === 'services/secureHistoryStore.ts') {

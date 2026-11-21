@@ -1,13 +1,11 @@
 /**
- * Transaction History Store — AsyncStorage-backed
+ * Transaction History Store
  *
- * Persists transaction history to AsyncStorage.
- * Tracks local transaction history for Monad Tap Pay & Username Pay.
+ * Tracks local transaction history for Monad Tap Pay & Username Pay. The history is encrypted
+ * at rest (AES-GCM, key in the Android Keystore); see secureHistoryStore.ts.
  */
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const HISTORY_STORAGE_KEY = '@tappay_tx_history';
+import {loadHistoryJson, saveHistoryJson} from './secureHistoryStore';
 
 export interface TransactionRecord {
   id: string;
@@ -40,7 +38,8 @@ async function ensureLoaded(): Promise<void> {
     return;
   }
   try {
-    const stored = await AsyncStorage.getItem(HISTORY_STORAGE_KEY);
+    // Encrypted at rest; a legacy plaintext copy is migrated on first read.
+    const stored = await loadHistoryJson();
     if (stored) {
       historyCache = JSON.parse(stored);
     }
@@ -51,15 +50,21 @@ async function ensureLoaded(): Promise<void> {
   isLoaded = true;
 }
 
+// Writes run one at a time, each with the snapshot taken when it was requested, so the last
+// change always wins and older snapshots can never overwrite newer ones.
+let writeChain: Promise<void> = Promise.resolve();
+
 /**
- * Persist current cache to AsyncStorage
+ * Persist current cache, encrypted (see secureHistoryStore). Never falls back to plaintext.
  */
-async function persistHistory(): Promise<void> {
-  try {
-    await AsyncStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(historyCache));
-  } catch {
-    // Silently fail — history is non-critical
-  }
+function persistHistory(): Promise<void> {
+  const snapshot = JSON.stringify(historyCache);
+  writeChain = writeChain
+    .then(() => saveHistoryJson(snapshot))
+    .catch(() => {
+      // Silently fail — history is non-critical
+    });
+  return writeChain;
 }
 
 export function getTransactionHistory(): TransactionRecord[] {

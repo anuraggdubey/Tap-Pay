@@ -224,6 +224,37 @@ describe('history service uses the encrypted store', () => {
     expect(JSON.parse((await store.loadHistoryJson(A))!)).toEqual([owned]);
   });
 
+  it('keeps distinct owned placeholder-hash payments from both legacy stores', async () => {
+    const store = freshStore();
+    const first = {...JSON.parse(SAMPLE)[0], id: 'first', txHash: 'tap-payment', to: A};
+    const second = {...first, id: 'second'};
+    await store.saveHistoryJson(JSON.stringify([first]));
+    mockAsync[LEGACY] = JSON.stringify([first, second]);
+    expect(JSON.parse((await store.loadHistoryJson(A))!)).toEqual([first, second]);
+    expect(JSON.parse((await freshStore().loadHistoryJson(A))!)).toEqual([first, second]);
+  });
+
+  it('preserves migrated rows across later writes after an initial hydration failure', async () => {
+    freshStore();
+    const owned = {...JSON.parse(SAMPLE)[0], from: A};
+    mockAsync[LEGACY] = JSON.stringify([owned]);
+    mockKeychain.failSet = true;
+    const history = require('../../src/services/history');
+    const {setHistoryWallet} = require('../../src/services/walletHistory');
+    setHistoryWallet(A);
+    await history.initHistory();
+    mockKeychain.failSet = false;
+    for (const hash of ['first', 'second']) {
+      history.recordTransaction({walletAddress: A, direction: 'sent', counterparty: B, amount: '1', status: 'pending', txHash: hash});
+      await new Promise(resolve => setImmediate(resolve));
+    }
+    freshStore();
+    const restarted = require('../../src/services/history');
+    require('../../src/services/walletHistory').setHistoryWallet(A);
+    await restarted.initHistory();
+    expect(restarted.getTransactionHistory().map((tx: {txHash: string}) => tx.txHash)).toEqual(['second', 'first', owned.txHash]);
+  });
+
   it('does not destroy encrypted legacy data while its key is unavailable', async () => {
     let store = freshStore();
     await store.saveHistoryJson(JSON.stringify([{...JSON.parse(SAMPLE)[0], from: A}]));

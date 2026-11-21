@@ -169,7 +169,9 @@ function rowsFrom(json: string | null): LegacyRow[] {
 function mergeRows(current: LegacyRow[], legacy: LegacyRow[]): LegacyRow[] {
   const seen = new Set<string>();
   return [...current, ...legacy].filter(row => {
-    const identity = `${row.txHash.toLowerCase()}:${row.direction}`;
+    const identity = typeof row.id === 'string'
+      ? `id:${row.id}`
+      : `tx:${row.txHash.toLowerCase()}:${row.direction}`;
     if (seen.has(identity)) return false;
     seen.add(identity);
     return true;
@@ -185,15 +187,16 @@ function serialize<T>(operation: () => Promise<T>): Promise<T> {
 }
 
 async function migrateLegacy(walletAddress: string): Promise<boolean> {
+  const plaintext = await AsyncStorage.getItem(LEGACY_STORAGE_KEY);
   const legacy = await readHistoryJson(undefined, true);
-  if (legacy === null) return false;
+  if (legacy === null && plaintext === null) return false;
   const owner = walletAddress.toLowerCase();
-  const owned = rowsFrom(legacy).filter(row =>
+  const owned = mergeRows(rowsFrom(legacy), rowsFrom(plaintext)).filter(row =>
     ['sender', 'from', 'recipient', 'to', 'senderAddress', 'recipientAddress'].some(field =>
       typeof row[field] === 'string' && row[field].toLowerCase() === owner,
     ),
   );
-  const current = rowsFrom(await readHistoryJson(walletAddress));
+  const current = rowsFrom(await readHistoryJson(walletAddress, true));
   const merged = mergeRows(current, owned);
   if (merged.length) await writeHistoryJson(JSON.stringify(merged), walletAddress);
   // Commit the scoped copy before consuming the source; retries deduplicate after interruption.
@@ -212,8 +215,9 @@ export function loadHistoryJson(walletAddress?: string): Promise<string | null> 
 export function saveHistoryJson(json: string, walletAddress?: string): Promise<void> {
   return serialize(async () => {
     let snapshot = json;
-    if (walletAddress && await migrateLegacy(walletAddress)) {
-      snapshot = JSON.stringify(mergeRows(rowsFrom(json), rowsFrom(await readHistoryJson(walletAddress))));
+    if (walletAddress) {
+      await migrateLegacy(walletAddress);
+      snapshot = JSON.stringify(mergeRows(rowsFrom(json), rowsFrom(await readHistoryJson(walletAddress, true))));
     }
     await writeHistoryJson(snapshot, walletAddress);
   });

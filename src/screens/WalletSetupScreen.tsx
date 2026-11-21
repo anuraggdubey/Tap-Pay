@@ -40,7 +40,9 @@ import {
   verifyRecoveryAnswers,
 } from '../utils/recovery';
 import {triggerHaptic} from '../utils/haptics';
-import BrandLogo from '../components/BrandLogo';
+import WelcomeHero from '../components/WelcomeHero';
+import {GradientFill} from '../components/Gradient';
+import PressableScale from '../components/PressableScale';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'WalletSetup'>;
@@ -605,44 +607,42 @@ export default function WalletSetupScreen({navigation}: Props) {
 
   // ── Welcome ──────────────────────────────────────────────────────────────
   return (
-    <View style={[styles.screenWrapper, {paddingTop: insets.top + 40, paddingBottom: insets.bottom + 20}]}>
-      <View style={styles.welcomeHeroContainer}>
-        <BrandLogo size={56} color={colors.accent} style={{marginBottom: 30}} />
-        <Text style={styles.welcomeSubtitle}>Welcome to</Text>
-        <Text style={styles.welcomeTitle}>TapPay</Text>
-        <Text style={styles.welcomeNote}>
-          Your wallet is protected by your phone's fingerprint, face or screen lock.
-        </Text>
-      </View>
-
-      <View style={styles.bottomCtaSection}>
-        <TouchableOpacity
-          style={styles.primaryPillButton}
+    <View style={[styles.welcomeRoot, {paddingTop: insets.top + 12, paddingBottom: insets.bottom + 20}]}>
+      <GradientFill
+        colors={['#0A0B0F', '#0A0B0F']}
+        angle={90}
+        glows={[
+          {color: '#3D7BFF', cx: 0.5, cy: 0.3, r: 0.75, opacity: 0.28},
+          {color: '#8B5CF6', cx: 1, cy: 0, r: 0.5, opacity: 0.2},
+        ]}
+      />
+      <WelcomeHero />
+      <View style={styles.welcomeCta}>
+        <PressableScale
+          style={styles.welcomePrimary}
+          contentStyle={styles.welcomePrimaryInner}
           onPress={handleCreate}
-          disabled={loading}
-          activeOpacity={0.85}>
+          disabled={loading}>
+          <GradientFill colors={['#3D7BFF', '#7C5CFF']} angle={135} />
           {loading ? (
-            <ActivityIndicator color={colors.textOnAccent} />
+            <ActivityIndicator color="#FFFFFF" />
           ) : (
-            <Text style={styles.primaryPillText}>Create Wallet</Text>
+            <Text style={styles.welcomePrimaryText}>Create wallet</Text>
           )}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.secondaryPillButton}
+        </PressableScale>
+        <PressableScale
+          style={styles.welcomeSecondary}
+          contentStyle={styles.welcomeSecondaryInner}
           onPress={() => setStep('restore')}
-          disabled={loading}
-          activeOpacity={0.85}>
-          <Text style={styles.secondaryPillText}>Restore with Recovery Phrase</Text>
+          disabled={loading}>
+          <Text style={styles.welcomeSecondaryText}>I have a recovery phrase</Text>
+        </PressableScale>
+        <TouchableOpacity onPress={() => setStep('import')} disabled={loading} activeOpacity={0.7}>
+          <Text style={styles.welcomeAdvanced}>Import private key (advanced)</Text>
         </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.secondaryTextButton}
-          onPress={() => setStep('import')}
-          disabled={loading}
-          activeOpacity={0.7}>
-          <Text style={styles.secondaryText}>Import private key (advanced)</Text>
-        </TouchableOpacity>
+        <Text style={styles.welcomeFine}>
+          Secured by your phone's fingerprint, face or screen lock.
+        </Text>
       </View>
     </View>
   );
@@ -650,6 +650,16 @@ export default function WalletSetupScreen({navigation}: Props) {
 
 function createStyles(colors: AppColors) {
   return StyleSheet.create({
+  welcomeRoot: {flex: 1, backgroundColor: '#0A0B0F', paddingHorizontal: 24},
+  welcomeCta: {gap: 12, alignItems: 'center'},
+  welcomePrimary: {width: '100%', borderRadius: 22, overflow: 'hidden'},
+  welcomePrimaryInner: {height: 58, alignItems: 'center', justifyContent: 'center'},
+  welcomePrimaryText: {fontSize: 17, fontWeight: '800', color: '#FFFFFF', letterSpacing: -0.2},
+  welcomeSecondary: {width: '100%', borderRadius: 22, borderWidth: 1, borderColor: '#262A34', backgroundColor: '#14161C'},
+  welcomeSecondaryInner: {height: 54, alignItems: 'center', justifyContent: 'center'},
+  welcomeSecondaryText: {fontSize: 15, fontWeight: '700', color: '#F4F5F7'},
+  welcomeAdvanced: {fontSize: 13, fontWeight: '600', color: '#8B91A0', paddingVertical: 6},
+  welcomeFine: {fontSize: 12, color: '#5F6573', textAlign: 'center'},
   screenWrapper: {
     flex: 1,
     backgroundColor: colors.background,

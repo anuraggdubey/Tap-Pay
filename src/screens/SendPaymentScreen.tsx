@@ -38,6 +38,7 @@ import ConfirmPaymentModal from '../components/ConfirmPaymentModal';
 import InsufficientBalanceModal from '../components/InsufficientBalanceModal';
 import {CrossIcon} from '../components/AppIcons';
 import {triggerHaptic} from '../utils/haptics';
+import AmbientBackground from '../components/AmbientBackground';
 import type {AppColors} from '../theme';
 
 type Props = {
@@ -61,8 +62,8 @@ export default function SendPaymentScreen({navigation}: Props) {
   const route = useRoute();
   const isPayTab = route.name === 'Pay';
   const {address, balance, refreshBalance} = useWallet();
-  const {colors} = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const {colors, isDark} = useTheme();
+  const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
   const [mode, setMode] = useState<PayMode>('username');
 
   // Recipient state
@@ -270,7 +271,7 @@ export default function SendPaymentScreen({navigation}: Props) {
     setSending(true);
     try {
       const result = await executeCrossBorderTransfer({
-        recipient: resolvedUsername ? `@${resolvedUsername}` : resolvedAddress,
+        recipient: resolvedAddress,
         amount: amount,
         tokenSymbol: selectedToken,
       });
@@ -323,6 +324,7 @@ export default function SendPaymentScreen({navigation}: Props) {
           styles.payRoot,
           {paddingTop: insets.top + 8, paddingBottom: amountBottomPad},
         ]}>
+        <AmbientBackground />
         <View style={styles.payHeader}>
           <TouchableOpacity
             style={styles.closeBtn}
@@ -332,6 +334,11 @@ export default function SendPaymentScreen({navigation}: Props) {
           </TouchableOpacity>
 
           <View style={styles.payHeaderCenter}>
+            {resolvedUsername ? (
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>{resolvedUsername.charAt(0).toUpperCase()}</Text>
+              </View>
+            ) : null}
             <Text style={styles.payHeaderTitle}>{recipientDisplay}</Text>
             <Text style={styles.payHeaderBalance}>
               {formatMon(balance).replace(/ MON$/, '')} MON available
@@ -387,7 +394,7 @@ export default function SendPaymentScreen({navigation}: Props) {
           disabled={!canPay}
           activeOpacity={0.85}>
           {sending ? (
-            <ActivityIndicator color="#FFFFFF" />
+            <ActivityIndicator color={colors.background} />
           ) : (
             <Text style={styles.payButtonText}>Pay</Text>
           )}
@@ -424,6 +431,7 @@ export default function SendPaymentScreen({navigation}: Props) {
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <AmbientBackground />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[
@@ -437,8 +445,8 @@ export default function SendPaymentScreen({navigation}: Props) {
         keyboardShouldPersistTaps="handled">
 
         <View style={styles.header}>
-          <Text style={styles.pageTitle}>Send Payment</Text>
-          <Text style={styles.pageSubtitle}>Direct transfer on Monad Mainnet</Text>
+          <Text style={styles.pageTitle}>Send</Text>
+          <Text style={styles.pageSubtitle}>Pay a TapPay handle or a wallet address.</Text>
         </View>
 
         <View style={styles.modeToggle}>
@@ -460,7 +468,7 @@ export default function SendPaymentScreen({navigation}: Props) {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.sectionLabel}>RECIPIENT</Text>
+        <Text style={styles.sectionLabel}>Recipient</Text>
         {mode === 'username' ? (
           <View style={styles.inputRow}>
             <View style={styles.inputPrefix}>
@@ -486,7 +494,7 @@ export default function SendPaymentScreen({navigation}: Props) {
               disabled={searching}
               activeOpacity={0.7}>
               {searching ? (
-                <ActivityIndicator color={colors.accent} size="small" />
+                <ActivityIndicator color={colors.background} size="small" />
               ) : (
                 <Text style={styles.searchBtnText}>Search</Text>
               )}
@@ -524,245 +532,71 @@ export default function SendPaymentScreen({navigation}: Props) {
   );
 }
 
-function createStyles(colors: AppColors) {
+function createStyles(colors: AppColors, isDark: boolean) {
+  const glass = isDark ? 'rgba(255,255,255,0.08)' : colors.surfaceSolid;
+  const glassStrong = isDark ? 'rgba(255,255,255,0.16)' : colors.surfaceSolid;
+  const rim = isDark ? 'rgba(255,255,255,0.18)' : colors.border;
   return StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  content: {
-    padding: 20,
-    paddingBottom: 120,
-  },
-  header: {
-    marginBottom: 14,
-  },
-  pageTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.text,
-    letterSpacing: -0.4,
-  },
-  pageSubtitle: {
-    fontSize: 14,
-    color: colors.textMuted,
-    marginTop: 4,
-  },
-  modeToggle: {
-    flexDirection: 'row',
-    backgroundColor: colors.surfaceSolidElevated,
-    borderRadius: 16,
-    padding: 3,
-    marginBottom: 24,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.borderSubtle,
-  },
-  modeTab: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 13,
-    alignItems: 'center',
-  },
-  modeTabActive: {
-    backgroundColor: colors.surfaceSolid,
-    shadowColor: '#0A84FF',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-  modeTabText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.textMuted,
-  },
-  modeTabTextActive: {
-    color: colors.accent,
-    fontWeight: '700',
-  },
-  sectionLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.textSubtle,
-    letterSpacing: 0.8,
-    marginBottom: 10,
-    marginLeft: 2,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surfaceSolid,
-    borderRadius: 16,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(10, 132, 255, 0.16)',
-    marginBottom: 16,
-    shadowColor: '#0B1F3A',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 2,
-  },
-  inputPrefix: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderRightWidth: StyleSheet.hairlineWidth,
-    borderRightColor: 'rgba(15, 40, 80, 0.08)',
-  },
-  inputPrefixText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.accent,
-  },
-  recipientInput: {
-    flex: 1,
-    fontSize: 15,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    backgroundColor: 'transparent',
-    color: colors.text,
-  },
-  searchBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-    marginRight: 8,
-    backgroundColor: colors.accent,
-    borderRadius: 12,
-  },
-  searchBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  payRoot: {
-    flex: 1,
-    backgroundColor: colors.background,
-    paddingHorizontal: 20,
-  },
-  payHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.surfaceSolid,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(15, 40, 80, 0.08)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  closeBtnSpacer: {
-    width: 36,
-  },
-  payHeaderCenter: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  payHeaderTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  payHeaderBalance: {
-    marginTop: 3,
-    fontSize: 13,
-    color: colors.textMuted,
-    fontWeight: '500',
-  },
-  amountStage: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-  },
-  bigAmount: {
-    fontSize: 64,
-    fontWeight: '700',
-    color: colors.text,
-    letterSpacing: -2,
-    maxWidth: '100%',
-  },
-  currencyRow: {
-    marginTop: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  currencyText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.accent,
-  },
-  gasHint: {
-    fontSize: 12,
-    color: colors.textSubtle,
-    fontWeight: '500',
-  },
-  addrHint: {
-    marginTop: 10,
-    fontSize: 12,
-    color: colors.textMuted,
-    fontFamily: 'monospace',
-  },
-  tokenPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(15, 40, 80, 0.1)',
-    backgroundColor: colors.surfaceSolid,
-  },
-  tokenPillActive: {
-    borderColor: colors.accent,
-    backgroundColor: colors.accentWash,
-  },
-  tokenPillText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textMuted,
-  },
-  tokenPillTextActive: {
-    color: colors.accent,
-  },
-  keypad: {
-    paddingBottom: 8,
-  },
-  keypadRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  key: {
-    width: '33.33%',
-    height: 64,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  keyText: {
-    fontSize: 28,
-    fontWeight: '500',
-    color: colors.text,
-  },
-  payButton: {
-    backgroundColor: colors.accent,
-    borderRadius: 28,
-    minHeight: 56,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 8,
-  },
-  payButtonDisabled: {
-    opacity: 0.35,
-  },
-  payButtonText: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
+    container: {flex: 1, backgroundColor: colors.background},
+    scrollView: {flex: 1},
+    content: {padding: 20, paddingBottom: 120},
+    header: {marginBottom: 18},
+    pageTitle: {fontSize: 34, fontWeight: '700', color: colors.text, letterSpacing: 0.4},
+    pageSubtitle: {fontSize: 15, color: colors.textMuted, marginTop: 4},
+    modeToggle: {
+      flexDirection: 'row',
+      backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : colors.surfaceElevated,
+      borderRadius: 22,
+      padding: 3,
+      marginBottom: 24,
+      borderWidth: 1,
+      borderColor: rim,
+    },
+    modeTab: {flex: 1, paddingVertical: 11, borderRadius: 19, alignItems: 'center'},
+    modeTabActive: {backgroundColor: glassStrong},
+    modeTabText: {fontSize: 14, fontWeight: '600', color: colors.textMuted},
+    modeTabTextActive: {color: colors.text, fontWeight: '700'},
+    sectionLabel: {fontSize: 13, color: colors.textMuted, marginBottom: 8, marginLeft: 4},
+    inputRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: glass,
+      borderRadius: 22,
+      borderWidth: 1,
+      borderColor: rim,
+      marginBottom: 16,
+      paddingRight: 6,
+    },
+    inputPrefix: {paddingLeft: 18, paddingRight: 4, paddingVertical: 14},
+    inputPrefixText: {fontSize: 17, fontWeight: '600', color: colors.textMuted},
+    recipientInput: {flex: 1, fontSize: 17, paddingHorizontal: 8, paddingVertical: 14, backgroundColor: 'transparent', color: colors.text},
+    searchBtn: {paddingHorizontal: 16, height: 36, justifyContent: 'center', backgroundColor: colors.text, borderRadius: 18},
+    searchBtnText: {fontSize: 14, fontWeight: '600', color: colors.background},
+    payRoot: {flex: 1, backgroundColor: colors.background, paddingHorizontal: 20},
+    payHeader: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8},
+    closeBtn: {width: 36, height: 36, borderRadius: 18, backgroundColor: glassStrong, borderWidth: 1, borderColor: rim, alignItems: 'center', justifyContent: 'center'},
+    closeBtnSpacer: {width: 36},
+    payHeaderCenter: {alignItems: 'center', flex: 1},
+    avatar: {width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surfaceElevated, alignItems: 'center', justifyContent: 'center', marginBottom: 6},
+    avatarText: {fontSize: 18, fontWeight: '600', color: colors.text},
+    payHeaderTitle: {fontSize: 17, fontWeight: '600', color: colors.text},
+    payHeaderBalance: {marginTop: 3, fontSize: 13, color: colors.textMuted},
+    amountStage: {flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 12},
+    bigAmount: {fontSize: 64, fontWeight: '700', color: colors.text, letterSpacing: -1.5, maxWidth: '100%'},
+    currencyRow: {marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'center'},
+    currencyText: {fontSize: 16, fontWeight: '600', color: colors.textMuted},
+    gasHint: {fontSize: 12, color: colors.textSubtle},
+    addrHint: {marginTop: 10, fontSize: 12, color: colors.textMuted, fontFamily: 'monospace'},
+    tokenPill: {paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderColor: rim, backgroundColor: glass},
+    tokenPillActive: {borderColor: colors.text, backgroundColor: colors.text},
+    tokenPillText: {fontSize: 14, fontWeight: '600', color: colors.textMuted},
+    tokenPillTextActive: {color: colors.background},
+    keypad: {paddingBottom: 8},
+    keypadRow: {flexDirection: 'row', justifyContent: 'space-between'},
+    key: {width: '33.33%', height: 64, alignItems: 'center', justifyContent: 'center'},
+    keyText: {fontSize: 30, fontWeight: '400', color: colors.text},
+    payButton: {backgroundColor: colors.text, borderRadius: 28, minHeight: 56, alignItems: 'center', justifyContent: 'center', marginTop: 8},
+    payButtonDisabled: {opacity: 0.35},
+    payButtonText: {fontSize: 17, fontWeight: '600', color: colors.background},
   });
 }

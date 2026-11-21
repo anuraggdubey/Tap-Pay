@@ -94,6 +94,10 @@ jobs:
       - name: Make Gradlew executable
         run: chmod +x android/gradlew
 
+      - name: Run Android JVM tests
+        working-directory: android
+        run: ./gradlew :app:testDebugUnitTest --no-daemon --stacktrace --max-workers=2
+
       # Release builds are never signed with the debug key.
       # With the TAPPAY_KEYSTORE_BASE64 secret set (the real release key) the APK is a real release.
       # Without it (pull requests, forks) a throwaway key is generated so the build is still verified;

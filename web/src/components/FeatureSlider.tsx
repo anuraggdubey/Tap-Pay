@@ -54,8 +54,8 @@ export const FeatureSlider: React.FC = () => {
             <div
               className="phantom-card-main"
               style={{
-                background: '#EAE6FE',
-                color: '#3C315B',
+                background: 'var(--canvas-bg-raised)',
+                color: 'var(--text-dark)',
               }}
             >
               <div>
@@ -86,7 +86,7 @@ export const FeatureSlider: React.FC = () => {
               {/* Interactive Demonstration Area */}
               <div
                 style={{
-                  background: '#FDFCFE',
+                  background: 'var(--canvas-bg-sunken)',
                   borderRadius: '24px',
                   padding: '24px',
                   marginTop: '20px',
@@ -142,8 +142,8 @@ export const FeatureSlider: React.FC = () => {
                     className="phantom-btn-pill"
                     style={{
                       width: '100%',
-                      background: '#3C315B',
-                      color: '#FFFDF8',
+                      background: 'var(--accent)',
+                      color: 'var(--text-on-accent)',
                       padding: '12px',
                     }}
                   >
@@ -159,7 +159,7 @@ export const FeatureSlider: React.FC = () => {
                       marginTop: '8px',
                       width: '100%',
                       fontSize: '12px',
-                      color: '#6C628A',
+                      color: 'var(--text-dark-subtle)',
                       textAlign: 'center',
                     }}
                   >
@@ -172,12 +172,12 @@ export const FeatureSlider: React.FC = () => {
 
           {/* Card 2: Cash App Keypad (Soft Warm Cream) */}
           <div className="phantom-card-wrapper scroll-reveal scroll-delay-2" data-parallax="-0.03">
-            <div className="phantom-card-shadow-layer" style={{ background: '#3C315B' }} />
+            <div className="phantom-card-shadow-layer" style={{ background: 'var(--accent-wash)' }} />
             <div
               className="phantom-card-main"
               style={{
-                background: '#FFF6E5',
-                color: '#3C315B',
+                background: 'var(--canvas-bg-raised)',
+                color: 'var(--text-dark)',
               }}
             >
               <div>
@@ -208,7 +208,7 @@ export const FeatureSlider: React.FC = () => {
               {/* Mini Keypad UI */}
               <div
                 style={{
-                  background: '#FDFCFE',
+                  background: 'var(--canvas-bg-sunken)',
                   borderRadius: '24px',
                   padding: '20px',
                   marginTop: '20px',
@@ -216,8 +216,8 @@ export const FeatureSlider: React.FC = () => {
                 }}
               >
                 <div style={{ textAlign: 'center', marginBottom: '14px' }}>
-                  <div style={{ fontSize: '11px', color: '#9890B4', marginBottom: '2px' }}>TO @ADITYA</div>
-                  <div style={{ fontSize: '28px', fontWeight: 800, color: '#3C315B' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--text-dark-subtle)', marginBottom: '2px' }}>TO @ADITYA</div>
+                  <div style={{ fontSize: '28px', fontWeight: 800, color: 'var(--text-dark)' }}>
                     {keypadAmount} <span style={{ fontSize: '16px', color: '#836EF9' }}>MON</span>
                   </div>
                 </div>
@@ -240,10 +240,10 @@ export const FeatureSlider: React.FC = () => {
                       style={{
                         padding: '10px',
                         borderRadius: '10px',
-                        background: '#F5F3FF',
+                        background: 'rgba(255,255,255,0.05)',
                         fontSize: '14px',
                         fontWeight: 700,
-                        color: '#3C315B',
+                        color: 'var(--text-dark)',
                       }}
                     >
                       {k}
@@ -256,12 +256,12 @@ export const FeatureSlider: React.FC = () => {
 
           {/* Card 3: Multi-Chain Settlement (Soft Sky Blue) */}
           <div className="phantom-card-wrapper scroll-reveal scroll-delay-3" data-parallax="0.04">
-            <div className="phantom-card-shadow-layer" style={{ background: '#0D0D12' }} />
+            <div className="phantom-card-shadow-layer" style={{ background: 'var(--accent-wash)' }} />
             <div
               className="phantom-card-main"
               style={{
-                background: '#E2EFFE',
-                color: '#3C315B',
+                background: 'var(--canvas-bg-raised)',
+                color: 'var(--text-dark)',
               }}
             >
               <div>
@@ -270,7 +270,7 @@ export const FeatureSlider: React.FC = () => {
                     fontSize: '12px',
                     fontWeight: 800,
                     letterSpacing: '0.06em',
-                    color: '#2563EB',
+                    color: 'var(--accent-bright)',
                     marginBottom: '12px',
                   }}
                 >
@@ -292,7 +292,7 @@ export const FeatureSlider: React.FC = () => {
               {/* Telemetry Display */}
               <div
                 style={{
-                  background: '#FDFCFE',
+                  background: 'var(--canvas-bg-sunken)',
                   borderRadius: '24px',
                   padding: '24px',
                   marginTop: '20px',
@@ -300,13 +300,13 @@ export const FeatureSlider: React.FC = () => {
                   textAlign: 'center',
                 }}
               >
-                <div style={{ fontSize: '48px', fontWeight: 900, color: '#2563EB', lineHeight: 1, marginBottom: '6px' }}>
+                <div style={{ fontSize: '48px', fontWeight: 900, color: 'var(--accent-bright)', lineHeight: 1, marginBottom: '6px' }}>
                   ~1.0s
                 </div>
-                <div style={{ fontSize: '14px', fontWeight: 700, color: '#3C315B', marginBottom: '4px' }}>
+                <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-dark)', marginBottom: '4px' }}>
                   On-Chain Finality
                 </div>
-                <div style={{ fontSize: '12px', color: '#6C628A', marginBottom: '16px' }}>
+                <div style={{ fontSize: '12px', color: 'var(--text-dark-subtle)', marginBottom: '16px' }}>
                   Chain ID: 143 · TapPayLedger.sol
                 </div>
 
@@ -317,10 +317,10 @@ export const FeatureSlider: React.FC = () => {
                     gap: '8px',
                   }}
                 >
-                  <span style={{ fontSize: '11px', fontWeight: 700, background: '#E2EFFE', color: '#2563EB', padding: '4px 10px', borderRadius: '9999px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 700, background: 'var(--accent-wash)', color: 'var(--accent-bright)', padding: '4px 10px', borderRadius: '9999px' }}>
                     10,000 TPS
                   </span>
-                  <span style={{ fontSize: '11px', fontWeight: 700, background: '#E2EFFE', color: '#2563EB', padding: '4px 10px', borderRadius: '9999px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 700, background: 'var(--accent-wash)', color: 'var(--accent-bright)', padding: '4px 10px', borderRadius: '9999px' }}>
                     Zero Escrow
                   </span>
                 </div>

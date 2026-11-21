@@ -52,16 +52,54 @@ export async function sendErc20ViaMultiTokenLedger(
 
   const tokenContract = new ethers.Contract(tokenAddress, [
     'function allowance(address owner, address spender) view returns (uint256)',
-    'function approve(address spender, uint256 amount) returns (bool)',
   ], signer);
 
-  const allowance: bigint = await tokenContract.allowance(signer.address, ledgerAddress);
-  if (allowance < amountRaw) {
-    const approveTx = await tokenContract.approve(ledgerAddress, amountRaw);
-    await approveTx.wait();
-  }
+  const approvalInterface = new ethers.Interface([
+    'function approve(address spender, uint256 amount) returns (bool)',
+  ]);
+  let approvalSent = false;
+  const approve = async (amount: bigint): Promise<void> => {
+    const request = {
+      to: tokenAddress,
+      data: approvalInterface.encodeFunctionData('approve', [ledgerAddress, amount]),
+    };
+    // Raw calls tolerate legacy tokens with empty return data, but not false.
+    const result = await signer.call(request);
+    if (result !== '0x' && !approvalInterface.decodeFunctionResult('approve', result)[0]) {
+      throw new Error('Token approval returned false');
+    }
+    const tx = await signer.sendTransaction(request);
+    approvalSent = true;
+    const receipt = await tx.wait();
+    if (!receipt || receipt.status !== 1) {
+      throw new Error('Token approval was not confirmed successfully');
+    }
+  };
 
-  const sessionIdHash = createSessionIdHash();
-  const ledger = new ethers.Contract(ledgerAddress, MULTI_TOKEN_LEDGER_ABI, signer);
-  return await ledger.payERC20WithLog(tokenAddress, to, amountRaw, sessionIdHash);
+  const allowance: bigint = await tokenContract.allowance(signer.address, ledgerAddress);
+  try {
+    if (allowance !== amountRaw) {
+      if (allowance !== 0n) {
+        await approve(0n);
+      }
+      await approve(amountRaw);
+    }
+
+    const sessionIdHash = createSessionIdHash();
+    const ledger = new ethers.Contract(ledgerAddress, MULTI_TOKEN_LEDGER_ABI, signer);
+    return await ledger.payERC20WithLog(tokenAddress, to, amountRaw, sessionIdHash);
+  } catch (error) {
+    if (!approvalSent && allowance === 0n) {
+      throw error;
+    }
+    try {
+      await approve(0n);
+    } catch (revokeError) {
+      const cleanupError = new Error(
+        'Payment or approval failed and allowance revocation failed; revoke the ledger allowance manually',
+      );
+      throw Object.assign(cleanupError, {errors: [error, revokeError]});
+    }
+    throw error;
+  }
 }

@@ -97,7 +97,8 @@ jest.mock('react-native-keychain', () => ({
     BIOMETRY_ANY: 'BIOMETRY_ANY',
   },
   SECURITY_LEVEL: {SECURE_HARDWARE: 'SECURE_HARDWARE'},
-  STORAGE_TYPE: {AES_GCM: 'AES_GCM'},
+  STORAGE_TYPE: {AES_GCM: 'AES_GCM', AES_GCM_NO_AUTH: 'AES_GCM_NO_AUTH'},
+  ACCESSIBLE: {WHEN_UNLOCKED_THIS_DEVICE_ONLY: 'WHEN_UNLOCKED_THIS_DEVICE_ONLY'},
 }));
 
 // HCE mock
@@ -139,4 +140,20 @@ jest.mock('@react-native-clipboard/clipboard', () => ({
   setString: jest.fn(),
   getString: jest.fn().mockResolvedValue(''),
   hasString: jest.fn().mockResolvedValue(false),
+}));
+
+// Sound effects are native-only; stub for tests.
+jest.mock("react-native-sound", () => {
+  const Sound = jest.fn().mockImplementation((_file, _base, cb) => {
+    if (cb) { cb(null); }
+    return {play: jest.fn(), stop: jest.fn(c => c && c()), setVolume: jest.fn(), release: jest.fn()};
+  });
+  Sound.setCategory = jest.fn();
+  Sound.MAIN_BUNDLE = "";
+  return {__esModule: true, default: Sound};
+});
+
+// Passkeys are native-only; stub for tests (the passkey service tests inject a fake provider).
+jest.mock("react-native-passkey", () => ({
+  Passkey: {isSupported: jest.fn(() => false), create: jest.fn(), get: jest.fn()},
 }));

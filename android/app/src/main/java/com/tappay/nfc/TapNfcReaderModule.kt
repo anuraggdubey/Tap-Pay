@@ -194,19 +194,7 @@ class TapNfcReaderModule(private val reactContext: ReactApplicationContext) :
       return null
     }
 
-    val record = message.records[0]
-    if (
-      record.tnf == NdefRecord.TNF_WELL_KNOWN &&
-        record.type.contentEquals(NdefRecord.RTD_TEXT)
-    ) {
-      val payload = record.payload
-      if (payload.size <= 3) {
-        return null
-      }
-      return String(payload.copyOfRange(3, payload.size), Charsets.UTF_8)
-    }
-
-    return String(record.payload, Charsets.UTF_8)
+    return decodeNdefRecord(message.records[0])
   }
 
   private fun isApduSuccess(response: ByteArray): Boolean {
@@ -262,5 +250,68 @@ class TapNfcReaderModule(private val reactContext: ReactApplicationContext) :
     private const val TAG = "TapNfcReader"
     const val EVENT_TAG_READ = "TapNfcTagRead"
     const val EVENT_TAG_ERROR = "TapNfcTagError"
+
+    private val URI_PREFIXES = arrayOf(
+      "",
+      "http://www.",
+      "https://www.",
+      "http://",
+      "https://",
+      "tel:",
+      "mailto:",
+      "ftp://anonymous:anonymous@",
+      "ftp://ftp.",
+      "ftps://",
+      "sftp://",
+      "smb://",
+      "nfs://",
+      "ftp://",
+      "dav://",
+      "news:",
+      "telnet://",
+      "imap:",
+      "rtsp://",
+      "urn:",
+      "pop:",
+      "sip:",
+      "sips:",
+      "tftp:",
+      "btspp://",
+      "btl2cap://",
+      "btgoep://",
+      "tcpobex://",
+      "irdaobex://",
+      "file://",
+      "urn:epc:id:",
+      "urn:epc:tag:",
+      "urn:epc:pat:",
+      "urn:epc:raw:",
+      "urn:epc:",
+      "urn:nfc:",
+    )
+
+    internal fun decodeNdefRecord(record: NdefRecord): String? {
+      if (record.tnf == NdefRecord.TNF_WELL_KNOWN && record.type.contentEquals(NdefRecord.RTD_URI)) {
+        val payload = record.payload
+        if (payload.isEmpty()) {
+          return null
+        }
+        val prefix = URI_PREFIXES.getOrNull(payload[0].toInt() and 0xFF) ?: return null
+        return prefix + String(payload.copyOfRange(1, payload.size), Charsets.UTF_8)
+      }
+
+      if (
+        record.tnf == NdefRecord.TNF_WELL_KNOWN &&
+          record.type.contentEquals(NdefRecord.RTD_TEXT)
+      ) {
+        val payload = record.payload
+        if (payload.size <= 3) {
+          return null
+        }
+        return String(payload.copyOfRange(3, payload.size), Charsets.UTF_8)
+      }
+
+      return String(record.payload, Charsets.UTF_8)
+    }
   }
 }

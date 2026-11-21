@@ -1,23 +1,15 @@
 /* Multi-chain motion polish — additive layer (website only) */
 
 :root {
-  --mc-accent: 16, 185, 129;
+  --mc-accent: 10, 132, 255;
   --mc-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* Aurora ambient drift */
-.ambient-orb { animation: mc-orb-drift 18s ease-in-out infinite alternate; will-change: transform; }
-.ambient-orb-b { animation-duration: 24s; animation-delay: -6s; }
-.ambient-orb-c { animation-duration: 30s; animation-delay: -12s; }
-@keyframes mc-orb-drift {
-  0%   { transform: translate3d(0, 0, 0) scale(1); }
-  50%  { transform: translate3d(5vw, -4vh, 0) scale(1.12); }
-  100% { transform: translate3d(-4vw, 5vh, 0) scale(0.94); }
-}
+/* Ambient orbs — static gradients, no animation for performance */
 
 /* Flowing gradient on the hero headline */
 .hero-headline-line2 {
-  background: linear-gradient(100deg, #1a1a1a 0%, #10b981 30%, #6366f1 55%, #0ea5e9 75%, #1a1a1a 100%);
+  background: linear-gradient(100deg, var(--text-dark) 0%, var(--accent) 30%, var(--violet) 55%, var(--accent-bright) 75%, var(--text-dark) 100%);
   background-size: 250% 100%;
   -webkit-background-clip: text;
   background-clip: text;
@@ -94,7 +86,7 @@
 
 /* Scroll progress beam shimmer */
 .scroll-progress-beam {
-  background: linear-gradient(90deg, #10b981, #6366f1, #0ea5e9, #10b981) !important;
+  background: linear-gradient(90deg, var(--accent), var(--violet), var(--accent-bright), var(--accent)) !important;
   background-size: 300% 100% !important;
   animation: mc-text-flow 6s linear infinite;
 }
@@ -106,8 +98,7 @@
 /* Phone mock: soft breathing glow */
 .tp-mock-nfc-dot, .sim-chip-dot { animation: mc-pulse 2s ease-in-out infinite; }
 
-/* Entrance polish for revealed blocks */
-.scroll-reveal, .scroll-reveal-scale { will-change: transform, opacity; }
+/* Entrance polish for revealed blocks — no will-change for perf */
 
 @media (prefers-reduced-motion: reduce), (hover: none) {
   .ambient-orb, .hero-headline-line2, .hero-floating-card, .play-bento-icon,

@@ -12,6 +12,8 @@ import * as Keychain from 'react-native-keychain';
 import {NativeModules, Platform} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {normalizeMnemonic, walletFromRecoveryPhrase} from '../utils/recovery';
+import {FanoutProvider} from './fanoutProvider';
+import {readStoredCustomRpc, storeCustomRpc, validateRpcUrl} from './rpcSettings';
 import {MONAD_CONFIG, GAS_LIMIT_FALLBACK, TX_POLL_INTERVAL_MS, TX_MAX_WAIT_MS} from '../config/monad';
 
 const KEYCHAIN_SERVICE = 'com.tappay.wallet';
@@ -21,6 +23,7 @@ const ADDRESS_STORAGE_KEY = '@tappay_wallet_address';
 export type WalletErrorCode =
   | 'WALLET_EXISTS'
   | 'NO_DEVICE_AUTH'
+  | 'AUTHENTICATION_FAILED'
   | 'NO_SECURE_HARDWARE'
   | 'INVALID_SECRET'
   | 'STORAGE_FAILED';
@@ -35,27 +38,111 @@ export class WalletError extends Error {
   }
 }
 
-// List of Monad RPC endpoints for automatic failover rotation
-const RPC_ENDPOINTS = [
+// Public RPC endpoints, used only while the user has not set their own RPC.
+// Privacy: every endpoint that serves a request sees the sender's IP. A signed payment is
+// broadcast to ALL of them (see FanoutProvider) so one honest node is enough, and receipts are
+// accepted only when two endpoints agree. Users who prefer a single trusted node can set their
+// own RPC, which then replaces these completely (no silent fallback). See docs/RPC_AND_PRIVACY.md.
+const DEFAULT_RPC_ENDPOINTS = [
   MONAD_CONFIG.rpcUrls.primary,
   MONAD_CONFIG.rpcUrls.fallback1,
   MONAD_CONFIG.rpcUrls.fallback2,
 ];
 
-let _currentRpcIndex = 0;
-let _provider: ethers.JsonRpcProvider | null = null;
+const PROVIDER_NETWORK = {chainId: MONAD_CONFIG.chainId, name: MONAD_CONFIG.chainName};
+const PROBE_TIMEOUT_MS = 8000;
 
-// Create a provider for the current RPC endpoint
-function createProvider(endpointIndex = _currentRpcIndex): ethers.JsonRpcProvider {
-  return new ethers.JsonRpcProvider(
-    RPC_ENDPOINTS[endpointIndex],
-    {
-      chainId: MONAD_CONFIG.chainId,
-      name: MONAD_CONFIG.chainName,
-    },
-    {
-      staticNetwork: true,
-    },
+let customRpcUrl: string | null = null;
+let _currentRpcIndex = 0;
+let _provider: FanoutProvider | null = null;
+const _readProviders = new Map<string, ethers.JsonRpcProvider>();
+
+function rpcEndpoints(): string[] {
+  return customRpcUrl ? [customRpcUrl] : DEFAULT_RPC_ENDPOINTS;
+}
+
+function applyCustomRpc(url: string | null) {
+  customRpcUrl = url;
+  _currentRpcIndex = 0;
+  _provider = null;
+  _readProviders.clear();
+}
+
+/** Resolves once the stored custom RPC (if any) has been loaded. Awaited before any RPC call. */
+export const rpcReady: Promise<void> = readStoredCustomRpc()
+  .then(url => {
+    if (url) {
+      applyCustomRpc(url);
+    }
+  })
+  .catch(() => {});
+
+/** The endpoint currently serving requests (full URL; use describeRpc() to display it). */
+export function getActiveRpcUrl(): string {
+  const endpoints = rpcEndpoints();
+  return endpoints[_currentRpcIndex % endpoints.length];
+}
+
+/** The user's own RPC URL, or null when the default public endpoints are in use. */
+export function getCustomRpcUrl(): string | null {
+  return customRpcUrl;
+}
+
+export function getDefaultRpcEndpoints(): string[] {
+  return [...DEFAULT_RPC_ENDPOINTS];
+}
+
+/**
+ * Set (or clear with null / empty) the user's own RPC endpoint. The endpoint must be https and
+ * must report Monad's chain id, so a wrong or hostile network cannot be selected by mistake.
+ */
+export async function setCustomRpc(input: string | null): Promise<{ok: true} | {ok: false; error: string}> {
+  if (input === null || !input.trim()) {
+    await storeCustomRpc(null);
+    applyCustomRpc(null);
+    return {ok: true};
+  }
+  const check = validateRpcUrl(input);
+  if (!check.ok) {
+    return check;
+  }
+  const probe = new ethers.JsonRpcProvider(check.url);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const reported = await Promise.race<string>([
+      probe.send('eth_chainId', []),
+      new Promise<string>((_, reject) => {
+        timer = setTimeout(() => reject(new Error('timeout')), PROBE_TIMEOUT_MS);
+      }),
+    ]);
+    if (BigInt(reported) !== BigInt(MONAD_CONFIG.chainId)) {
+      return {
+        ok: false,
+        error: `That endpoint is on a different network (chain ID ${BigInt(reported).toString()}). TapPay needs Monad (${MONAD_CONFIG.chainId}).`,
+      };
+    }
+  } catch {
+    return {ok: false, error: 'Could not reach that endpoint. Check the URL and try again.'};
+  } finally {
+    if (timer) {
+      clearTimeout(timer);
+    }
+    probe.destroy();
+  }
+  await storeCustomRpc(check.url);
+  applyCustomRpc(check.url);
+  return {ok: true};
+}
+
+// Create a provider for the current RPC endpoint. Broadcasts fan out to every other endpoint.
+function createProvider(endpointIndex = _currentRpcIndex): FanoutProvider {
+  const endpoints = rpcEndpoints();
+  const index = endpointIndex % endpoints.length;
+  return new FanoutProvider(
+    endpoints[index],
+    PROVIDER_NETWORK,
+    {staticNetwork: true},
+    endpoints.filter((_, i) => i !== index),
   );
 }
 
@@ -66,24 +153,37 @@ export function getProvider(): ethers.JsonRpcProvider {
   return _provider;
 }
 
+/** Read-only provider for one specific endpoint (used to cross-check receipts). */
+function readProviderFor(url: string): ethers.JsonRpcProvider {
+  let provider = _readProviders.get(url);
+  if (!provider) {
+    provider = new ethers.JsonRpcProvider(url, PROVIDER_NETWORK, {staticNetwork: true});
+    _readProviders.set(url, provider);
+  }
+  return provider;
+}
+
 /**
- * Rotate to the next fallback RPC if the current one is unresponsive or rate-limited
+ * Rotate to the next endpoint for READS if the current one is unresponsive or rate-limited.
+ * (A custom RPC is the only endpoint, so there is nothing to rotate to.)
  */
 export function rotateRpcProvider(): ethers.JsonRpcProvider {
-  _currentRpcIndex = (_currentRpcIndex + 1) % RPC_ENDPOINTS.length;
-  console.warn(`[RPC Failover] Switching to RPC endpoint #${_currentRpcIndex}`);
+  _currentRpcIndex = (_currentRpcIndex + 1) % rpcEndpoints().length;
   _provider = createProvider(_currentRpcIndex);
   return _provider;
 }
 
 /**
- * Execute an RPC action with automatic retry & rotation on failover
+ * Execute a read-only RPC action with retry & rotation across the configured endpoints.
+ * Do not use it to broadcast: broadcasts go through the provider's fan-out.
  */
 export async function withRpcFailover<T>(action: (provider: ethers.JsonRpcProvider) => Promise<T>): Promise<T> {
+  await rpcReady;
   let attempts = 0;
   let lastError: any = null;
+  const maxAttempts = rpcEndpoints().length;
 
-  while (attempts < RPC_ENDPOINTS.length) {
+  while (attempts < maxAttempts) {
     try {
       const provider = getProvider();
       return await action(provider);
@@ -322,14 +422,53 @@ export async function hasRecoveryPhrase(): Promise<boolean> {
   }
 }
 
+async function authorizeResetSecret(service: string): Promise<'authenticated' | 'unrecoverable'> {
+  try {
+    const credentials = await Keychain.getGenericPassword({
+      service,
+      authenticationPrompt: authPrompt('Authenticate to reset your wallet'),
+    });
+    if (credentials && credentials.password) {
+      return 'authenticated';
+    }
+  } catch (error: any) {
+    if (Platform.OS === 'android' && error?.code === 'E_CRYPTO_FAILED' && (
+      error?.message === 'Wrapped error: Key permanently invalidated' ||
+      error?.message === 'Decryption failed: Authentication tag verification failed. ' +
+        'This usually indicates that the encrypted data was modified, corrupted, ' +
+        'or is being decrypted with the wrong key.'
+    )) {
+      return 'unrecoverable';
+    }
+  }
+  throw new WalletError(
+    'AUTHENTICATION_FAILED',
+    'Device authentication was cancelled or failed. Your wallet was not reset.',
+  );
+}
+
 /**
- * Delete the stored wallet, recovery phrase and cached address from this device.
+ * Delete stored secrets after phone authentication, or if each secret is unrecoverable.
  * Returns true only if everything was removed.
  */
 export async function deleteWallet(): Promise<boolean> {
+  let keyExists: boolean;
+  let phraseExists: boolean;
   try {
-    const keyRemoved = await Keychain.resetGenericPassword({service: KEYCHAIN_SERVICE});
-    const phraseRemoved = await Keychain.resetGenericPassword({service: PHRASE_SERVICE});
+    keyExists = await Keychain.hasGenericPassword({service: KEYCHAIN_SERVICE});
+    phraseExists = await Keychain.hasGenericPassword({service: PHRASE_SERVICE});
+  } catch {
+    throw new WalletError('AUTHENTICATION_FAILED', 'Could not verify the stored wallet. Nothing was removed.');
+  }
+
+  const keyAccess = keyExists ? await authorizeResetSecret(KEYCHAIN_SERVICE) : null;
+  if (phraseExists && keyAccess !== 'authenticated') {
+    await authorizeResetSecret(PHRASE_SERVICE);
+  }
+
+  try {
+    const keyRemoved = !keyExists || await Keychain.resetGenericPassword({service: KEYCHAIN_SERVICE});
+    const phraseRemoved = !phraseExists || await Keychain.resetGenericPassword({service: PHRASE_SERVICE});
     await AsyncStorage.removeItem(ADDRESS_STORAGE_KEY);
     return keyRemoved !== false && phraseRemoved !== false;
   } catch (error) {
@@ -516,6 +655,7 @@ export async function sendPayment(
   }
 
   try {
+    await rpcReady;
     const provider = getProvider();
     const wallet = new ethers.Wallet(key, provider);
     const ledgerAbi = [
@@ -554,8 +694,10 @@ export async function sendPayment(
           }
         : {gasPrice: feeData.gasPrice ?? ethers.parseUnits('50', 'gwei')};
 
-    // Sign and broadcast exactly once. A broadcast is NOT retried across endpoints: a timeout or
-    // transient error after the node accepted the tx must never cause a second, double-spending send.
+    // Sign once and broadcast that exact signed transaction. The provider sends the same raw bytes
+    // to every configured endpoint (same hash, same nonce), so it is idempotent and cannot
+    // double-spend, while a single dropping or censoring node can no longer stop the payment.
+    // It is never re-signed or re-sent with different fields.
     const tx = await wallet.sendTransaction({
       ...txRequest,
       nonce,
@@ -570,24 +712,94 @@ export async function sendPayment(
   }
 }
 
+export type ReceiptStatus = 'confirmed' | 'reverted' | 'pending' | 'unknown';
+
+type EndpointReceipt = 'confirmed' | 'reverted' | 'pending' | 'error';
+
+async function receiptFromEndpoint(url: string, txHash: string): Promise<EndpointReceipt> {
+  try {
+    const receipt = await readProviderFor(url).getTransactionReceipt(txHash);
+    if (!receipt) {
+      return 'pending';
+    }
+    return receipt.status === 1 ? 'confirmed' : 'reverted';
+  } catch {
+    return 'error';
+  }
+}
+
+/**
+ * Read results are untrusted: a single compromised RPC could invent a confirmed receipt. A
+ * receipt is accepted only when two different endpoints report the same status. With a custom
+ * RPC there is one endpoint, so the user's own node is trusted on its own.
+ *  - confirmed / reverted: enough endpoints agree.
+ *  - pending: no receipt yet, only one endpoint has it, or the endpoints disagree.
+ *  - unknown: no endpoint could be reached.
+ */
+async function quorumReceiptStatus(txHash: string): Promise<ReceiptStatus> {
+  await rpcReady;
+  const endpoints = rpcEndpoints();
+  const start = _currentRpcIndex % endpoints.length;
+  const order = endpoints.map((_, i) => endpoints[(start + i) % endpoints.length]);
+  const needed = Math.min(2, endpoints.length);
+  const agreed: Array<'confirmed' | 'reverted'> = [];
+  let answered = false;
+
+  for (const url of order) {
+    const result = await receiptFromEndpoint(url, txHash);
+    if (result === 'error') {
+      continue;
+    }
+    answered = true;
+    if (result === 'pending') {
+      if (agreed.length === 0) {
+        return 'pending'; // the first node to answer has no receipt yet: keep waiting
+      }
+      continue;
+    }
+    agreed.push(result);
+    if (agreed.length >= needed) {
+      break;
+    }
+  }
+
+  if (agreed.length === 0) {
+    return answered ? 'pending' : 'unknown';
+  }
+  if (agreed.length < needed) {
+    return 'pending'; // a receipt exists on one node but could not be corroborated yet
+  }
+  return agreed.every(status => status === agreed[0]) ? agreed[0] : 'pending';
+}
+
+/**
+ * Outcome of waiting for a receipt. A receipt is the only authoritative signal:
+ *  - `confirmed`: a receipt with status 1.
+ *  - `reverted`: a receipt with status 0. The only case that may be reported as a failure.
+ *  - `timedOut`: no (corroborated) receipt yet. The transaction may still confirm, so it is NOT
+ *    a failure.
+ */
+export type ReceiptOutcome = {
+  confirmed: boolean;
+  reverted?: boolean;
+  timedOut?: boolean;
+  error?: string;
+};
+
 /**
  * Poll for transaction receipt with Monad-optimized interval (500ms)
  */
-export async function waitForReceipt(
-  txHash: string,
-): Promise<{confirmed: boolean; error?: string}> {
+export async function waitForReceipt(txHash: string): Promise<ReceiptOutcome> {
   const startTime = Date.now();
 
   while (Date.now() - startTime < TX_MAX_WAIT_MS) {
     try {
-      const provider = getProvider();
-      const receipt = await provider.getTransactionReceipt(txHash);
-      if (receipt) {
-        if (receipt.status === 1) {
-          return {confirmed: true};
-        } else {
-          return {confirmed: false, error: 'Transaction reverted on chain'};
-        }
+      const status = await quorumReceiptStatus(txHash);
+      if (status === 'confirmed') {
+        return {confirmed: true};
+      }
+      if (status === 'reverted') {
+        return {confirmed: false, reverted: true, error: 'Transaction reverted on chain'};
       }
     } catch {
       // RPC transient error — continue polling
@@ -597,7 +809,24 @@ export async function waitForReceipt(
     await new Promise(resolve => setTimeout(resolve, TX_POLL_INTERVAL_MS));
   }
 
-  return {confirmed: false, error: 'Confirmation timeout — transaction may still confirm'};
+  return {
+    confirmed: false,
+    timedOut: true,
+    error: 'Still confirming. The transaction may still go through.',
+  };
+}
+
+/**
+ * One-shot receipt lookup (no polling) used to reconcile pending history rows. Applies the same
+ * two-endpoint agreement as waitForReceipt. `unknown` = nothing could be reached, so nothing can
+ * be concluded.
+ */
+export async function getReceiptStatus(txHash: string): Promise<ReceiptStatus> {
+  try {
+    return await quorumReceiptStatus(txHash);
+  } catch {
+    return 'unknown';
+  }
 }
 
 /**

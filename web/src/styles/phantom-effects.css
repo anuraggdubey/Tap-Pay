@@ -71,25 +71,30 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 20px;
-  border-radius: var(--radius-pill);
-  background: var(--pill-bg);
-  color: var(--pill-text);
-  font-weight: 600;
-  font-size: 14px;
-  transition: background 0.2s ease;
+  padding: 10px 20px;
+  border-radius: var(--radius-card-sm);
+  background: transparent;
+  border: 1px solid var(--canvas-line-bright);
+  color: var(--text-dark);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 12.5px;
+  letter-spacing: 0.02em;
+  transition: border-color 0.2s ease, color 0.2s ease;
 }
 
 .phantom-see-more:hover {
-  background: var(--pill-hover);
+  border-color: var(--accent);
+  color: var(--accent-bright);
 }
 
 /* Big Section Titles */
 .phantom-section-title {
-  font-size: clamp(30px, 7.5vw, 84px);
+  font-family: var(--font-serif);
+  font-size: clamp(34px, 7.5vw, 88px);
   font-weight: 400;
-  line-height: 1.08;
-  letter-spacing: -0.035em;
+  line-height: 1.02;
+  letter-spacing: -0.02em;
   color: var(--text-dark);
   text-align: center;
   margin-bottom: 24px;
@@ -137,9 +142,10 @@
 .phantom-card-shadow-layer {
   position: absolute;
   inset: 0;
-  background: #0D0D12;
+  background: var(--accent-wash);
+  border: 1px solid var(--accent-wash-strong);
   border-radius: var(--radius-card);
-  transform: rotate(2deg) translateY(6px);
+  transform: rotate(1.5deg) translateY(6px);
   z-index: 0;
 }
 
@@ -147,8 +153,9 @@
   position: relative;
   z-index: 1;
   border-radius: var(--radius-card);
-  padding: 40px 32px;
-  box-shadow: 0 10px 40px rgba(26, 26, 26, 0.06);
+  border: 1px solid var(--canvas-line);
+  padding: 36px 30px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -160,18 +167,18 @@
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  background: #FDFCFE;
+  background: var(--canvas-bg-raised);
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--text-dark);
-  box-shadow: 0 4px 15px rgba(26, 26, 26, 0.06);
-  border: 1px solid rgba(26, 26, 26, 0.06);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--canvas-line);
   transition: background 0.2s ease;
 }
 
 .phantom-icon-btn:hover {
-  background: var(--pill-hover);
+  background: var(--canvas-bg-sunken);
 }
 
 /* Card Badge Pill */
@@ -321,10 +328,10 @@
   top: 0;
   left: 0;
   height: 2px;
-  background: linear-gradient(90deg, #1A1A1A 0%, #444444 50%, #10B981 100%);
+  background: linear-gradient(90deg, var(--canvas-bg) 0%, var(--accent-dim) 50%, var(--accent) 100%);
   z-index: 9999;
   pointer-events: none;
-  box-shadow: 0 0 8px rgba(16, 185, 129, 0.3);
+  box-shadow: 0 0 8px rgba(10, 132, 255, 0.3);
   transition: width 0.1s linear;
 }
 
@@ -333,7 +340,6 @@
   opacity: 0;
   transform: translateY(44px) scale(0.97);
   transition: opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1), transform 0.85s cubic-bezier(0.16, 1, 0.3, 1);
-  will-change: opacity, transform;
 }
 
 .scroll-reveal.in-view {
@@ -346,7 +352,6 @@
   opacity: 0;
   transform: translateX(-45px) translateY(20px) scale(0.96);
   transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1), transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
-  will-change: opacity, transform;
 }
 
 .scroll-reveal-left.in-view {
@@ -359,7 +364,6 @@
   opacity: 0;
   transform: translateX(45px) translateY(20px) scale(0.96);
   transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1), transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
-  will-change: opacity, transform;
 }
 
 .scroll-reveal-right.in-view {
@@ -372,7 +376,6 @@
   opacity: 0;
   transform: scale(0.88) translateY(45px);
   transition: opacity 0.95s cubic-bezier(0.16, 1, 0.3, 1), transform 0.95s cubic-bezier(0.16, 1, 0.3, 1);
-  will-change: opacity, transform;
 }
 
 .scroll-reveal-scale.in-view {
@@ -390,18 +393,6 @@
 [data-parallax] {
   transform: translateY(var(--parallax-y, 0px));
   transition: transform 0.15s cubic-bezier(0, 0, 0.2, 1);
-  will-change: transform;
-}
-
-html.lenis-smooth-active [data-parallax] {
-  transition: none;
-}
-
-html.lenis-smooth-active .scroll-reveal,
-html.lenis-smooth-active .scroll-reveal-left,
-html.lenis-smooth-active .scroll-reveal-right,
-html.lenis-smooth-active .scroll-reveal-scale {
-  transition: none;
 }
 
 /* Ambient scroll-linked background orbs */
@@ -420,10 +411,8 @@ html.lenis-smooth-active .scroll-reveal-scale {
 .ambient-orb {
   position: absolute;
   border-radius: 50%;
-  filter: blur(80px);
   opacity: 0.45;
-  transform: translate3d(0, calc(var(--scroll-y, 0px) * -0.04), 0);
-  will-change: transform;
+  transform: translate3d(0, 0, 0);
 }
 
 .ambient-orb-a {
@@ -431,7 +420,7 @@ html.lenis-smooth-active .scroll-reveal-scale {
   height: min(55vw, 520px);
   top: -12%;
   left: -8%;
-  background: radial-gradient(circle, rgba(16, 185, 129, 0.22) 0%, transparent 68%);
+  background: radial-gradient(circle, rgba(10, 132, 255, 0.08) 0%, transparent 68%);
 }
 
 .ambient-orb-b {
@@ -439,8 +428,7 @@ html.lenis-smooth-active .scroll-reveal-scale {
   height: min(48vw, 440px);
   top: 38%;
   right: -10%;
-  background: radial-gradient(circle, rgba(26, 26, 26, 0.08) 0%, transparent 70%);
-  transform: translate3d(0, calc(var(--scroll-y, 0px) * 0.06), 0);
+  background: radial-gradient(circle, rgba(110, 84, 255, 0.06) 0%, transparent 70%);
 }
 
 .ambient-orb-c {
@@ -448,8 +436,7 @@ html.lenis-smooth-active .scroll-reveal-scale {
   height: min(42vw, 380px);
   bottom: 8%;
   left: 28%;
-  background: radial-gradient(circle, rgba(255, 253, 248, 0.55) 0%, transparent 72%);
-  transform: translate3d(0, calc(var(--scroll-y, 0px) * -0.08), 0);
+  background: radial-gradient(circle, rgba(10, 132, 255, 0.05) 0%, transparent 72%);
 }
 
 .scroll-progress-glow {
@@ -458,7 +445,7 @@ html.lenis-smooth-active .scroll-reveal-scale {
   width: 120px;
   height: 4px;
   margin-left: -60px;
-  background: radial-gradient(circle, rgba(16, 185, 129, 0.85) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(10, 132, 255, 0.85) 0%, transparent 70%);
   z-index: 9998;
   pointer-events: none;
   opacity: 0.85;
@@ -484,5 +471,21 @@ html.lenis-smooth-active .scroll-reveal-scale {
     opacity: 1 !important;
     transform: none !important;
   }
+}
+
+/* Low-end device mode — keep visuals, kill expensive paint ops */
+html.perf-lite .site-ambient-layer { display: none; }
+html.perf-lite .scroll-progress-glow { display: none; }
+html.perf-lite .hero-mesh-canvas { display: none; }
+html.perf-lite .cursor-spotlight { display: none; }
+html.perf-lite .glass-sheen-sweep { animation: none; }
+html.perf-lite .hero-floating-card { animation: none; }
+html.perf-lite .hero-nfc-waves-bg { display: none; }
+html.perf-lite .scroll-reveal,
+html.perf-lite .scroll-reveal-left,
+html.perf-lite .scroll-reveal-right,
+html.perf-lite .scroll-reveal-scale {
+  opacity: 1 !important;
+  transform: none !important;
 }
 

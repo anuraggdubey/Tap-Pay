@@ -39,12 +39,12 @@ export const Prerequisites: React.FC = () => {
         >
           {/* Card 1: Android Only (Sky Blue) */}
           <div className="phantom-card-wrapper scroll-reveal scroll-delay-1" data-parallax="0.04">
-            <div className="phantom-card-shadow-layer" style={{ background: '#1D4ED8' }} />
+            <div className="phantom-card-shadow-layer" style={{ background: 'var(--accent-wash)' }} />
             <div
               className="phantom-card-main"
               style={{
-                background: '#E2EFFE',
-                color: '#3C315B',
+                background: 'var(--canvas-bg-raised)',
+                color: 'var(--text-dark)',
               }}
             >
               <div>
@@ -53,7 +53,7 @@ export const Prerequisites: React.FC = () => {
                     fontSize: '12px',
                     fontWeight: 800,
                     letterSpacing: '0.06em',
-                    color: '#2563EB',
+                    color: 'var(--accent-bright)',
                     marginBottom: '12px',
                   }}
                 >
@@ -70,14 +70,14 @@ export const Prerequisites: React.FC = () => {
                 >
                   Android 10+ (API 34) Only.
                 </h3>
-                <p style={{ color: '#6C628A', fontSize: '15px', lineHeight: 1.6, marginBottom: '24px' }}>
+                <p style={{ color: 'var(--text-dark-subtle)', fontSize: '15px', lineHeight: 1.6, marginBottom: '24px' }}>
                   TapPay requires Android because Apple iOS restricts Host Card Emulation to Apple Pay, preventing phone-to-phone wallet reads.
                 </p>
               </div>
 
               <div
                 style={{
-                  background: '#FDFCFE',
+                  background: 'var(--canvas-bg-sunken)',
                   borderRadius: '20px',
                   padding: '18px',
                   display: 'flex',
@@ -88,7 +88,7 @@ export const Prerequisites: React.FC = () => {
                 <Check size={22} color="#2563EB" strokeWidth={2.5} style={{ flexShrink: 0 }} />
                 <div>
                   <div style={{ fontSize: '13px', fontWeight: 700 }}>HostApduService Native</div>
-                  <div style={{ fontSize: '11px', color: '#9890B4' }}>Full peer-to-peer NFC stack</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-dark-subtle)' }}>Full peer-to-peer NFC stack</div>
                 </div>
               </div>
             </div>
@@ -96,12 +96,12 @@ export const Prerequisites: React.FC = () => {
 
           {/* Card 2: NFC Chip (Lavender) */}
           <div className="phantom-card-wrapper scroll-reveal scroll-delay-2" data-parallax="-0.03">
-            <div className="phantom-card-shadow-layer" style={{ background: '#684FF6' }} />
+            <div className="phantom-card-shadow-layer" style={{ background: 'var(--accent-wash)' }} />
             <div
               className="phantom-card-main"
               style={{
-                background: '#EAE6FE',
-                color: '#3C315B',
+                background: 'var(--canvas-bg-raised)',
+                color: 'var(--text-dark)',
               }}
             >
               <div>
@@ -127,14 +127,14 @@ export const Prerequisites: React.FC = () => {
                 >
                   Physical NFC Chip Required.
                 </h3>
-                <p style={{ color: '#6C628A', fontSize: '15px', lineHeight: 1.6, marginBottom: '24px' }}>
+                <p style={{ color: 'var(--text-dark-subtle)', fontSize: '15px', lineHeight: 1.6, marginBottom: '24px' }}>
                   Your phone must have an integrated NFC chip toggled ON in Android settings to exchange APDU keys when held against another phone.
                 </p>
               </div>
 
               <div
                 style={{
-                  background: '#FDFCFE',
+                  background: 'var(--canvas-bg-sunken)',
                   borderRadius: '20px',
                   padding: '18px',
                   display: 'flex',
@@ -145,7 +145,7 @@ export const Prerequisites: React.FC = () => {
                 <Radio size={22} color="#836EF9" strokeWidth={2.5} style={{ flexShrink: 0 }} />
                 <div>
                   <div style={{ fontSize: '13px', fontWeight: 700 }}>ISO-DEP APDU Protocol</div>
-                  <div style={{ fontSize: '11px', color: '#9890B4' }}>Radio frequency communication</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-dark-subtle)' }}>Radio frequency communication</div>
                 </div>
               </div>
             </div>
@@ -153,12 +153,12 @@ export const Prerequisites: React.FC = () => {
 
           {/* Card 3: Two Devices (Mint Green) */}
           <div className="phantom-card-wrapper scroll-reveal scroll-delay-3" data-parallax="0.04">
-            <div className="phantom-card-shadow-layer" style={{ background: '#059669' }} />
+            <div className="phantom-card-shadow-layer" style={{ background: 'var(--accent-wash)' }} />
             <div
               className="phantom-card-main"
               style={{
-                background: '#E1F8F0',
-                color: '#3C315B',
+                background: 'var(--canvas-bg-raised)',
+                color: 'var(--text-dark)',
               }}
             >
               <div>
@@ -167,7 +167,7 @@ export const Prerequisites: React.FC = () => {
                     fontSize: '12px',
                     fontWeight: 800,
                     letterSpacing: '0.06em',
-                    color: '#059669',
+                    color: 'var(--signal)',
                     marginBottom: '12px',
                   }}
                 >
@@ -184,14 +184,14 @@ export const Prerequisites: React.FC = () => {
                 >
                   Two Physical Phones Needed.
                 </h3>
-                <p style={{ color: '#6C628A', fontSize: '15px', lineHeight: 1.6, marginBottom: '24px' }}>
+                <p style={{ color: 'var(--text-dark-subtle)', fontSize: '15px', lineHeight: 1.6, marginBottom: '24px' }}>
                   For end-to-end tap payment testing, you need two physical Android devices (one as sender, one as receiver). Emulators cannot simulate NFC.
                 </p>
               </div>
 
               <div
                 style={{
-                  background: '#FDFCFE',
+                  background: 'var(--canvas-bg-sunken)',
                   borderRadius: '20px',
                   padding: '18px',
                   display: 'flex',
@@ -202,7 +202,7 @@ export const Prerequisites: React.FC = () => {
                 <Layers size={22} color="#10B981" strokeWidth={2.5} style={{ flexShrink: 0 }} />
                 <div>
                   <div style={{ fontSize: '13px', fontWeight: 700 }}>Sender &amp; Receiver Pair</div>
-                  <div style={{ fontSize: '11px', color: '#9890B4' }}>Real physical contact testing</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-dark-subtle)' }}>Real physical contact testing</div>
                 </div>
               </div>
             </div>
@@ -213,7 +213,7 @@ export const Prerequisites: React.FC = () => {
         <div
           className="scroll-reveal prereq-compat-bar"
           style={{
-            background: '#FDFCFE',
+            background: 'var(--canvas-bg-sunken)',
             borderRadius: '24px',
             padding: '24px 32px',
             display: 'flex',
@@ -225,10 +225,10 @@ export const Prerequisites: React.FC = () => {
           }}
         >
           <div className="prereq-compat-copy">
-            <h4 style={{ fontSize: '18px', fontWeight: 700, color: '#3C315B', marginBottom: '4px' }}>
+            <h4 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-dark)', marginBottom: '4px' }}>
               Is your device compatible?
             </h4>
-            <p style={{ fontSize: '14px', color: '#6C628A' }}>
+            <p style={{ fontSize: '14px', color: 'var(--text-dark-subtle)' }}>
               Select your mobile operating system to verify TapPay support.
             </p>
           </div>
@@ -238,8 +238,9 @@ export const Prerequisites: React.FC = () => {
               onClick={() => setDeviceTest('android')}
               className="phantom-btn-pill"
               style={{
-                background: deviceTest === 'android' ? 'var(--text-dark)' : 'var(--pill-bg)',
-                color: deviceTest === 'android' ? '#FFFDF8' : 'var(--text-dark)',
+                background: deviceTest === 'android' ? 'var(--accent)' : 'var(--canvas-bg-raised)',
+                color: deviceTest === 'android' ? 'var(--text-on-accent)' : 'var(--text-dark)',
+                border: '1px solid ' + (deviceTest === 'android' ? 'var(--accent)' : 'var(--canvas-line-bright)'),
               }}
             >
               <Check size={16} />
@@ -250,8 +251,9 @@ export const Prerequisites: React.FC = () => {
               onClick={() => setDeviceTest('ios')}
               className="phantom-btn-pill"
               style={{
-                background: deviceTest === 'ios' ? '#EF4444' : 'var(--pill-bg)',
+                background: deviceTest === 'ios' ? 'var(--danger)' : 'var(--canvas-bg-raised)',
                 color: deviceTest === 'ios' ? '#FFFFFF' : 'var(--text-dark)',
+                border: '1px solid ' + (deviceTest === 'ios' ? 'var(--danger)' : 'var(--canvas-line-bright)'),
               }}
             >
               <AlertCircle size={16} />

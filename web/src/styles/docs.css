@@ -7,7 +7,7 @@
 .docs-main {
   position: relative;
   z-index: 1;
-  padding-top: 96px;
+  padding-top: 112px;
 }
 
 .docs-hero {
@@ -82,7 +82,7 @@
 
 .docs-nav-link:hover,
 .docs-nav-link.is-active {
-  background: rgba(26, 26, 26, 0.06);
+  background: var(--accent-wash);
   color: var(--text-dark);
 }
 
@@ -102,7 +102,7 @@
   letter-spacing: -0.02em;
   margin-bottom: 12px;
   padding-bottom: 12px;
-  border-bottom: 1px solid rgba(26, 26, 26, 0.08);
+  border-bottom: 1px solid var(--canvas-line);
 }
 
 .docs-section h3 {
@@ -133,22 +133,22 @@
 }
 
 .docs-card {
-  background: var(--card-white);
-  border: 1px solid rgba(26, 26, 26, 0.08);
+  background: var(--canvas-bg-raised);
+  border: 1px solid var(--canvas-line);
   border-radius: var(--radius-card-sm);
   padding: 22px 24px;
   margin: 16px 0;
-  box-shadow: 0 8px 28px rgba(26, 26, 26, 0.04);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.2);
 }
 
 .docs-card--mint {
-  background: var(--card-mint);
-  border-color: rgba(16, 185, 129, 0.2);
+  background: var(--canvas-bg-raised);
+  border-color: var(--signal-wash);
 }
 
 .docs-card--lavender {
-  background: var(--card-lavender);
-  border-color: rgba(91, 72, 217, 0.15);
+  background: var(--canvas-bg-raised);
+  border-color: var(--accent-wash-strong);
 }
 
 .docs-steps {
@@ -185,8 +185,8 @@
 .docs-table-wrap {
   overflow-x: auto;
   margin: 16px 0;
-  border-radius: 16px;
-  border: 1px solid rgba(26, 26, 26, 0.08);
+  border-radius: var(--radius-card-sm);
+  border: 1px solid var(--canvas-line);
 }
 
 .docs-table {
@@ -199,11 +199,11 @@
 .docs-table td {
   padding: 12px 16px;
   text-align: left;
-  border-bottom: 1px solid rgba(26, 26, 26, 0.06);
+  border-bottom: 1px solid var(--canvas-line);
 }
 
 .docs-table th {
-  background: rgba(26, 26, 26, 0.04);
+  background: var(--canvas-bg-sunken);
   font-weight: 700;
   color: var(--text-dark);
 }
@@ -219,10 +219,10 @@
 .docs-code {
   font-family: var(--font-mono);
   font-size: 13px;
-  background: rgba(26, 26, 26, 0.06);
+  background: var(--accent-wash);
   padding: 2px 8px;
   border-radius: 6px;
-  color: var(--text-dark);
+  color: var(--accent-bright);
 }
 
 .docs-x-banner {

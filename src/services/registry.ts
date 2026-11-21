@@ -3,9 +3,10 @@
  *
  * Usernames live in the Supabase `usernames` table (one row per wallet, mainnet chain 143).
  * Registration and release require a wallet signature verified by the register-username Edge
- * Function; resolution and reverse-resolution are public reads normalized the same way as
- * registration. The on-chain UsernameRegistry contract exists but is intentionally NOT used by
- * the app — do not add a second, divergent lookup path.
+ * Function. Resolution and reverse-resolution are exact-match RPCs (`resolve_username`,
+ * `reverse_resolve_address`): the table is not publicly readable, so it cannot be scraped.
+ * The on-chain UsernameRegistry contract exists but is intentionally NOT used by the app: do not
+ * add a second, divergent lookup path.
  */
 
 import {ethers} from 'ethers';
@@ -132,14 +133,13 @@ export async function releaseUsername(): Promise<{error?: string}> {
  */
 export async function resolveUsername(username: string): Promise<string | null> {
   try {
-    const { data } = await supabase
-      .from('usernames')
-      .select('wallet_address')
-      .eq('normalized_username', normalizeUsername(username))
-      .eq('chain_id', ACTIVE_CHAIN_ID)
-      .maybeSingle();
-    
-    return data?.wallet_address || null;
+    // Exact-match RPC. The usernames table itself is not readable by the public role, so the
+    // handle directory cannot be bulk-downloaded.
+    const {data, error} = await supabase.rpc('resolve_username', {p_username: normalizeUsername(username)});
+    if (error || typeof data !== 'string') {
+      return null;
+    }
+    return data;
   } catch {
     return null;
   }
@@ -151,14 +151,11 @@ export async function resolveUsername(username: string): Promise<string | null> 
  */
 export async function reverseResolveAddress(address: string): Promise<string | null> {
   try {
-    const { data } = await supabase
-      .from('usernames')
-      .select('username')
-      .eq('wallet_address', address.toLowerCase())
-      .eq('chain_id', ACTIVE_CHAIN_ID)
-      .maybeSingle();
-      
-    return data?.username || null;
+    const {data, error} = await supabase.rpc('reverse_resolve_address', {p_address: address.toLowerCase()});
+    if (error || typeof data !== 'string') {
+      return null;
+    }
+    return data;
   } catch {
     return null;
   }

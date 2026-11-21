@@ -1,0 +1,34 @@
+name: PR links an issue
+
+# Every PR must reference the issue it solves with a closing keyword
+# (Closes / Fixes / Resolves #123) so the issue closes when the PR merges.
+# Trivial typo/docs changes can write "No issue: <reason>" instead.
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    # Dependency bots do not link issues.
+    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require a closing keyword
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          # Ignore the untouched template placeholder ("Closes #" with no number).
+          if printf '%s\n' "$PR_BODY" | grep -Eiq '(^|[^[:alnum:]])(close[sd]?|fix(e[sd])?|resolve[sd]?)[: ]+([[:alnum:]_.-]+/[[:alnum:]_.-]+)?#[0-9]+'; then
+            echo "Linked issue found."
+            exit 0
+          fi
+          if printf '%s\n' "$PR_BODY" | grep -Eiq '^[[:space:]]*no issue:[[:space:]]*[^[:space:]]+'; then
+            echo "Exempted with 'No issue: <reason>'."
+            exit 0
+          fi
+          echo "::error title=Missing linked issue::Add 'Closes #<issue number>' on its own line in the PR description. For a trivial typo/docs fix with no issue, write 'No issue: <reason>'. See CONTRIBUTING.md."
+          exit 1

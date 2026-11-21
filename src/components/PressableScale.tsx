@@ -54,10 +54,11 @@ export default function PressableScale({
 
   const animateTo = useCallback(
     (to: number, duration: number) => {
-      Animated.timing(scale, {
+      // Spring gives the slightly springy, fluid press feel of iOS.
+      Animated.spring(scale, {
         toValue: to,
-        duration,
-        easing: EASE_OUT,
+        speed: to < 1 ? 60 : 24,
+        bounciness: to < 1 ? 0 : 9,
         useNativeDriver: true,
       }).start();
     },

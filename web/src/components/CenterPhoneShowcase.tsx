@@ -19,7 +19,7 @@ const InteractivePhone: React.FC<PhoneProps> = ({ val, setVal, paid, onPay, isMo
         borderRadius: isMobile ? '44px' : '52px',
         padding: isMobile ? '10px' : '12px',
         background: '#0D0E15',
-        boxShadow: '0 30px 80px rgba(60, 49, 91, 0.35), 0 0 50px rgba(131, 110, 249, 0.3)',
+        boxShadow: '0 40px 90px rgba(0, 0, 0, 0.6), 0 0 60px rgba(10, 132, 255, 0.14)',
       }}
     >
       <div className="realistic-phone-camera" />
@@ -184,52 +184,53 @@ export const CenterPhoneShowcase: React.FC = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             {/* Top Left Card: Deep Navy/Indigo */}
             <div
-              className="showcase-card-l1"
+              className="showcase-card-l1 field-card"
               style={{
-                background: 'linear-gradient(145deg, #130e2e 0%, #090717 100%)',
-                borderRadius: '32px',
-                padding: '36px 30px',
-                color: '#FFFDF8',
+                background: 'var(--canvas-bg-raised)',
+                borderRadius: 'var(--radius-card)',
+                padding: '32px 28px',
+                color: 'var(--text-dark)',
                 minHeight: '260px',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)',
+                border: '1px solid var(--canvas-line)',
                 position: 'relative',
                 overflow: 'hidden',
               }}
             >
-              <h3 style={{ fontSize: '24px', fontWeight: 700, lineHeight: 1.25, maxWidth: '240px' }}>
-                Earn &amp; Transact with Multi-Chain TapPay
-              </h3>
+              <div>
+                <span className="field-kicker" style={{ marginBottom: '18px', display: 'inline-flex' }}>Feature 01 · Yield</span>
+                <h3 className="showcase-card-title">Earn &amp; transact on a multi-chain balance.</h3>
+              </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <Coins size={52} color="#A78BFA" strokeWidth={1.8} className="phantom-floating" />
+                <Coins size={46} color="var(--accent-bright)" strokeWidth={1.5} className="phantom-floating" />
               </div>
             </div>
 
             {/* Bottom Left Card: Soft Lavender */}
             <div
-              className="showcase-card-l2"
+              className="showcase-card-l2 field-card"
               style={{
-                background: 'linear-gradient(155deg, #4F46E5 0%, #312E81 100%)',
-                borderRadius: '32px',
-                padding: '36px 30px',
-                color: '#F5F3FF',
+                background: 'var(--canvas-bg-raised)',
+                borderRadius: 'var(--radius-card)',
+                padding: '32px 28px',
+                color: 'var(--text-dark)',
                 minHeight: '260px',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                boxShadow: '0 16px 40px rgba(49, 46, 129, 0.35)',
-                border: '1px solid rgba(255, 255, 255, 0.12)',
+                border: '1px solid var(--canvas-line)',
                 position: 'relative',
                 overflow: 'hidden',
               }}
             >
-              <h3 style={{ fontSize: '24px', fontWeight: 700, lineHeight: 1.25, maxWidth: '240px' }}>
-                Send and receive money globally, instantly
-              </h3>
+              <div>
+                <span className="field-kicker" style={{ marginBottom: '18px', display: 'inline-flex' }}>Feature 02 · Transfers</span>
+                <h3 className="showcase-card-title">Send and receive money globally, instantly.</h3>
+              </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <Send size={46} color="#C4B5FD" strokeWidth={1.8} className="phantom-floating" />
+                <Send size={44} color="var(--text-dark-subtle)" strokeWidth={1.5} className="phantom-floating" />
               </div>
             </div>
           </div>
@@ -245,52 +246,53 @@ export const CenterPhoneShowcase: React.FC = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             {/* Top Right Card: Deep Emerald Green */}
             <div
-              className="showcase-card-r1"
+              className="showcase-card-r1 field-card"
               style={{
-                background: 'linear-gradient(145deg, #05261d 0%, #031711 100%)',
-                borderRadius: '32px',
-                padding: '36px 30px',
-                color: '#FFFDF8',
+                background: 'var(--canvas-bg-raised)',
+                borderRadius: 'var(--radius-card)',
+                padding: '32px 28px',
+                color: 'var(--text-dark)',
                 minHeight: '260px',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)',
+                border: '1px solid var(--canvas-line)',
                 position: 'relative',
                 overflow: 'hidden',
               }}
             >
-              <h3 style={{ fontSize: '24px', fontWeight: 700, lineHeight: 1.25, maxWidth: '240px' }}>
-                Spend anywhere with TapPay NFC, instant tap
-              </h3>
+              <div>
+                <span className="field-kicker is-signal" style={{ marginBottom: '18px', display: 'inline-flex' }}>Feature 03 · Hardware NFC</span>
+                <h3 className="showcase-card-title">Spend anywhere with a single instant tap.</h3>
+              </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <Radio size={50} color="#34D399" strokeWidth={1.8} className="phantom-floating" />
+                <Radio size={46} color="var(--signal)" strokeWidth={1.5} className="phantom-floating" />
               </div>
             </div>
 
             {/* Bottom Right Card: Warm Peach/Coral */}
             <div
-              className="showcase-card-r2"
+              className="showcase-card-r2 field-card"
               style={{
-                background: 'linear-gradient(155deg, #EA580C 0%, #9A3412 100%)',
-                borderRadius: '32px',
-                padding: '36px 30px',
-                color: '#FFF7ED',
+                background: 'linear-gradient(165deg, rgba(10,132,255,0.16), rgba(10,132,255,0.03))',
+                borderRadius: 'var(--radius-card)',
+                padding: '32px 28px',
+                color: 'var(--text-dark)',
                 minHeight: '260px',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                boxShadow: '0 16px 40px rgba(154, 52, 18, 0.35)',
-                border: '1px solid rgba(255, 255, 255, 0.14)',
+                border: '1px solid var(--accent-wash-strong)',
                 position: 'relative',
                 overflow: 'hidden',
               }}
             >
-              <h3 style={{ fontSize: '24px', fontWeight: 700, lineHeight: 1.25, maxWidth: '240px' }}>
-                One handle that connects to everything: @username
-              </h3>
+              <div>
+                <span className="field-kicker" style={{ marginBottom: '18px', display: 'inline-flex' }}>Feature 04 · Identity</span>
+                <h3 className="showcase-card-title">One handle for everything — <span style={{ color: 'var(--accent-bright)' }}>@username</span>.</h3>
+              </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <ArrowRightLeft size={48} color="#FED7AA" strokeWidth={1.8} className="phantom-floating" />
+                <ArrowRightLeft size={46} color="var(--accent-bright)" strokeWidth={1.5} className="phantom-floating" />
               </div>
             </div>
           </div>
@@ -345,8 +347,9 @@ export const CenterPhoneShowcase: React.FC = () => {
             <div
               className="mobile-stack-card mobile-stack-card-1"
               style={{
-                background: 'linear-gradient(145deg, #130e2e 0%, #090717 100%)',
-                color: '#FFFDF8',
+                background: 'var(--canvas-bg-raised)',
+                border: '1px solid var(--canvas-line)',
+                color: 'var(--text-dark)',
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -370,8 +373,9 @@ export const CenterPhoneShowcase: React.FC = () => {
             <div
               className="mobile-stack-card mobile-stack-card-2"
               style={{
-                background: '#EAE6FE',
-                color: '#3C315B',
+                background: 'var(--canvas-bg-raised)',
+                border: '1px solid var(--canvas-line)',
+                color: 'var(--text-dark)',
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -395,8 +399,9 @@ export const CenterPhoneShowcase: React.FC = () => {
             <div
               className="mobile-stack-card mobile-stack-card-3"
               style={{
-                background: 'linear-gradient(145deg, #05261d 0%, #031711 100%)',
-                color: '#FFFDF8',
+                background: 'var(--canvas-bg-raised)',
+                border: '1px solid var(--canvas-line)',
+                color: 'var(--text-dark)',
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -420,8 +425,9 @@ export const CenterPhoneShowcase: React.FC = () => {
             <div
               className="mobile-stack-card mobile-stack-card-4"
               style={{
-                background: '#FFD7C2',
-                color: '#3C315B',
+                background: 'linear-gradient(165deg, rgba(10,132,255,0.16), rgba(10,132,255,0.03))',
+                border: '1px solid var(--accent-wash-strong)',
+                color: 'var(--text-dark)',
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -445,6 +451,16 @@ export const CenterPhoneShowcase: React.FC = () => {
       </div>
 
       <style>{`
+        .showcase-card-title {
+          font-family: var(--font-serif);
+          font-size: 27px;
+          font-weight: 400;
+          line-height: 1.12;
+          letter-spacing: -0.01em;
+          max-width: 15ch;
+          color: var(--text-dark);
+        }
+
         /* Desktop Grid Display */
         @media (min-width: 991px) {
           .center-phone-desktop-grid {

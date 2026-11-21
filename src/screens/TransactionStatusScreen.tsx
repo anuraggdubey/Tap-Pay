@@ -3,15 +3,14 @@
  * Confirmed UI inspired by Glow-style Sent/Received receipt.
  */
 
-import React, {useState, useEffect, useRef, useMemo} from 'react';
+import React, {useState, useEffect, useRef, useMemo, useCallback} from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
   Linking,
-  ActivityIndicator,
   Animated,
+  Easing,
   ScrollView,
 } from 'react-native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
@@ -19,18 +18,17 @@ import {RouteProp} from '@react-navigation/native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import {getExplorerTxUrl} from '../config/monad';
-import {truncateAddress, formatMon} from '../utils/format';
+import {truncateAddress} from '../utils/format';
 import {waitForReceipt, getBalance} from '../services/wallet';
 import {useWallet} from '../context/WalletContext';
 import {triggerHaptic} from '../utils/haptics';
 import {updateTransactionStatus} from '../services/history';
-import {
-  CrossIcon,
-  ExternalLinkIcon,
-  ReceiveTapIcon,
-  SendTapIcon,
-  WalletCardIcon,
-} from '../components/AppIcons';
+import {ExternalLinkIcon, ContactlessWave} from '../components/AppIcons';
+import PressableScale from '../components/PressableScale';
+import {GradientFill} from '../components/Gradient';
+import AmbientBackground from '../components/AmbientBackground';
+import SuccessBurst from '../components/SuccessBurst';
+import {playSound} from '../utils/sounds';
 import {useTheme} from '../context/ThemeContext';
 import type {AppColors} from '../theme';
 import {getTokenBySymbol} from '../config/tokens';
@@ -39,66 +37,6 @@ type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'TransactionStatus'>;
   route: RouteProp<RootStackParamList, 'TransactionStatus'>;
 };
-
-function DirectionArrow({
-  direction,
-  sentColor,
-  receivedColor,
-}: {
-  direction: 'up' | 'down';
-  sentColor: string;
-  receivedColor: string;
-}) {
-  if (direction === 'up') {
-    return <SendTapIcon size={28} color={sentColor} />;
-  }
-  return <ReceiveTapIcon size={28} color={receivedColor} />;
-}
-
-function PartyRow({
-  label,
-  primary,
-  secondary,
-  balanceLabel,
-  balanceValue,
-  styles,
-  iconMuted,
-}: {
-  label: string;
-  primary: string;
-  secondary?: string;
-  balanceLabel?: string;
-  balanceValue?: string;
-  styles: ReturnType<typeof createStyles>;
-  iconMuted: string;
-}) {
-  return (
-    <View style={styles.partyRow}>
-      <View style={styles.partyLeft}>
-        <View style={styles.partyIcon}>
-          <WalletCardIcon size={14} color={iconMuted} />
-        </View>
-        <View style={styles.partyTextCol}>
-          <Text style={styles.partyLabel}>{label}</Text>
-          <Text style={styles.partyPrimary} numberOfLines={1}>
-            {primary}
-          </Text>
-          {!!secondary && (
-            <Text style={styles.partySecondary} numberOfLines={1}>
-              {secondary}
-            </Text>
-          )}
-        </View>
-      </View>
-      {!!balanceValue && (
-        <View style={styles.partyRight}>
-          <Text style={styles.partyLabel}>{balanceLabel || 'Balance'}</Text>
-          <Text style={styles.partyBalance}>{balanceValue}</Text>
-        </View>
-      )}
-    </View>
-  );
-}
 
 export default function TransactionStatusScreen({navigation, route}: Props) {
   const {
@@ -117,9 +55,11 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
   const {colors} = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
-  const [status, setStatus] = useState<'pending' | 'confirmed' | 'failed'>(
+  // 'delayed' = no receipt yet after waiting. It is NOT a failure: the payment may still confirm.
+  const [status, setStatus] = useState<'pending' | 'delayed' | 'confirmed' | 'failed'>(
     initialStatus ?? 'pending',
   );
+  const [attempt, setAttempt] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const checkmarkScale = useRef(
     new Animated.Value(initialStatus === 'confirmed' ? 1 : 0),
@@ -153,6 +93,17 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
       useNativeDriver: true,
     }).start();
     refreshBalance();
+  };
+
+  // Timed out without a receipt: keep the history row pending (it is reconciled later).
+  const markDelayed = () => {
+    setStatus('delayed');
+  };
+
+  const checkAgain = () => {
+    triggerHaptic.selection();
+    setStatus('pending');
+    setAttempt(n => n + 1);
   };
 
   const markFailed = (message: string) => {
@@ -197,7 +148,7 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
         }
 
         if (isMounted) {
-          markFailed('Payment not detected yet. It may still arrive shortly.');
+          markDelayed();
         }
         return;
       }
@@ -219,12 +170,16 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
 
         if (result.confirmed) {
           markConfirmed();
-        } else {
+        } else if (result.reverted) {
+          // A reverted receipt is the only authoritative failure.
           markFailed(result.error || 'Transaction reverted');
+        } else {
+          markDelayed();
         }
-      } catch (err: any) {
+      } catch {
+        // Could not reach the network: nothing is known, so do not report a failure.
         if (isMounted) {
-          markFailed(err?.message || 'Failed to poll transaction receipt');
+          markDelayed();
         }
       }
     })();
@@ -232,7 +187,7 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
     return () => {
       isMounted = false;
     };
-  }, [txHash, waitForBalance, expectedAmountWei, address, balance, refreshBalance, initialStatus]);
+  }, [txHash, waitForBalance, expectedAmountWei, address, balance, refreshBalance, initialStatus, attempt]);
 
   const openExplorer = () => {
     if (isRealTxHash) {
@@ -300,26 +255,75 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
   const badgeLetter = displaySymbol.charAt(0);
 
   const signedAmount = `${isReceived ? '+' : '-'}${amount} ${displaySymbol}`;
-  const sentAmountColor = '#FF6B6B';
+  const sentAmountColor = colors.text;
   const amountColor = isReceived ? colors.success : sentAmountColor;
   const iconMuted = colors.textSubtle;
+
+  const onSuccessStart = useCallback(() => {
+    // Replaying a stored receipt from History should stay quiet.
+    if (initialStatus === 'confirmed') {
+      return;
+    }
+    playSound('pay_success');
+  }, [initialStatus]);
+
+  const onFailedStart = useRef(false);
+  useEffect(() => {
+    if (status === 'failed' && !onFailedStart.current && initialStatus !== 'failed') {
+      onFailedStart.current = true;
+      playSound('pay_fail');
+    }
+  }, [status, initialStatus]);
+
+  const background = <AmbientBackground />;
 
   if (status === 'pending') {
     return (
       <View style={[styles.container, {paddingTop: insets.top + 40}]}>
+        {background}
         <View style={styles.centerState}>
-          <ActivityIndicator size="large" color={colors.accent} />
-          <Text style={styles.pendingTitle}>
-            {isReceived ? 'Receiving…' : 'Broadcasting…'}
-          </Text>
-          <Text style={styles.pendingHint}>
+          <PendingPulse accent={colors.accent} />
+          <Text style={styles.stateTitle}>{isReceived ? 'Receiving…' : 'Sending…'}</Text>
+          <Text style={styles.stateHint}>
             {isReceived
-              ? 'Waiting for sender to complete the on-chain transfer'
-              : 'Waiting for Monad confirmation (~1–2s)'}
+              ? 'Waiting for the sender to finish the transfer'
+              : 'Waiting for network confirmation (about 1–2s)'}
           </Text>
-          <View style={styles.pendingAmountChip}>
-            <Text style={styles.pendingAmount}>{amount} {displaySymbol}</Text>
+          <View style={styles.amountChip}>
+            <Text style={styles.amountChipText}>
+              {amount} {displaySymbol}
+            </Text>
           </View>
+        </View>
+      </View>
+    );
+  }
+
+  if (status === 'delayed') {
+    return (
+      <View style={[styles.container, {paddingTop: insets.top + 40}]}>
+        {background}
+        <View style={styles.centerState}>
+          <PendingPulse accent={colors.accent} />
+          <Text style={styles.stateTitle}>Still confirming</Text>
+          <Text style={styles.stateHint}>
+            {isReceived
+              ? 'We have not seen this payment yet. It may still arrive. Check History in a moment.'
+              : 'This is taking longer than usual. Your payment may still go through, so please do not send it again. It will update in History once the network confirms it.'}
+          </Text>
+          <View style={styles.amountChip}>
+            <Text style={styles.amountChipText}>
+              {amount} {displaySymbol}
+            </Text>
+          </View>
+        </View>
+        <View style={[styles.actions, {paddingBottom: insets.bottom + 20}]}>
+          <PressableScale style={styles.secondaryBtn} contentStyle={styles.btnInner} onPress={checkAgain}>
+            <Text style={styles.secondaryBtnText}>Check Again</Text>
+          </PressableScale>
+          <PressableScale style={styles.primaryBtn} contentStyle={styles.btnInner} onPress={() => navigation.popToTop()}>
+            <Text style={styles.primaryBtnText}>Done</Text>
+          </PressableScale>
         </View>
       </View>
     );
@@ -328,382 +332,159 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
   if (status === 'failed') {
     return (
       <View style={[styles.container, {paddingTop: insets.top + 40}]}>
+        {background}
         <View style={styles.centerState}>
-          <View style={styles.failCircle}>
-            <CrossIcon size={32} color={colors.text} />
-          </View>
-          <Text style={styles.pendingTitle}>Transaction Failed</Text>
-          {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
-          <TouchableOpacity
-            style={styles.homeBtn}
-            onPress={() => navigation.popToTop()}
-            activeOpacity={0.85}>
-            <Text style={styles.homeBtnText}>Back to Home</Text>
-          </TouchableOpacity>
+          <SuccessBurst colors={['#FF453A', '#FF453A']} reduced />
+          <Text style={styles.stateTitle}>Payment failed</Text>
+          {errorMessage && <Text style={styles.stateHint}>{errorMessage}</Text>}
+        </View>
+        <View style={[styles.actions, {paddingBottom: insets.bottom + 20}]}>
+          <PressableScale style={styles.primaryBtn} contentStyle={styles.btnInner} onPress={() => navigation.popToTop()}>
+            <Text style={styles.primaryBtnText}>Done</Text>
+          </PressableScale>
         </View>
       </View>
     );
   }
 
+  const rows: {k: string; v: string; sub?: string}[] = [
+    {k: 'From', v: fromParty.primary, sub: fromParty.secondary},
+    {k: 'To', v: toParty.primary, sub: toParty.secondary},
+    {k: 'Network', v: 'Monad'},
+    {k: 'Time', v: timestampLabel},
+  ];
+  if (isRealTxHash) {
+    rows.push({k: 'Reference', v: truncateAddress(txHash, 6, 5)});
+  }
+
   return (
     <View style={[styles.container, {paddingTop: insets.top + 8}]}>
+      {background}
       <ScrollView
-        contentContainerStyle={[
-          styles.scrollContent,
-          {paddingBottom: insets.bottom + 28},
-        ]}
+        contentContainerStyle={[styles.scrollContent, {paddingBottom: 16}]}
         showsVerticalScrollIndicator={false}>
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => navigation.popToTop()}
-          hitSlop={{top: 12, bottom: 12, left: 12, right: 12}}>
-          <Text style={styles.backChevron}>‹</Text>
-        </TouchableOpacity>
-
-        <Animated.View
-          style={[
-            styles.heroIcon,
-            {
-              backgroundColor: isReceived
-                ? 'rgba(16, 185, 129, 0.18)'
-                : 'rgba(255, 107, 107, 0.18)',
-              transform: [{scale: checkmarkScale}],
-            },
-          ]}>
-          <DirectionArrow
-            direction={isReceived ? 'down' : 'up'}
-            sentColor={sentAmountColor}
-            receivedColor={colors.success}
+        <View style={styles.hero}>
+          <SuccessBurst
+            colors={['#30D158', '#30D158']}
+            onStart={onSuccessStart}
           />
-        </Animated.View>
-
-        <Text style={styles.heroStatus}>{isReceived ? 'Received' : 'Sent'}</Text>
-        <Text style={styles.heroAmount}>{amount} {displaySymbol}</Text>
-        <Text style={styles.heroTime}>{timestampLabel}</Text>
-
-        <View style={styles.partyBlock}>
-          <PartyRow
-            label="From"
-            primary={fromParty.primary}
-            secondary={fromParty.secondary}
-            balanceLabel={!isReceived ? 'Balance' : undefined}
-            balanceValue={!isReceived ? formatMon(balance) : undefined}
-            styles={styles}
-            iconMuted={iconMuted}
-          />
-          <View style={styles.partyConnector}>
-            <Text style={styles.partyConnectorIcon}>⌄</Text>
-          </View>
-          <PartyRow
-            label="To"
-            primary={toParty.primary}
-            secondary={toParty.secondary}
-            balanceLabel={isReceived ? 'Balance' : undefined}
-            balanceValue={isReceived ? formatMon(balance) : undefined}
-            styles={styles}
-            iconMuted={iconMuted}
-          />
+          <Text style={styles.stateTitle}>{isReceived ? 'Payment received' : 'Payment sent'}</Text>
+          <Text style={[styles.bigAmount, {color: amountColor}]} numberOfLines={1} adjustsFontSizeToFit>
+            {isReceived ? '+' : '−'}
+            {amount}
+            <Text style={styles.bigUnit}> {displaySymbol}</Text>
+          </Text>
+          <Text style={styles.heroSub}>
+            {isReceived ? 'from ' : 'to '}
+            {isReceived ? fromParty.primary : toParty.primary}
+          </Text>
         </View>
 
-        <View style={styles.divider} />
-
-        <View style={styles.detailList}>
-          <View style={styles.assetRow}>
-            <View style={styles.assetLeft}>
-              <View style={styles.monBadge}>
-                <Text style={styles.monBadgeText}>{badgeLetter}</Text>
-              </View>
-              <View>
-                <Text style={styles.assetName}>{tokenName}</Text>
-                <Text style={styles.assetTicker}>{displaySymbol}</Text>
+        <View style={styles.ticket}>
+          {rows.map((r, i) => (
+            <View key={r.k} style={[styles.ticketRow, i > 0 && styles.ticketRowBorder]}>
+              <Text style={styles.ticketKey}>{r.k}</Text>
+              <View style={styles.ticketValWrap}>
+                <Text style={styles.ticketVal} numberOfLines={1}>
+                  {r.v}
+                </Text>
+                {!!r.sub && <Text style={styles.ticketSub}>{r.sub}</Text>}
               </View>
             </View>
-            <View style={styles.assetRight}>
-              <Text style={[styles.assetDelta, {color: amountColor}]}>
-                {signedAmount}
-              </Text>
-            </View>
-          </View>
-
-          {isRealTxHash && (
-            <View style={styles.metaRow}>
-              <Text style={styles.metaLabel}>Signature</Text>
-              <Text style={styles.metaValue}>
-                {truncateAddress(txHash, 6, 5)}
-              </Text>
-            </View>
-          )}
-
-          <View style={styles.metaRow}>
-            <Text style={styles.metaLabel}>Network</Text>
-            <Text style={styles.metaValue}>Monad Mainnet</Text>
-          </View>
-        </View>
+          ))}
+                  </View>
 
         {isRealTxHash && (
-          <TouchableOpacity
-            style={styles.explorerLink}
-            onPress={openExplorer}
-            activeOpacity={0.7}>
-            <Text style={styles.explorerLinkText}>View Raw Transaction</Text>
-            <ExternalLinkIcon size={14} color={iconMuted} />
-          </TouchableOpacity>
+          <PressableScale onPress={openExplorer} contentStyle={styles.explorerLink}>
+            <Text style={styles.explorerLinkText}>View on explorer</Text>
+            <ExternalLinkIcon size={14} color={colors.accent} />
+          </PressableScale>
         )}
-
-        <TouchableOpacity
-          style={styles.homeBtn}
-          onPress={() => navigation.popToTop()}
-          activeOpacity={0.85}>
-          <Text style={styles.homeBtnText}>Done</Text>
-        </TouchableOpacity>
       </ScrollView>
+
+      <View style={[styles.actions, {paddingBottom: insets.bottom + 20}]}>
+        <PressableScale style={styles.primaryBtn} contentStyle={styles.btnInner} onPress={() => navigation.popToTop()}>
+            <Text style={styles.primaryBtnText}>Done</Text>
+        </PressableScale>
+      </View>
+    </View>
+  );
+}
+
+function PendingPulse({accent}: {accent: string}) {
+  const p = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.timing(p, {toValue: 1, duration: 1600, easing: Easing.out(Easing.quad), useNativeDriver: true}),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [p]);
+  const ring = (off: number) => {
+    const v = Animated.modulo(Animated.add(p, off), 1);
+    return (
+      <Animated.View
+        style={{
+          position: 'absolute',
+          width: 88,
+          height: 88,
+          borderRadius: 44,
+          borderWidth: 2,
+          borderColor: accent,
+          opacity: v.interpolate({inputRange: [0, 0.2, 1], outputRange: [0, 0.6, 0]}),
+          transform: [{scale: v.interpolate({inputRange: [0, 1], outputRange: [1, 2.2]})}],
+        }}
+      />
+    );
+  };
+  return (
+    <View style={{width: 200, height: 200, alignItems: 'center', justifyContent: 'center'}}>
+      {ring(0)}
+      {ring(0.5)}
+      <View style={{width: 88, height: 88, borderRadius: 44, overflow: 'hidden', backgroundColor: '#0A84FF', alignItems: 'center', justifyContent: 'center'}}>
+        <ContactlessWave size={38} color="#FFFFFF" />
+      </View>
     </View>
   );
 }
 
 function createStyles(colors: AppColors) {
   return StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scrollContent: {
-    paddingHorizontal: 22,
-  },
-  backBtn: {
-    width: 36,
-    height: 36,
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  backChevron: {
-    color: colors.text,
-    fontSize: 32,
-    fontWeight: '300',
-    marginTop: -4,
-  },
-  heroIcon: {
-    alignSelf: 'center',
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 8,
-    marginBottom: 18,
-  },
-  heroStatus: {
-    textAlign: 'center',
-    fontSize: 28,
-    fontWeight: '700',
-    color: colors.text,
-    letterSpacing: -0.4,
-  },
-  heroAmount: {
-    textAlign: 'center',
-    fontSize: 22,
-    fontWeight: '600',
-    color: colors.text,
-    marginTop: 6,
-  },
-  heroTime: {
-    textAlign: 'center',
-    fontSize: 13,
-    color: colors.textMuted,
-    marginTop: 8,
-    marginBottom: 28,
-  },
-  partyBlock: {
-    marginBottom: 8,
-  },
-  partyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  partyLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    paddingRight: 12,
-  },
-  partyIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: colors.accentWash,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  partyTextCol: {
-    flex: 1,
-  },
-  partyLabel: {
-    fontSize: 12,
-    color: colors.textMuted,
-    marginBottom: 2,
-  },
-  partyPrimary: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  partySecondary: {
-    fontSize: 12,
-    color: colors.textSubtle,
-    marginTop: 2,
-    fontFamily: 'monospace',
-  },
-  partyRight: {
-    alignItems: 'flex-end',
-  },
-  partyBalance: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  partyConnector: {
-    paddingLeft: 10,
-    paddingVertical: 4,
-  },
-  partyConnectorIcon: {
-    color: colors.textSubtle,
-    fontSize: 16,
-  },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.separator,
-    marginVertical: 18,
-  },
-  detailList: {
-    gap: 18,
-  },
-  assetRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  assetLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  monBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  monBadgeText: {
-    color: colors.textOnAccent,
-    fontWeight: '800',
-    fontSize: 16,
-  },
-  assetName: {
-    color: colors.text,
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  assetTicker: {
-    color: colors.textMuted,
-    fontSize: 12,
-    marginTop: 1,
-  },
-  assetRight: {
-    alignItems: 'flex-end',
-  },
-  assetDelta: {
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  metaLabel: {
-    fontSize: 14,
-    color: colors.textMuted,
-  },
-  metaValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  explorerLink: {
-    marginTop: 28,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  explorerLinkText: {
-    fontSize: 14,
-    color: colors.accent,
-    fontWeight: '600',
-  },
-  homeBtn: {
-    marginTop: 28,
-    backgroundColor: colors.accent,
-    borderRadius: 28,
-    minHeight: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 0,
-  },
-  homeBtnText: {
-    color: colors.textOnAccent,
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  centerState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 28,
-  },
-  pendingTitle: {
-    marginTop: 18,
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.text,
-    textAlign: 'center',
-  },
-  pendingHint: {
-    marginTop: 8,
-    fontSize: 13,
-    color: colors.textMuted,
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  pendingAmountChip: {
-    marginTop: 22,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: colors.surfaceSolid,
-  },
-  pendingAmount: {
-    color: colors.text,
-    fontWeight: '700',
-    fontSize: 16,
-  },
-  failCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: 'rgba(239, 68, 68, 0.16)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  errorText: {
-    marginTop: 10,
-    fontSize: 13,
-    color: colors.danger,
-    textAlign: 'center',
-  },
+    container: {flex: 1, backgroundColor: colors.background},
+    scrollContent: {paddingHorizontal: 20},
+    centerState: {flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, gap: 10},
+    hero: {alignItems: 'center', marginTop: 4, marginBottom: 8},
+    stateTitle: {fontSize: 17, fontWeight: '600', color: colors.textMuted, marginTop: -30},
+    stateHint: {fontSize: 14, color: colors.textMuted, textAlign: 'center', lineHeight: 20},
+    amountChip: {marginTop: 8, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 999, backgroundColor: colors.surfaceSolid, borderWidth: 1, borderColor: colors.border},
+    amountChipText: {fontSize: 16, fontWeight: '700', color: colors.text},
+    bigAmount: {fontSize: 44, fontWeight: '700', letterSpacing: -1, marginTop: 6, maxWidth: '100%'},
+    bigUnit: {fontSize: 18, fontWeight: '700', color: colors.textMuted, letterSpacing: 0},
+    heroSub: {fontSize: 14, color: colors.textMuted, marginTop: 4},
+    ticket: {
+      marginTop: 18,
+      borderRadius: 26,
+      backgroundColor: 'rgba(255,255,255,0.08)',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.18)',
+      paddingHorizontal: 18,
+    },
+    ticketRow: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingVertical: 15, gap: 16},
+    ticketRowBorder: {borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.separator},
+    ticketKey: {fontSize: 13, color: colors.textMuted, fontWeight: '500'},
+    ticketValWrap: {flex: 1, alignItems: 'flex-end'},
+    ticketVal: {fontSize: 14, color: colors.text, fontWeight: '600'},
+    ticketSub: {fontSize: 12, color: colors.textSubtle, marginTop: 2},
+    notch: {position: 'absolute', top: '50%', width: 18, height: 18, borderRadius: 9, backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, marginTop: -9},
+    notchL: {left: -10},
+    notchR: {right: -10},
+    explorerLink: {flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 18},
+    explorerLinkText: {fontSize: 15, fontWeight: '400', color: colors.accent},
+    actions: {paddingHorizontal: 20, paddingTop: 8},
+    secondaryBtn: {borderRadius: 26, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginBottom: 12},
+    secondaryBtnText: {fontSize: 17, fontWeight: '600', color: colors.text},
+    primaryBtn: {borderRadius: 26, overflow: 'hidden', backgroundColor: colors.text},
+    btnInner: {height: 52, alignItems: 'center', justifyContent: 'center'},
+    primaryBtnText: {fontSize: 17, fontWeight: '600', color: colors.background},
   });
 }

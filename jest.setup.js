@@ -140,3 +140,14 @@ jest.mock('@react-native-clipboard/clipboard', () => ({
   getString: jest.fn().mockResolvedValue(''),
   hasString: jest.fn().mockResolvedValue(false),
 }));
+
+// Sound effects are native-only; stub for tests.
+jest.mock("react-native-sound", () => {
+  const Sound = jest.fn().mockImplementation((_file, _base, cb) => {
+    if (cb) { cb(null); }
+    return {play: jest.fn(), stop: jest.fn(c => c && c()), setVolume: jest.fn(), release: jest.fn()};
+  });
+  Sound.setCategory = jest.fn();
+  Sound.MAIN_BUNDLE = "";
+  return {__esModule: true, default: Sound};
+});

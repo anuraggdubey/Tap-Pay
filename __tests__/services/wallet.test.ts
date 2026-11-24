@@ -36,7 +36,7 @@ jest.mock('react-native-keychain', () => {
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Keychain from 'react-native-keychain';
-import {Platform} from 'react-native';
+import {NativeModules, Platform} from 'react-native';
 import {
   WalletError,
   deleteWallet,
@@ -52,11 +52,16 @@ import {
 import {walletFromRecoveryPhrase} from '../../src/utils/recovery';
 
 const kc = Keychain as any;
+const deviceAuth = {isDeviceSecure: jest.fn()};
 
 async function reset() {
   Object.keys(kc.__store).forEach(k => delete kc.__store[k]);
   kc.__state.authReady = true;
   kc.__state.failSetFor = null;
+  NativeModules.DeviceAuth = deviceAuth;
+  deviceAuth.isDeviceSecure.mockReset().mockImplementation(async () => kc.__state.authReady);
+  kc.canImplyAuthentication.mockReset().mockImplementation(async () => kc.__state.authReady);
+  kc.getSupportedBiometryType.mockReset().mockResolvedValue('Fingerprint');
   await AsyncStorage.clear();
   jest.clearAllMocks();
 }
@@ -67,6 +72,68 @@ async function expectCode(promise: Promise<unknown>, code: string) {
 
 describe('wallet storage', () => {
   beforeEach(reset);
+
+  describe.each(['android', 'ios'] as const)('%s device authentication', os => {
+    beforeEach(() => {
+      jest.replaceProperty(Platform, 'OS', os);
+    });
+
+    afterEach(() => jest.restoreAllMocks());
+
+    it.each([true, false])('stores an authenticated wallet (with phrase: %s)', async withPhrase => {
+      if (os === 'android') {
+        kc.canImplyAuthentication.mockResolvedValue(false);
+        kc.getSupportedBiometryType.mockResolvedValue(null);
+      }
+      const w = generateWallet();
+      await expect(storeWallet({
+        privateKey: w.privateKey,
+        mnemonic: withPhrase ? w.mnemonic : undefined,
+      })).resolves.toBe(w.address);
+      expect(kc.setGenericPassword).toHaveBeenCalledTimes(withPhrase ? 2 : 1);
+      if (os === 'android') {
+        expect(deviceAuth.isDeviceSecure).toHaveBeenCalledTimes(1);
+        expect(kc.canImplyAuthentication).not.toHaveBeenCalled();
+      } else {
+        expect(kc.canImplyAuthentication).toHaveBeenCalledWith({
+          authenticationType: Keychain.AUTHENTICATION_TYPE.DEVICE_PASSCODE_OR_BIOMETRICS,
+        });
+        expect(deviceAuth.isDeviceSecure).not.toHaveBeenCalled();
+      }
+    });
+
+    it.each(['unconfigured', 'error'])('refuses storage when the auth check is %s', async state => {
+      kc.__state.authReady = false;
+      if (os === 'android') {
+        kc.canImplyAuthentication.mockResolvedValue(true);
+      }
+      if (state === 'error') {
+        const check = os === 'android' ? deviceAuth.isDeviceSecure : kc.canImplyAuthentication;
+        check.mockRejectedValueOnce(new Error('Authentication unavailable'));
+      }
+      const w = generateWallet();
+      await expectCode(storeWallet({privateKey: w.privateKey, mnemonic: w.mnemonic}), 'NO_DEVICE_AUTH');
+      expect(kc.setGenericPassword).not.toHaveBeenCalled();
+      expect(await hasWallet()).toBe(false);
+      expect(await AsyncStorage.getItem('@tappay_wallet_address')).toBeNull();
+      if (os === 'android') {
+        expect(kc.canImplyAuthentication).not.toHaveBeenCalled();
+      } else {
+        expect(deviceAuth.isDeviceSecure).not.toHaveBeenCalled();
+      }
+    });
+  });
+
+  it('fails closed on Android if the native module is unavailable', async () => {
+    jest.replaceProperty(Platform, 'OS', 'android');
+    NativeModules.DeviceAuth = undefined;
+    try {
+      await expectCode(storeWallet({privateKey: generateWallet().privateKey}), 'NO_DEVICE_AUTH');
+      expect(kc.setGenericPassword).not.toHaveBeenCalled();
+    } finally {
+      jest.restoreAllMocks();
+    }
+  });
 
   it('distinguishes a failed wallet-existence probe from confirmed absence when requested', async () => {
     await expect(hasWallet(true)).resolves.toBe(false);

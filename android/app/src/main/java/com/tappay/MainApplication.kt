@@ -17,6 +17,7 @@ class MainApplication : Application(), ReactApplication {
       packageList =
         PackageList(this).packages.apply {
           add(HcePackage())
+          add(DeviceAuthPackage())
           add(TapNfcReaderPackage())
         },
     )

@@ -135,6 +135,14 @@ describe('wallet storage', () => {
     }
   });
 
+  it('distinguishes a failed wallet-existence probe from confirmed absence when requested', async () => {
+    await expect(hasWallet(true)).resolves.toBe(false);
+    kc.hasGenericPassword.mockRejectedValueOnce(new Error('Keychain unavailable'));
+    await expect(hasWallet(true)).rejects.toThrow('Keychain unavailable');
+    kc.hasGenericPassword.mockRejectedValueOnce(new Error('Keychain unavailable'));
+    await expect(hasWallet()).resolves.toBe(false);
+  });
+
   it('generates a wallet with a matching 12-word recovery phrase', () => {
     const w = generateWallet();
     expect(w.mnemonic.split(' ')).toHaveLength(12);

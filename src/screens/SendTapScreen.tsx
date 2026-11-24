@@ -149,47 +149,55 @@ export default function SendTapScreen({navigation}: Props) {
       return;
     }
 
+    const paymentAmount = ethers.formatEther(amountWei);
     setConfirming(true);
     setPhase('broadcasting');
     triggerHaptic.impactMedium();
 
     const result = await broadcastTapPayment(recipient.receiverAddress, amountWei);
 
-    if (!isMountedRef.current) {
-      return;
-    }
     clearCountdown();
-    setConfirming(false);
-    setConfirmVisible(false);
+    if (isMountedRef.current) {
+      setConfirming(false);
+      setConfirmVisible(false);
+
+      if (!result.txHash) {
+        triggerHaptic.notificationError();
+        setPhase('failed');
+        Alert.alert(
+          'Payment Failed',
+          result.error || 'Could not broadcast the payment.',
+          [{text: 'OK', onPress: () => handleCancel()}],
+        );
+        return;
+      }
+
+      triggerHaptic.notificationSuccess();
+      refreshBalance();
+      setPendingRecipient(null);
+    }
 
     if (!result.txHash) {
-      triggerHaptic.notificationError();
-      setPhase('failed');
-      Alert.alert(
-        'Payment Failed',
-        result.error || 'Could not broadcast the payment.',
-        [{text: 'OK', onPress: () => handleCancel()}],
-      );
       return;
     }
 
-    triggerHaptic.notificationSuccess();
-    refreshBalance();
-    setPendingRecipient(null);
-
     recordTransaction({
+      walletAddress: address,
       direction: 'sent',
       counterparty: recipient.receiverAddress,
       counterpartyUsername: recipient.receiverUsername,
-      amount: amount,
+      amount: paymentAmount,
       tokenSymbol: 'MON',
       status: 'pending',
       txHash: result.txHash,
     });
 
+    if (!isMountedRef.current) {
+      return;
+    }
     navigation.replace('TransactionStatus', {
       txHash: result.txHash,
-      amount: amount,
+      amount: paymentAmount,
       recipient: recipient.receiverAddress,
       direction: 'sent',
       counterpartyUsername: recipient.receiverUsername,

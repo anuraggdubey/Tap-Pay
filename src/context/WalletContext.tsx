@@ -27,9 +27,17 @@ import {
 } from '../utils/recovery';
 import {reverseResolve} from '../services/registry';
 import {getTokenBalance} from '../services/tokens/tokenBalance';
+import {setHistoryWallet} from '../services/walletHistory';
+import {discardLegacyHistory} from '../services/secureHistoryStore';
 
 const USERNAME_STORAGE_KEY = '@tappay_username';
 const BACKUP_VERIFIED_KEY = '@tappay_backup_verified';
+
+async function discardOrphanedHistory(): Promise<void> {
+  if (!(await hasWallet(true))) {
+    await discardLegacyHistory();
+  }
+}
 
 interface WalletState {
   isLoading: boolean;
@@ -97,9 +105,10 @@ export function WalletProvider({children}: {children: ReactNode}) {
 
   // Load the wallet from secure storage (on mount, and when the user retries unlocking)
   const initWallet = useCallback(async () => {
+    setHistoryWallet(null);
     setWalletLocked(false);
     try {
-      const exists = await hasWallet();
+      const exists = await hasWallet(true);
       if (exists) {
         const addr = await getWalletAddress();
         if (!addr) {
@@ -109,6 +118,7 @@ export function WalletProvider({children}: {children: ReactNode}) {
           setWalletLocked(true);
           return;
         }
+        setHistoryWallet(addr);
         setAddress(addr);
         setIsInitialized(true);
 
@@ -135,6 +145,8 @@ export function WalletProvider({children}: {children: ReactNode}) {
         } catch {
           // Network error — balance stays 0
         }
+      } else {
+        await discardLegacyHistory();
       }
     } catch (error) {
       console.error('Wallet init error:', error);
@@ -209,6 +221,7 @@ export function WalletProvider({children}: {children: ReactNode}) {
       } else {
         await AsyncStorage.removeItem(BACKUP_VERIFIED_KEY);
       }
+      setHistoryWallet(newAddress);
       setBackupVerified(verified);
       setAddress(newAddress);
       setIsInitialized(true);
@@ -218,6 +231,7 @@ export function WalletProvider({children}: {children: ReactNode}) {
 
   const createWallet = useCallback(async () => {
     const wallet = generateWallet();
+    await discardOrphanedHistory();
     const newAddress = await storeWallet({
       privateKey: wallet.privateKey,
       mnemonic: wallet.mnemonic,
@@ -236,6 +250,7 @@ export function WalletProvider({children}: {children: ReactNode}) {
       }
       const normalized = normalizeMnemonic(phrase);
       const wallet = walletFromRecoveryPhrase(normalized);
+      await discardOrphanedHistory();
       const newAddress = await storeWallet({
         privateKey: wallet.privateKey,
         mnemonic: normalized,
@@ -253,6 +268,7 @@ export function WalletProvider({children}: {children: ReactNode}) {
       if (!isPrivateKeyHex(key)) {
         throw new WalletError('INVALID_SECRET', 'Invalid private key. It must be 0x followed by 64 hex characters.');
       }
+      await discardOrphanedHistory();
       const newAddress = await storeWallet({privateKey: key});
       await activateWallet(newAddress, true);
       await loadStoredUsername(newAddress);
@@ -292,6 +308,7 @@ export function WalletProvider({children}: {children: ReactNode}) {
     try {
       const deleted = await deleteWallet();
       if (deleted) {
+        setHistoryWallet(null);
         setAddress(null);
         setBalance(0n);
         setAusdBalance(0n);
@@ -299,9 +316,11 @@ export function WalletProvider({children}: {children: ReactNode}) {
         setBackupVerified(false);
         setWalletLocked(false);
         setUsername(null);
-        // Clear stored username and backup status
-        await AsyncStorage.removeItem(USERNAME_STORAGE_KEY);
-        await AsyncStorage.removeItem(BACKUP_VERIFIED_KEY);
+        await Promise.allSettled([
+          discardLegacyHistory(),
+          AsyncStorage.removeItem(USERNAME_STORAGE_KEY),
+          AsyncStorage.removeItem(BACKUP_VERIFIED_KEY),
+        ]);
         return true;
       }
       return false;

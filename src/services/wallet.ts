@@ -403,10 +403,11 @@ export async function loadRecoveryPhrase(
 /**
  * Check if a wallet exists in secure storage. Does not prompt for authentication.
  */
-export async function hasWallet(): Promise<boolean> {
+export async function hasWallet(throwOnError = false): Promise<boolean> {
   try {
     return await Keychain.hasGenericPassword({service: KEYCHAIN_SERVICE});
-  } catch {
+  } catch (error) {
+    if (throwOnError) throw error;
     return false;
   }
 }

@@ -143,7 +143,7 @@ export default function UsernamePayScreen({navigation}: Props) {
 
   // Final confirmation: sign and broadcast on Monad Mainnet
   const handleConfirmSend = async () => {
-    if (!resolvedAddress || !balanceCheckData) {
+    if (!resolvedAddress || !balanceCheckData || !address) {
       return;
     }
 
@@ -164,6 +164,7 @@ export default function UsernamePayScreen({navigation}: Props) {
 
         // Record in local transaction history
         recordTransaction({
+          walletAddress: address,
           direction: 'sent',
           counterparty: resolvedAddress,
           counterpartyUsername: username ? username.trim().toLowerCase() : undefined,

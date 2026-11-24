@@ -149,6 +149,7 @@ export default function SendTapScreen({navigation}: Props) {
       return;
     }
 
+    const paymentAmount = ethers.formatEther(amountWei);
     setConfirming(true);
     setPhase('broadcasting');
     triggerHaptic.impactMedium();
@@ -185,7 +186,7 @@ export default function SendTapScreen({navigation}: Props) {
       direction: 'sent',
       counterparty: recipient.receiverAddress,
       counterpartyUsername: recipient.receiverUsername,
-      amount: amount,
+      amount: paymentAmount,
       tokenSymbol: 'MON',
       status: 'pending',
       txHash: result.txHash,
@@ -196,7 +197,7 @@ export default function SendTapScreen({navigation}: Props) {
     }
     navigation.replace('TransactionStatus', {
       txHash: result.txHash,
-      amount: amount,
+      amount: paymentAmount,
       recipient: recipient.receiverAddress,
       direction: 'sent',
       counterpartyUsername: recipient.receiverUsername,

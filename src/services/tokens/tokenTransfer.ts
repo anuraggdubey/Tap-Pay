@@ -11,7 +11,7 @@
  */
 
 import {ethers} from 'ethers';
-import {getProvider, withRpcFailover, loadPrivateKey} from '../wallet';
+import {getProvider, loadPrivateKey} from '../wallet';
 import {SUPPORTED_TOKENS, ERC20_ABI, parseTokenAmount} from '../../config/tokens';
 import {
   isMultiTokenLedgerEnabled,

@@ -1,7 +1,5 @@
 import {getTokenBalance} from '../../src/services/tokens/tokenBalance';
 import * as wallet from '../../src/services/wallet';
-import {SUPPORTED_TOKENS} from '../../src/config/tokens';
-import {ethers} from 'ethers';
 
 // Mock dependencies
 jest.mock('../../src/services/wallet', () => ({
@@ -44,8 +42,6 @@ describe('tokenBalance', () => {
     it('should return ERC-20 balance (e.g., AUSD)', async () => {
       // Note: The mock for ethers.Contract is set to return 2000000n
       // which for AUSD (if 6 decimals) is 2.0
-      const token = SUPPORTED_TOKENS['AUSD'];
-      
       const result = await getTokenBalance('0x123', 'AUSD');
 
       expect(wallet.withRpcFailover).toHaveBeenCalled();

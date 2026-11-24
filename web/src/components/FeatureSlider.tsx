@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowUpRight, Radio, AtSign, Zap, Check, RotateCcw } from 'lucide-react';
+import { ArrowUpRight, Radio, Check } from 'lucide-react';
 
 export const FeatureSlider: React.FC = () => {
   // Interactive mini simulation for Card 1

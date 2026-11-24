@@ -42,7 +42,6 @@ export const Navbar: React.FC = () => {
   }, [isSubpage]);
 
   const navSolid = isScrolled || isSubpage;
-  const splitClass = `nav-download-split nav-download-split-desktop ${isDarkNav ? 'is-dark' : ''}`;
 
   return (
     <>

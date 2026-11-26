@@ -25,7 +25,7 @@ import {triggerHaptic} from '../utils/haptics';
 import {updateTransactionStatus} from '../services/history';
 import {ExternalLinkIcon, ContactlessWave} from '../components/AppIcons';
 import PressableScale from '../components/PressableScale';
-import {GradientFill} from '../components/Gradient';
+import AmbientBackground from '../components/AmbientBackground';
 import SuccessBurst from '../components/SuccessBurst';
 import {playSound} from '../utils/sounds';
 import {useTheme} from '../context/ThemeContext';
@@ -54,9 +54,11 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
   const {colors} = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
-  const [status, setStatus] = useState<'pending' | 'confirmed' | 'failed'>(
+  // 'delayed' = no receipt yet after waiting. It is NOT a failure: the payment may still confirm.
+  const [status, setStatus] = useState<'pending' | 'delayed' | 'confirmed' | 'failed'>(
     initialStatus ?? 'pending',
   );
+  const [attempt, setAttempt] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const checkmarkScale = useRef(
     new Animated.Value(initialStatus === 'confirmed' ? 1 : 0),
@@ -77,7 +79,7 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
     navigation.setOptions({headerShown: false});
   }, [navigation]);
 
-  const markConfirmed = () => {
+  const markConfirmed = useCallback(() => {
     triggerHaptic.notificationSuccess();
     if (isRealTxHash) {
       updateTransactionStatus(txHash, 'confirmed');
@@ -90,16 +92,27 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
       useNativeDriver: true,
     }).start();
     refreshBalance();
+  }, [isRealTxHash, txHash, checkmarkScale, refreshBalance]);
+
+  // Timed out without a receipt: keep the history row pending (it is reconciled later).
+  const markDelayed = () => {
+    setStatus('delayed');
   };
 
-  const markFailed = (message: string) => {
+  const checkAgain = () => {
+    triggerHaptic.selection();
+    setStatus('pending');
+    setAttempt(n => n + 1);
+  };
+
+  const markFailed = useCallback((message: string) => {
     triggerHaptic.notificationError();
     if (isRealTxHash) {
       updateTransactionStatus(txHash, 'failed');
     }
     setStatus('failed');
     setErrorMessage(message);
-  };
+  }, [isRealTxHash, txHash]);
 
   useEffect(() => {
     // History / already-finalized txs: show the stored outcome, don't re-enter waiting UI.
@@ -134,7 +147,7 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
         }
 
         if (isMounted) {
-          markFailed('Payment not detected yet. It may still arrive shortly.');
+          markDelayed();
         }
         return;
       }
@@ -156,12 +169,16 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
 
         if (result.confirmed) {
           markConfirmed();
-        } else {
+        } else if (result.reverted) {
+          // A reverted receipt is the only authoritative failure.
           markFailed(result.error || 'Transaction reverted');
+        } else {
+          markDelayed();
         }
-      } catch (err: any) {
+      } catch {
+        // Could not reach the network: nothing is known, so do not report a failure.
         if (isMounted) {
-          markFailed(err?.message || 'Failed to poll transaction receipt');
+          markDelayed();
         }
       }
     })();
@@ -169,7 +186,7 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
     return () => {
       isMounted = false;
     };
-  }, [txHash, waitForBalance, expectedAmountWei, address, balance, refreshBalance, initialStatus]);
+  }, [txHash, waitForBalance, expectedAmountWei, address, balance, refreshBalance, initialStatus, attempt, checkmarkScale, isRealTxHash, markConfirmed, markFailed]);
 
   const openExplorer = () => {
     if (isRealTxHash) {
@@ -232,14 +249,10 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
   }, [completedAt]);
 
   const tokenInfo = getTokenBySymbol(tokenSymbol);
-  const tokenName = tokenInfo?.name || 'Monad';
   const displaySymbol = tokenInfo?.symbol || 'MON';
-  const badgeLetter = displaySymbol.charAt(0);
 
-  const signedAmount = `${isReceived ? '+' : '-'}${amount} ${displaySymbol}`;
   const sentAmountColor = colors.text;
   const amountColor = isReceived ? colors.success : sentAmountColor;
-  const iconMuted = colors.textSubtle;
 
   const onSuccessStart = useCallback(() => {
     // Replaying a stored receipt from History should stay quiet.
@@ -257,23 +270,7 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
     }
   }, [status, initialStatus]);
 
-  const background = (
-    <>
-      <GradientFill
-        colors={[colors.background, colors.background]}
-        angle={90}
-        glows={[
-          {
-            color: status === 'failed' ? '#FF5C5C' : isReceived ? '#2DD4A0' : '#3D7BFF',
-            cx: 0.5,
-            cy: 0.18,
-            r: 0.75,
-            opacity: 0.22,
-          },
-        ]}
-      />
-    </>
-  );
+  const background = <AmbientBackground />;
 
   if (status === 'pending') {
     return (
@@ -297,19 +294,48 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
     );
   }
 
+  if (status === 'delayed') {
+    return (
+      <View style={[styles.container, {paddingTop: insets.top + 40}]}>
+        {background}
+        <View style={styles.centerState}>
+          <PendingPulse accent={colors.accent} />
+          <Text style={styles.stateTitle}>Still confirming</Text>
+          <Text style={styles.stateHint}>
+            {isReceived
+              ? 'We have not seen this payment yet. It may still arrive. Check History in a moment.'
+              : 'This is taking longer than usual. Your payment may still go through, so please do not send it again. It will update in History once the network confirms it.'}
+          </Text>
+          <View style={styles.amountChip}>
+            <Text style={styles.amountChipText}>
+              {amount} {displaySymbol}
+            </Text>
+          </View>
+        </View>
+        <View style={[styles.actions, {paddingBottom: insets.bottom + 20}]}>
+          <PressableScale style={styles.secondaryBtn} contentStyle={styles.btnInner} onPress={checkAgain}>
+            <Text style={styles.secondaryBtnText}>Check Again</Text>
+          </PressableScale>
+          <PressableScale style={styles.primaryBtn} contentStyle={styles.btnInner} onPress={() => navigation.popToTop()}>
+            <Text style={styles.primaryBtnText}>Done</Text>
+          </PressableScale>
+        </View>
+      </View>
+    );
+  }
+
   if (status === 'failed') {
     return (
       <View style={[styles.container, {paddingTop: insets.top + 40}]}>
         {background}
         <View style={styles.centerState}>
-          <SuccessBurst colors={['#FF5C5C', '#FF8A5C']} reduced />
+          <SuccessBurst colors={['#FF453A', '#FF453A']} reduced />
           <Text style={styles.stateTitle}>Payment failed</Text>
           {errorMessage && <Text style={styles.stateHint}>{errorMessage}</Text>}
         </View>
         <View style={[styles.actions, {paddingBottom: insets.bottom + 20}]}>
           <PressableScale style={styles.primaryBtn} contentStyle={styles.btnInner} onPress={() => navigation.popToTop()}>
-            <GradientFill colors={['#3D7BFF', '#7C5CFF']} angle={135} />
-            <Text style={styles.primaryBtnText}>Back to home</Text>
+            <Text style={styles.primaryBtnText}>Done</Text>
           </PressableScale>
         </View>
       </View>
@@ -334,7 +360,7 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
         showsVerticalScrollIndicator={false}>
         <View style={styles.hero}>
           <SuccessBurst
-            colors={isReceived ? ['#2DD4A0', '#14B8A6'] : ['#3D7BFF', '#7C5CFF']}
+            colors={['#30D158', '#30D158']}
             onStart={onSuccessStart}
           />
           <Text style={styles.stateTitle}>{isReceived ? 'Payment received' : 'Payment sent'}</Text>
@@ -361,9 +387,7 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
               </View>
             </View>
           ))}
-          <View style={[styles.notch, styles.notchL]} />
-          <View style={[styles.notch, styles.notchR]} />
-        </View>
+                  </View>
 
         {isRealTxHash && (
           <PressableScale onPress={openExplorer} contentStyle={styles.explorerLink}>
@@ -375,8 +399,7 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
 
       <View style={[styles.actions, {paddingBottom: insets.bottom + 20}]}>
         <PressableScale style={styles.primaryBtn} contentStyle={styles.btnInner} onPress={() => navigation.popToTop()}>
-          <GradientFill colors={['#3D7BFF', '#7C5CFF']} angle={135} />
-          <Text style={styles.primaryBtnText}>Done</Text>
+            <Text style={styles.primaryBtnText}>Done</Text>
         </PressableScale>
       </View>
     </View>
@@ -413,8 +436,7 @@ function PendingPulse({accent}: {accent: string}) {
     <View style={{width: 200, height: 200, alignItems: 'center', justifyContent: 'center'}}>
       {ring(0)}
       {ring(0.5)}
-      <View style={{width: 88, height: 88, borderRadius: 44, overflow: 'hidden', alignItems: 'center', justifyContent: 'center'}}>
-        <GradientFill colors={['#3D7BFF', '#7C5CFF']} angle={135} />
+      <View style={{width: 88, height: 88, borderRadius: 44, overflow: 'hidden', backgroundColor: '#0A84FF', alignItems: 'center', justifyContent: 'center'}}>
         <ContactlessWave size={38} color="#FFFFFF" />
       </View>
     </View>
@@ -427,23 +449,23 @@ function createStyles(colors: AppColors) {
     scrollContent: {paddingHorizontal: 20},
     centerState: {flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, gap: 10},
     hero: {alignItems: 'center', marginTop: 4, marginBottom: 8},
-    stateTitle: {fontSize: 15, fontWeight: '700', color: colors.textMuted, letterSpacing: 0.2, marginTop: -30},
+    stateTitle: {fontSize: 17, fontWeight: '600', color: colors.textMuted, marginTop: -30},
     stateHint: {fontSize: 14, color: colors.textMuted, textAlign: 'center', lineHeight: 20},
     amountChip: {marginTop: 8, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 999, backgroundColor: colors.surfaceSolid, borderWidth: 1, borderColor: colors.border},
     amountChipText: {fontSize: 16, fontWeight: '700', color: colors.text},
-    bigAmount: {fontSize: 44, fontWeight: '800', letterSpacing: -2, marginTop: 6, maxWidth: '100%'},
+    bigAmount: {fontSize: 44, fontWeight: '700', letterSpacing: -1, marginTop: 6, maxWidth: '100%'},
     bigUnit: {fontSize: 18, fontWeight: '700', color: colors.textMuted, letterSpacing: 0},
     heroSub: {fontSize: 14, color: colors.textMuted, marginTop: 4},
     ticket: {
       marginTop: 18,
-      borderRadius: 24,
-      backgroundColor: colors.surfaceSolid,
+      borderRadius: 26,
+      backgroundColor: 'rgba(255,255,255,0.08)',
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: 'rgba(255,255,255,0.18)',
       paddingHorizontal: 18,
     },
     ticketRow: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingVertical: 15, gap: 16},
-    ticketRowBorder: {borderTopWidth: 1, borderTopColor: colors.borderSubtle, borderStyle: 'dashed'},
+    ticketRowBorder: {borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.separator},
     ticketKey: {fontSize: 13, color: colors.textMuted, fontWeight: '500'},
     ticketValWrap: {flex: 1, alignItems: 'flex-end'},
     ticketVal: {fontSize: 14, color: colors.text, fontWeight: '600'},
@@ -452,10 +474,12 @@ function createStyles(colors: AppColors) {
     notchL: {left: -10},
     notchR: {right: -10},
     explorerLink: {flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 18},
-    explorerLinkText: {fontSize: 14, fontWeight: '600', color: colors.accent},
+    explorerLinkText: {fontSize: 15, fontWeight: '400', color: colors.accent},
     actions: {paddingHorizontal: 20, paddingTop: 8},
-    primaryBtn: {borderRadius: 20, overflow: 'hidden'},
-    btnInner: {height: 56, alignItems: 'center', justifyContent: 'center'},
-    primaryBtnText: {fontSize: 16, fontWeight: '800', color: '#FFFFFF', letterSpacing: -0.2},
+    secondaryBtn: {borderRadius: 26, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginBottom: 12},
+    secondaryBtnText: {fontSize: 17, fontWeight: '600', color: colors.text},
+    primaryBtn: {borderRadius: 26, overflow: 'hidden', backgroundColor: colors.text},
+    btnInner: {height: 52, alignItems: 'center', justifyContent: 'center'},
+    primaryBtnText: {fontSize: 17, fontWeight: '600', color: colors.background},
   });
 }

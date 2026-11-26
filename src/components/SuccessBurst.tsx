@@ -18,11 +18,11 @@ type Props = {
   onStart?: () => void;
 };
 
-const PARTICLES = 14;
+const PARTICLES = 0;
 
 export default function SuccessBurst({
   size = 120,
-  colors = ['#2DD4A0', '#14B8A6'],
+  colors = ['#30D158', '#30D158'],
   reduced = false,
   onStart,
 }: Props) {
@@ -80,7 +80,7 @@ export default function SuccessBurst({
 
   return (
     <View style={{width: stage, height: stage, alignItems: 'center', justifyContent: 'center'}}>
-      {[0, 0.18, 0.36].map((d, i) => (
+      {[0, 0.25].map((d, i) => (
         <Animated.View
           key={i}
           pointerEvents="none"

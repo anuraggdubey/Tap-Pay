@@ -137,7 +137,7 @@ contract MultiTokenLedger is Ownable2Step, Pausable, ReentrancyGuard {
         uint256 amount, 
         bytes32 sessionIdHash
     ) internal view {
-        if (to == address(0)) {
+        if (to == address(0) || to == address(this)) {
             revert InvalidRecipient();
         }
         if (to == msg.sender) {

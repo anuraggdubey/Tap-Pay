@@ -1,0 +1,11 @@
+**/build/
+**/.gradle/
+**/.cxx/
+**/.kotlin/
+**/dist/
+**/Pods/
+vendor/
+artifacts/
+cache/
+typechain-types/
+coverage/

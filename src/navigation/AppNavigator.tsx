@@ -28,16 +28,18 @@ import TransactionHistoryScreen from '../screens/TransactionHistoryScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import AccountInfoScreen from '../screens/AccountInfoScreen';
 import AboutScreen from '../screens/AboutScreen';
+import PasskeyRecoveryScreen from '../screens/PasskeyRecoveryScreen';
 import NetworkScreen from '../screens/NetworkScreen';
 import {useWallet} from '../context/WalletContext';
 import {useTheme} from '../context/ThemeContext';
 import {HomeIcon, PayIcon, HistoryIcon, SettingsIcon} from '../components/AppIcons';
 import TapFab from '../components/TapFab';
+import GlassSurface from '../components/GlassSurface';
 import SendMethodSheet, {SendMethod} from '../components/SendMethodSheet';
 import {triggerHaptic} from '../utils/haptics';
 import PressableScale from '../components/PressableScale';
 import {shadows} from '../theme';
-import type {AppColors, AppGlass} from '../theme';
+import type {AppColors} from '../theme';
 
 export type RootStackParamList = {
   WalletSetup: undefined;
@@ -59,6 +61,7 @@ export type RootStackParamList = {
     completedAt?: string;
   };
   AccountInfo: undefined;
+  PasskeyRecovery: undefined;
   AboutTapPay: undefined;
   NetworkInfo: undefined;
   History: undefined;
@@ -81,10 +84,10 @@ const Tab = createBottomTabNavigator<TabParamList>();
  */
 function FloatingTabBar({state, descriptors, navigation}: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
-  const {colors, glass, isDark} = useTheme();
+  const {colors} = useTheme();
   const styles = useMemo(
-    () => createTabStyles(colors, glass, isDark),
-    [colors, glass, isDark],
+    () => createTabStyles(colors),
+    [colors],
   );
   const stackNav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [sheet, setSheet] = useState(false);
@@ -102,7 +105,7 @@ function FloatingTabBar({state, descriptors, navigation}: BottomTabBarProps) {
   return (
     <>
       <View pointerEvents="box-none" style={[styles.floatingContainer, {bottom: bottomOffset}]}>
-        <View style={styles.capsulePill}>
+        <GlassSurface radius={33} strength={1.6} style={styles.capsulePill}>
           {order.map(name => {
             if (name === 'TAP') {
               return (
@@ -138,7 +141,7 @@ function FloatingTabBar({state, descriptors, navigation}: BottomTabBarProps) {
                 accessibilityLabel={options.tabBarAccessibilityLabel}
                 testID={`tab-${route.name.toLowerCase()}`}
                 onPress={onPress}
-                style={styles.tabItem}
+                style={[styles.tabItem, isFocused && styles.tabItemFocused]}
                 contentStyle={styles.tabItemContent}
                 scaleTo={0.94}>
                 <View style={styles.iconWrapper}>
@@ -154,7 +157,7 @@ function FloatingTabBar({state, descriptors, navigation}: BottomTabBarProps) {
               </PressableScale>
             );
           })}
-        </View>
+        </GlassSurface>
       </View>
       <SendMethodSheet visible={sheet} onClose={() => setSheet(false)} onSelect={onSelect} />
     </>
@@ -268,6 +271,11 @@ export default function AppNavigator() {
           options={{title: 'Account Info', headerBackTitle: 'Back'}}
         />
         <Stack.Screen
+          name="PasskeyRecovery"
+          component={PasskeyRecoveryScreen}
+          options={{title: 'Passkey Recovery', headerBackTitle: 'Back'}}
+        />
+        <Stack.Screen
           name="AboutTapPay"
           component={AboutScreen}
           options={{title: 'About TapPay', headerBackTitle: 'Back'}}
@@ -282,7 +290,7 @@ export default function AppNavigator() {
   );
 }
 
-function createTabStyles(colors: AppColors, glass: AppGlass, isDark: boolean) {
+function createTabStyles(colors: AppColors) {
   return StyleSheet.create({
     floatingContainer: {
       position: 'absolute',
@@ -295,12 +303,8 @@ function createTabStyles(colors: AppColors, glass: AppGlass, isDark: boolean) {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      backgroundColor: colors.surfaceSolid,
       paddingHorizontal: 8,
       height: 66,
-      borderRadius: 33,
-      borderWidth: 1,
-      borderColor: colors.border,
       width: '92%',
       maxWidth: 420,
       ...shadows.heavy,
@@ -315,6 +319,7 @@ function createTabStyles(colors: AppColors, glass: AppGlass, isDark: boolean) {
       paddingVertical: 6,
       paddingHorizontal: 4,
     },
+    tabItemFocused: {backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: 28},
     activeDot: {
       position: 'absolute',
       bottom: 3,

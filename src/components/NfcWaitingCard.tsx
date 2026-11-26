@@ -11,6 +11,7 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {ContactlessWave, CrossIcon, ReceiveTapIcon} from './AppIcons';
 import PressableScale from './PressableScale';
 import {GradientFill} from './Gradient';
+import AmbientBackground from './AmbientBackground';
 import SuccessBurst from './SuccessBurst';
 import {useTheme} from '../context/ThemeContext';
 import {triggerHaptic} from '../utils/haptics';
@@ -176,10 +177,10 @@ export default function NfcWaitingCard({
 
   const gradient: [string, string] =
     accent === 'green'
-      ? ['#14B8A6', '#2DD4A0']
+      ? ['#30D158', '#30D158']
       : accent === 'purple'
-        ? ['#7C5CFF', '#B06CFF']
-        : ['#3D7BFF', '#7C5CFF'];
+        ? ['#BF5AF2', '#BF5AF2']
+        : ['#0A84FF', '#0A84FF'];
 
   const isSend = direction === 'send';
   const isSuccess = phase === 'success';
@@ -206,8 +207,8 @@ export default function NfcWaitingCard({
   let title = '';
   let sub = '';
   if (isSearching) {
-    title = isSend ? 'Hold near receiver' : 'Ready to receive';
-    sub = 'Place the back of both phones together';
+    title = isSend ? 'Hold Near Reader' : 'Ready to Receive';
+    sub = 'Hold the top of your iPhone near the other phone.'.replace('iPhone', 'phone');
   } else if (isBroadcasting) {
     title = isSend ? 'Sending…' : 'Receiving…';
     sub = 'Keep your phones together';
@@ -237,14 +238,7 @@ export default function NfcWaitingCard({
 
   return (
     <View style={[s2.root, {paddingTop: insets.top}]}>
-      <GradientFill
-        colors={[colors.background, colors.background]}
-        angle={90}
-        glows={[
-          {color: gradient[0], cx: 0.5, cy: 0.45, r: 0.7, opacity: 0.2},
-          {color: gradient[1], cx: 0.9, cy: 0.05, r: 0.5, opacity: 0.14},
-        ]}
-      />
+      <AmbientBackground />
 
       <View style={s2.header}>
         <PressableScale
@@ -254,7 +248,7 @@ export default function NfcWaitingCard({
           onPress={onClose}>
           <CrossIcon size={14} color={colors.text} />
         </PressableScale>
-        <Text style={s2.headerTitle}>{isSend ? 'Tap to pay' : 'Receive'}</Text>
+        <Text style={s2.headerTitle}>{isSend ? 'Tap to Pay' : 'Receive'}</Text>
         <View style={s2.badge}>
           <View style={[s2.badgeDot, {backgroundColor: isFailed ? colors.danger : isSuccess ? colors.success : colors.accent}]} />
           <Text style={s2.badgeText}>{statusLabel}</Text>
@@ -273,7 +267,7 @@ export default function NfcWaitingCard({
 
       <View style={s2.center}>
         {isSuccess ? (
-          <SuccessBurst colors={gradient} reduced={reduced} onStart={() => playSound('pay_success')} />
+          <SuccessBurst colors={['#30D158', '#30D158']} reduced={reduced} onStart={() => playSound('pay_success')} />
         ) : (
           <NfcRadar
             colors={gradient}
@@ -319,21 +313,21 @@ function createStyles(c: AppColors) {
   return StyleSheet.create({
     root: {flex: 1, backgroundColor: c.background, paddingHorizontal: 20, overflow: 'hidden'},
     header: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12},
-    closeBtn: {width: 38, height: 38, borderRadius: 19, backgroundColor: c.surfaceSolid, borderWidth: 1, borderColor: c.border, overflow: 'hidden'},
-    closeBtnInner: {width: 38, height: 38, alignItems: 'center', justifyContent: 'center'},
+    closeBtn: {width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', overflow: 'hidden'},
+    closeBtnInner: {width: 32, height: 32, alignItems: 'center', justifyContent: 'center'},
     headerTitle: {fontSize: 16, fontWeight: '700', color: c.text, letterSpacing: -0.2},
-    badge: {flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: c.surfaceSolid, borderWidth: 1, borderColor: c.border},
+    badge: {flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)'},
     badgeDot: {width: 7, height: 7, borderRadius: 4},
     badgeText: {fontSize: 12, fontWeight: '600', color: c.text},
     amountWrap: {alignItems: 'center', marginTop: 18},
-    amountValue: {fontSize: 52, fontWeight: '800', color: c.text, letterSpacing: -2.5, maxWidth: '100%'},
+    amountValue: {fontSize: 52, fontWeight: '700', color: c.text, letterSpacing: -1.5, maxWidth: '100%'},
     amountUnit: {fontSize: 18, fontWeight: '700', color: c.textMuted, letterSpacing: 0},
     expiry: {marginTop: 4, fontSize: 12, fontWeight: '600', color: c.textMuted},
     center: {flex: 1, alignItems: 'center', justifyContent: 'center'},
-    title: {marginTop: 6, fontSize: 22, fontWeight: '800', color: c.text, textAlign: 'center', letterSpacing: -0.5},
+    title: {marginTop: 6, fontSize: 22, fontWeight: '700', color: c.text, textAlign: 'center', letterSpacing: 0.3},
     sub: {marginTop: 6, fontSize: 14, color: c.textMuted, textAlign: 'center', lineHeight: 20, maxWidth: 280},
     footer: {paddingTop: 8},
-    gasRow: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: c.surfaceSolid, borderRadius: 16, paddingVertical: 12, paddingHorizontal: 16, marginBottom: 12, borderWidth: 1, borderColor: c.border},
+    gasRow: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.16)', borderRadius: 22, paddingVertical: 14, paddingHorizontal: 16, marginBottom: 12},
     gasText: {fontSize: 12, fontWeight: '600', color: c.textMuted},
   });
 }

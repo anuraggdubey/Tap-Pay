@@ -40,6 +40,7 @@ import NfcNotAvailableModal from '../components/NfcNotAvailableModal';
 import NfcWaitingCard from '../components/NfcWaitingCard';
 import {CrossIcon} from '../components/AppIcons';
 import {triggerHaptic} from '../utils/haptics';
+import AmbientBackground from '../components/AmbientBackground';
 import type {AppColors} from '../theme';
 import PressableScale from '../components/PressableScale';
 
@@ -58,8 +59,8 @@ const KEYS = [
 
 export default function SendTapScreen({navigation}: Props) {
   const {address, balance, refreshBalance} = useWallet();
-  const {colors} = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const {colors, isDark} = useTheme();
+  const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
   const insets = useSafeAreaInsets();
   const [amount, setAmount] = useState('');
   const [phase, setPhase] = useState<TapSenderPhase>('idle');
@@ -148,47 +149,55 @@ export default function SendTapScreen({navigation}: Props) {
       return;
     }
 
+    const paymentAmount = ethers.formatEther(amountWei);
     setConfirming(true);
     setPhase('broadcasting');
     triggerHaptic.impactMedium();
 
     const result = await broadcastTapPayment(recipient.receiverAddress, amountWei);
 
-    if (!isMountedRef.current) {
-      return;
-    }
     clearCountdown();
-    setConfirming(false);
-    setConfirmVisible(false);
+    if (isMountedRef.current) {
+      setConfirming(false);
+      setConfirmVisible(false);
+
+      if (!result.txHash) {
+        triggerHaptic.notificationError();
+        setPhase('failed');
+        Alert.alert(
+          'Payment Failed',
+          result.error || 'Could not broadcast the payment.',
+          [{text: 'OK', onPress: () => handleCancel()}],
+        );
+        return;
+      }
+
+      triggerHaptic.notificationSuccess();
+      refreshBalance();
+      setPendingRecipient(null);
+    }
 
     if (!result.txHash) {
-      triggerHaptic.notificationError();
-      setPhase('failed');
-      Alert.alert(
-        'Payment Failed',
-        result.error || 'Could not broadcast the payment.',
-        [{text: 'OK', onPress: () => handleCancel()}],
-      );
       return;
     }
 
-    triggerHaptic.notificationSuccess();
-    refreshBalance();
-    setPendingRecipient(null);
-
     recordTransaction({
+      walletAddress: address,
       direction: 'sent',
       counterparty: recipient.receiverAddress,
       counterpartyUsername: recipient.receiverUsername,
-      amount: amount,
+      amount: paymentAmount,
       tokenSymbol: 'MON',
       status: 'pending',
       txHash: result.txHash,
     });
 
+    if (!isMountedRef.current) {
+      return;
+    }
     navigation.replace('TransactionStatus', {
       txHash: result.txHash,
-      amount: amount,
+      amount: paymentAmount,
       recipient: recipient.receiverAddress,
       direction: 'sent',
       counterpartyUsername: recipient.receiverUsername,
@@ -392,6 +401,7 @@ export default function SendTapScreen({navigation}: Props) {
         styles.payRoot,
         {paddingTop: insets.top + 8, paddingBottom: insets.bottom + 12},
       ]}>
+      <AmbientBackground />
       <View style={styles.payHeader}>
         <TouchableOpacity
           style={styles.closeBtn}
@@ -449,7 +459,7 @@ export default function SendTapScreen({navigation}: Props) {
         onPress={handleArm}
         disabled={!canPay}>
         {loading ? (
-          <ActivityIndicator color="#FFFFFF" />
+          <ActivityIndicator color={colors.background} />
         ) : (
           <Text style={styles.payButtonText}>Pay</Text>
         )}
@@ -477,7 +487,8 @@ export default function SendTapScreen({navigation}: Props) {
   );
 }
 
-function createStyles(colors: AppColors) {
+function createStyles(colors: AppColors, isDark: boolean) {
+  const rim = isDark ? 'rgba(255,255,255,0.18)' : colors.border;
   return StyleSheet.create({
   payRoot: {
     flex: 1,
@@ -494,9 +505,9 @@ function createStyles(colors: AppColors) {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: colors.surfaceSolid,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.borderSubtle,
+    backgroundColor: isDark ? 'rgba(255,255,255,0.16)' : colors.surfaceSolid,
+    borderWidth: 1,
+    borderColor: rim,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -509,7 +520,7 @@ function createStyles(colors: AppColors) {
   },
   payHeaderTitle: {
     fontSize: 17,
-    fontWeight: '700',
+    fontWeight: '600',
     color: colors.text,
   },
   payHeaderBalance: {
@@ -528,7 +539,7 @@ function createStyles(colors: AppColors) {
     fontSize: 64,
     fontWeight: '700',
     color: colors.text,
-    letterSpacing: -2,
+    letterSpacing: -1.5,
     maxWidth: '100%',
   },
   currencyRow: {
@@ -539,8 +550,8 @@ function createStyles(colors: AppColors) {
   },
   currencyText: {
     fontSize: 16,
-    fontWeight: '700',
-    color: colors.accent,
+    fontWeight: '600',
+    color: colors.textMuted,
   },
   gasHint: {
     fontSize: 12,
@@ -563,12 +574,12 @@ function createStyles(colors: AppColors) {
     justifyContent: 'center',
   },
   keyText: {
-    fontSize: 28,
-    fontWeight: '500',
+    fontSize: 30,
+    fontWeight: '400',
     color: colors.text,
   },
   payButton: {
-    backgroundColor: colors.accent,
+    backgroundColor: colors.text,
     borderRadius: 28,
     marginTop: 8,
     overflow: 'hidden',
@@ -583,8 +594,8 @@ function createStyles(colors: AppColors) {
   },
   payButtonText: {
     fontSize: 17,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontWeight: '600',
+    color: colors.background,
   },
   cancelLink: {
     marginTop: 20,
@@ -593,8 +604,8 @@ function createStyles(colors: AppColors) {
   },
   cancelLinkText: {
     fontSize: 15,
-    fontWeight: '600',
-    color: colors.textMuted,
+    fontWeight: '400',
+    color: colors.accent,
   },
   });
 }

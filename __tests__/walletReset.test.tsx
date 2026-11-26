@@ -113,7 +113,7 @@ describe.each([
         address, username: null, walletLocked: true, isInitialized: false,
         backupVerified: false, resetWallet,
       } as any);
-      const navigation = {reset: jest.fn(), replace: jest.fn(), navigate: jest.fn()};
+      const navigation = {reset: jest.fn(), replace: jest.fn(), navigate: jest.fn(), addListener: jest.fn(() => jest.fn())};
       await act(async () => {
         tree = ReactTestRenderer.create(<Screen navigation={navigation as any} />);
       });

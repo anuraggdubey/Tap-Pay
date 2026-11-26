@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
+const {Buffer} = require('node:buffer');
 
 // CRC32 table
 const crcTable = new Uint32Array(256);

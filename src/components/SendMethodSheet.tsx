@@ -28,9 +28,9 @@ const OPTIONS: {
   colors: string[];
   glyph?: string;
 }[] = [
-  {key: 'nfc', title: 'Tap to pay', sub: 'Hold phones together. No typing.', colors: ['#3D7BFF', '#7C5CFF']},
-  {key: 'username', title: 'Pay @username', sub: 'Send to a TapPay handle', colors: ['#14B8A6', '#2DD4A0'], glyph: '@'},
-  {key: 'address', title: 'Wallet address', sub: 'Paste or type a 0x address', colors: ['#F59E0B', '#FF6B6B'], glyph: '0x'},
+  {key: 'nfc', title: 'Tap to Pay', sub: 'Hold phones together', colors: ['#0A84FF']},
+  {key: 'username', title: 'Username', sub: 'Pay a TapPay handle', colors: ['#30D158'], glyph: '@'},
+  {key: 'address', title: 'Wallet Address', sub: 'Paste a 0x address', colors: ['#FF9F0A'], glyph: '0x'},
 ];
 
 export default function SendMethodSheet({visible, onClose, onSelect}: Props) {
@@ -77,8 +77,8 @@ export default function SendMethodSheet({visible, onClose, onSelect}: Props) {
       <Animated.View
         style={[styles.sheet, {paddingBottom: insets.bottom + 20, transform: [{translateY}]}]}>
         <View style={styles.handle} />
-        <Text style={styles.title}>Send money</Text>
-        <Text style={styles.subtitle}>Choose how you want to pay</Text>
+        <Text style={styles.title}>Send</Text>
+        <Text style={styles.subtitle}>Choose how you want to pay.</Text>
         <View style={styles.list}>
           {OPTIONS.map(o => (
             <PressableScale
@@ -119,21 +119,21 @@ function createStyles(c: AppColors) {
       left: 0,
       right: 0,
       bottom: 0,
-      backgroundColor: c.surfaceSolid,
-      borderTopLeftRadius: 32,
-      borderTopRightRadius: 32,
+      backgroundColor: 'rgba(40,40,44,0.94)',
+      borderTopLeftRadius: 38,
+      borderTopRightRadius: 38,
       paddingHorizontal: 20,
       paddingTop: 10,
       borderTopWidth: 1,
-      borderColor: c.border,
+      borderColor: 'rgba(255,255,255,0.22)',
     },
     handle: {alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: c.borderStrong, marginBottom: 18},
-    title: {fontSize: 24, fontWeight: '800', color: c.text, letterSpacing: -0.6},
-    subtitle: {fontSize: 14, color: c.textMuted, marginTop: 4, marginBottom: 18},
+    title: {fontSize: 22, fontWeight: '700', color: c.text, letterSpacing: 0.3},
+    subtitle: {fontSize: 15, color: c.textMuted, marginTop: 2, marginBottom: 16},
     list: {gap: 10},
-    option: {borderRadius: 22, backgroundColor: c.surfaceElevated, borderWidth: 1, borderColor: c.border},
-    optionInner: {flexDirection: 'row', alignItems: 'center', padding: 14, gap: 14},
-    iconWrap: {width: 52, height: 52, borderRadius: 18, overflow: 'hidden', alignItems: 'center', justifyContent: 'center'},
+    option: {borderRadius: 24, backgroundColor: 'rgba(255,255,255,0.09)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)'},
+    optionInner: {flexDirection: 'row', alignItems: 'center', padding: 12, gap: 14},
+    iconWrap: {width: 44, height: 44, borderRadius: 15, overflow: 'hidden', alignItems: 'center', justifyContent: 'center'},
     glyph: {fontSize: 20, fontWeight: '800', color: '#FFFFFF'},
     optionText: {flex: 1},
     optionTitle: {fontSize: 16, fontWeight: '700', color: c.text, letterSpacing: -0.2},

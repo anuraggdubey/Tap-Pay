@@ -99,11 +99,11 @@ export default function WelcomeHero() {
 
   return (
     <View style={s.wrap}>
-      <RippleRings size={420} color="#7FA6FF" opacity={0.2} rings={7} style={s.bgRipple} />
+      <RippleRings size={420} color="#FFFFFF" opacity={0.1} rings={7} style={s.bgRipple} />
       <Animated.View style={[s.phones, {transform: [{translateY: lift}]}]}>
         {!reduced && [0, 0.5].map(ring)}
-        <Phone side="left" colors={['#2B5BE8', '#6D4DFF']} />
-        <Phone side="right" colors={['#14B8A6', '#3D7BFF']} />
+        <Phone side="left" colors={['#0A84FF']} />
+        <Phone side="right" colors={['#3A3A3C']} />
       </Animated.View>
       <Text style={s.headline}>
         Tap phones.{'\n'}
@@ -118,29 +118,25 @@ const s = StyleSheet.create({
   wrap: {flex: 1, alignItems: 'center', justifyContent: 'center'},
   bgRipple: {position: 'absolute', top: -20},
   phones: {width: 260, height: 230, alignItems: 'center', justifyContent: 'center', marginBottom: 28},
-  pulseRing: {position: 'absolute', width: 90, height: 90, borderRadius: 45, borderWidth: 1.5, borderColor: '#7FA6FF'},
+  pulseRing: {position: 'absolute', width: 90, height: 90, borderRadius: 45, borderWidth: 1.5, borderColor: '#0A84FF'},
   phone: {
     position: 'absolute',
     width: 104,
     height: 196,
     borderRadius: 26,
     padding: 5,
-    backgroundColor: '#1C1F27',
+    backgroundColor: '#1C1C1E',
     borderWidth: 1,
-    borderColor: '#343A47',
-    shadowColor: '#3D7BFF',
-    shadowOpacity: 0.35,
-    shadowRadius: 24,
-    shadowOffset: {width: 0, height: 12},
-    elevation: 10,
+    borderColor: '#48484A',
+    elevation: 0,
   },
   phoneLeft: {left: 28},
   phoneRight: {right: 28},
   screen: {flex: 1, borderRadius: 21, overflow: 'hidden', padding: 10, justifyContent: 'flex-end', gap: 6},
   notch: {position: 'absolute', top: 8, alignSelf: 'center', width: 26, height: 6, borderRadius: 3, backgroundColor: 'rgba(0,0,0,0.45)'},
-  screenChip: {width: 34, height: 34, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center', marginBottom: 8},
+  screenChip: {width: 34, height: 34, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.25)', alignItems: 'center', justifyContent: 'center', marginBottom: 8},
   screenBar: {height: 6, width: '70%', borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.7)'},
-  headline: {fontSize: 40, fontWeight: '800', color: '#F4F5F7', textAlign: 'center', letterSpacing: -1.6, lineHeight: 44},
-  headlineAccent: {color: '#7FA6FF'},
-  line: {marginTop: 14, fontSize: 15, color: '#8B91A0', textAlign: 'center'},
+  headline: {fontSize: 38, fontWeight: '700', color: '#FFFFFF', textAlign: 'center', letterSpacing: 0.3, lineHeight: 44},
+  headlineAccent: {color: '#8E8E93'},
+  line: {marginTop: 14, fontSize: 17, color: '#8E8E93', textAlign: 'center'},
 });

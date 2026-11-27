@@ -34,6 +34,7 @@ import {
   TapSenderPhase,
 } from '../services/tapPayment';
 import {recordTransaction} from '../services/history';
+import {SUPPORTED_TOKENS} from '../config/tokens';
 import ConfirmPaymentModal from '../components/ConfirmPaymentModal';
 import InsufficientBalanceModal from '../components/InsufficientBalanceModal';
 import NfcNotAvailableModal from '../components/NfcNotAvailableModal';
@@ -142,21 +143,33 @@ export default function SendTapScreen({navigation}: Props) {
       return;
     }
     const recipient = pendingRecipient;
+    const effectiveToken = (recipient.requestedToken || 'MON').toUpperCase();
+    const tokenInfo = SUPPORTED_TOKENS[effectiveToken];
+    const decimals = tokenInfo?.decimals ?? 18;
+    const rawAmount = recipient.requestedAmount || activeAmount || amount;
     let amountWei: bigint;
     try {
-      amountWei = ethers.parseEther(activeAmount || amount);
+      amountWei = ethers.parseUnits(rawAmount, decimals);
     } catch {
       Alert.alert('Invalid Amount', 'Could not read the payment amount.');
       await handleCancel();
       return;
     }
 
-    const paymentAmount = ethers.formatEther(amountWei);
+    const paymentAmount = ethers.formatUnits(amountWei, decimals);
     setConfirming(true);
     setPhase('broadcasting');
     triggerHaptic.impactMedium();
 
-    const result = await broadcastTapPayment(recipient.receiverAddress, amountWei);
+    const result =
+      effectiveToken === 'MON'
+        ? await broadcastTapPayment(recipient.receiverAddress, amountWei)
+        : await broadcastTapPayment(
+            recipient.receiverAddress,
+            amountWei,
+            effectiveToken,
+            paymentAmount,
+          );
 
     clearCountdown();
     if (isMountedRef.current) {
@@ -189,7 +202,7 @@ export default function SendTapScreen({navigation}: Props) {
       counterparty: recipient.receiverAddress,
       counterpartyUsername: recipient.receiverUsername,
       amount: paymentAmount,
-      tokenSymbol: 'MON',
+      tokenSymbol: effectiveToken,
       status: 'pending',
       txHash: result.txHash,
     });
@@ -203,7 +216,7 @@ export default function SendTapScreen({navigation}: Props) {
       recipient: recipient.receiverAddress,
       direction: 'sent',
       counterpartyUsername: recipient.receiverUsername,
-      tokenSymbol: 'MON',
+      tokenSymbol: effectiveToken,
     });
   };
 
@@ -337,6 +350,82 @@ export default function SendTapScreen({navigation}: Props) {
     }
   };
 
+  const handleScanRequest = async () => {
+    if (!address) {
+      return;
+    }
+
+    const supported = await isNfcSupported();
+    if (!supported) {
+      setNfcModalVisible(true);
+      return;
+    }
+
+    const enabled = await isNfcEnabled();
+    if (!enabled) {
+      Alert.alert(
+        'NFC Disabled',
+        'Please enable NFC in your device settings to tap and pay.',
+        [
+          {text: 'Cancel', style: 'cancel'},
+          {text: 'Open Settings', onPress: () => openNfcSettings()},
+        ],
+      );
+      return;
+    }
+
+    setActiveAmount('');
+    setPhase('reading');
+    setTimeLeft(120);
+    triggerHaptic.impactMedium();
+
+    clearCountdown();
+    countdownRef.current = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          handleCancel();
+          triggerHaptic.notificationError();
+          Alert.alert('Session Expired', 'Tap session timed out. Please try again.');
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    readTapRecipient(address).then(result => {
+      if (!isMountedRef.current) {
+        return;
+      }
+
+      if (!result.recipient) {
+        triggerHaptic.notificationError();
+        setPhase('failed');
+        Alert.alert(
+          'Tap Failed',
+          result.error || 'Could not read the other device.',
+          [{text: 'OK', onPress: () => handleCancel()}],
+        );
+        return;
+      }
+
+      if (!result.recipient.requestedAmount) {
+        triggerHaptic.notificationError();
+        setPhase('failed');
+        Alert.alert(
+          'Amount Required',
+          'The other phone did not specify a payment amount. Enter an amount and tap Pay.',
+          [{text: 'OK', onPress: () => handleCancel()}],
+        );
+        return;
+      }
+
+      triggerHaptic.notificationSuccess();
+      setPendingRecipient(result.recipient);
+      setPhase('confirming');
+      setConfirmVisible(true);
+    });
+  };
+
   if (phase !== 'idle') {
     const isBusy = phase === 'broadcasting';
     const isCompleted = phase === 'completed';
@@ -357,9 +446,13 @@ export default function SendTapScreen({navigation}: Props) {
       ? formatMon(estimatedGasWei).replace(/ MON$/, '')
       : '0.0004';
 
+    const confirmToken = (pendingRecipient?.requestedToken || 'MON').toUpperCase();
+    const confirmDecimals = SUPPORTED_TOKENS[confirmToken]?.decimals ?? 18;
+    const confirmDisplayAmount =
+      pendingRecipient?.requestedAmount || activeAmount || amount || '0';
     let confirmAmountWei = 0n;
     try {
-      confirmAmountWei = ethers.parseEther(activeAmount || amount || '0');
+      confirmAmountWei = ethers.parseUnits(confirmDisplayAmount, confirmDecimals);
     } catch {
       confirmAmountWei = 0n;
     }
@@ -370,7 +463,8 @@ export default function SendTapScreen({navigation}: Props) {
           accent="blue"
           phase={visualPhase}
           direction="send"
-          amount={activeAmount || amount}
+          amount={pendingRecipient?.requestedAmount || activeAmount || amount}
+          tokenSymbol={confirmToken}
           timeLeft={timeLeft}
           gasEstimate={gasDisplay}
           hint={scanHint}
@@ -393,7 +487,12 @@ export default function SendTapScreen({navigation}: Props) {
           amountWei={confirmAmountWei}
           gasCostWei={estimatedGasWei ?? 0n}
           loading={confirming}
-          tokenSymbol="MON"
+          tokenSymbol={confirmToken}
+          displayAmount={
+            pendingRecipient?.requestedAmount || confirmToken !== 'MON'
+              ? confirmDisplayAmount
+              : undefined
+          }
           onConfirm={handleConfirmSend}
           onCancel={handleCancel}
         />
@@ -473,6 +572,14 @@ export default function SendTapScreen({navigation}: Props) {
           <Text style={styles.payButtonText}>Pay</Text>
         )}
       </PressableScale>
+
+      <TouchableOpacity
+        style={styles.scanRequestBtn}
+        onPress={handleScanRequest}
+        disabled={loading}
+        activeOpacity={0.7}>
+        <Text style={styles.scanRequestBtnText}>Scan Payment Request</Text>
+      </TouchableOpacity>
 
       {balanceCheckData && (
         <InsufficientBalanceModal
@@ -614,6 +721,16 @@ function createStyles(colors: AppColors, isDark: boolean) {
   cancelLinkText: {
     fontSize: 15,
     fontWeight: '400',
+    color: colors.accent,
+  },
+  scanRequestBtn: {
+    alignSelf: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  scanRequestBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
     color: colors.accent,
   },
   });

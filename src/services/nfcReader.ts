@@ -14,7 +14,7 @@ import {
   formatNfcErrorHint,
   type TapNfcErrorEvent,
 } from './tapNfcNative';
-import {decodeReceiverAddress} from '../utils/apdu';
+import {decodeReceiverPayload} from '../utils/apdu';
 
 export type NfcReadStatus =
   | 'SUCCESS'
@@ -27,6 +27,8 @@ export type NfcReadStatus =
 export interface NfcReadResponse {
   status: NfcReadStatus;
   receiverAddress: string | null;
+  requestedAmount?: string;
+  requestedToken?: string;
   errorMessage?: string;
 }
 
@@ -211,8 +213,8 @@ export async function readReceiverAddress(
       options?.onHint,
     );
     
-    const receiverAddress = decodeReceiverAddress(text);
-    if (!receiverAddress) {
+    const payload = decodeReceiverPayload(text);
+    if (!payload) {
       return {
         status: 'INVALID_PAYLOAD',
         receiverAddress: null,
@@ -220,7 +222,12 @@ export async function readReceiverAddress(
       };
     }
 
-    return {status: 'SUCCESS', receiverAddress};
+    return {
+      status: 'SUCCESS',
+      receiverAddress: payload.receiverAddress,
+      requestedAmount: payload.amount,
+      requestedToken: payload.tokenSymbol,
+    };
   } catch (error: any) {
     if (isUserCancelled(error)) {
       return {status: 'CANCELLED', receiverAddress: null};

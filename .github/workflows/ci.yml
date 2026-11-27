@@ -139,3 +139,7 @@ jobs:
 
       - name: Run ESLint
         run: npm run lint
+
+      # Supabase keys and other JWTs belong in build-time config, never in the repository (#27).
+      - name: Check for committed keys
+        run: npm run check:secrets

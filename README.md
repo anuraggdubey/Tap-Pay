@@ -260,7 +260,11 @@ git clone https://github.com/anuraggdubey/Tap-Pay.git
 cd Tap-Pay
 npm install
 
-# Terminal 1: Metro bundler
+# Supabase config is build-time only, never committed: set TAPPAY_SUPABASE_URL and
+# TAPPAY_SUPABASE_ANON_KEY in .env (or your shell). Release builds fail without them.
+cp .env.example .env
+
+# Terminal 1: Metro bundler (add -- --reset-cache after changing .env)
 npm start
 
 # Terminal 2: build and install
@@ -270,8 +274,9 @@ npx react-native run-android
 ### Test
 
 ```bash
-npm test          # app unit tests
-npm run lint      # ESLint
+npm test               # app unit tests
+npm run lint           # ESLint
+npm run check:secrets  # fails if a Supabase key or JWT is committed (also runs in CI)
 ```
 
 ### Contracts

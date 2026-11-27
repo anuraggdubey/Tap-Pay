@@ -124,11 +124,28 @@ alter table public.usernames validate constraint usernames_normalized_consistenc
    then rebuild (`npm --prefix web ci && npm --prefix web run build`). No committed
    fallback is used. Other pages tolerate missing Supabase configuration.
    `WaitlistPage` remains unrouted intentionally; deployment does not enable it.
-5. Rotate the previously committed Supabase anon key using the project's supported
-   key-rotation procedure. Coordinate all consumers **before** revoking the old
-   key: web, external integrations, and the RN app (which still embeds its key).
-   RN key/config changes are deliberately not part of this patch. Public anon keys
-   are not secrets; RLS and privileges remain the security boundary.
+5. Rotate the previously committed Supabase anon key (see
+   [Rotating the committed anon key](#rotating-the-committed-anon-key-issue-27) below).
+   Public anon keys are not secrets; RLS and privileges remain the security boundary.
+
+### Rotating the committed anon key (issue #27)
+
+The RN app no longer embeds the Supabase URL or anon key: they are build-time config
+(`TAPPAY_SUPABASE_URL`, `TAPPAY_SUPABASE_ANON_KEY` in `.env` or the build
+environment, see `.env.example`). Release builds fail without them, and
+`npm run check:secrets` (run in CI) fails if a key or JWT is committed again. The old
+key is still in git history and in builds shipped before this change, so rotate it, in
+this order:
+
+1. In the Supabase dashboard (**Project Settings → API Keys**), create the new
+   publishable key (or new anon key) **without** revoking the old one yet.
+2. Set the new key everywhere it is used: the app build environment (`.env`, the
+   GitHub Actions variables `TAPPAY_SUPABASE_URL` / `TAPPAY_SUPABASE_ANON_KEY`), the
+   website (`VITE_SUPABASE_ANON_KEY` in Vercel) and any other integration.
+3. Ship an app release and redeploy the website built with the new key. Wait until
+   users have moved off older app builds (they embed the old key).
+4. Only then revoke / disable the old key in the dashboard. Requests with it start
+   failing immediately.
 
 The default limit is **5 validated requests per IP per fixed 10-minute window**,
 including invalid CAPTCHA attempts and duplicates. `WAITLIST_RATE_LIMIT` accepts

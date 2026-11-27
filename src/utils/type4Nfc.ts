@@ -69,6 +69,7 @@ export async function readType4HceText(): Promise<string | null> {
     isReaderModeEnabled: true,
     readerModeFlags:
       NfcAdapter.FLAG_READER_NFC_A | NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK,
+    readerModeDelay: 250,
   });
 
   try {

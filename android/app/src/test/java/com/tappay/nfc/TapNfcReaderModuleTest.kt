@@ -104,6 +104,15 @@ class TapNfcReaderModuleTest {
     assertNull(TapNfcReaderModule.decodeNdefRecord(record))
   }
 
+  @Test
+  fun buildsReaderModeExtrasWithPresenceCheckDelay() {
+    val extras = TapNfcReaderModule.buildReaderModeExtras()
+    assertEquals(
+      TapNfcReaderModule.PRESENCE_CHECK_DELAY_MS,
+      extras.getInt(android.nfc.NfcAdapter.EXTRA_READER_PRESENCE_CHECK_DELAY),
+    )
+  }
+
   private fun textRecord(lang: String, text: String, utf16: Boolean): NdefRecord {
     val langBytes = lang.toByteArray(Charsets.US_ASCII)
     val status = ((if (utf16) 0x80 else 0x00) or (langBytes.size and 0x3F)).toByte()
@@ -115,7 +124,6 @@ class TapNfcReaderModuleTest {
       byteArrayOf(status) + langBytes + textBytes,
     )
   }
-
   private fun uriRecord(code: Int, suffix: String): NdefRecord {
     return NdefRecord(
       NdefRecord.TNF_WELL_KNOWN,

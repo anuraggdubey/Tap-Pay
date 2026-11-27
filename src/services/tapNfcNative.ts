@@ -22,6 +22,33 @@ const emitter =
 export const TAP_NFC_TAG_READ = 'TapNfcTagRead';
 export const TAP_NFC_TAG_ERROR = 'TapNfcTagError';
 
+export type TapNfcErrorCode =
+  | 'NOT_ISO_DEP'
+  | 'APP_NOT_FOUND'
+  | 'TAG_LOST'
+  | 'READ_FAILED'
+  | 'UNKNOWN';
+
+export interface TapNfcErrorEvent {
+  code: TapNfcErrorCode;
+  message: string;
+}
+
+export function formatNfcErrorHint(event: TapNfcErrorEvent): string {
+  switch (event.code) {
+    case 'NOT_ISO_DEP':
+      return 'Not a TapPay device — ask the receiver to open Receive.';
+    case 'APP_NOT_FOUND':
+      return 'Ask the receiver to open the Receive screen in TapPay.';
+    case 'TAG_LOST':
+      return 'Phone moved too fast — hold phones together a moment longer.';
+    case 'READ_FAILED':
+      return 'Could not read payment tag — hold steady and try again.';
+    default:
+      return event.message || 'Hold phones together and try again.';
+  }
+}
+
 export function isNativeTapReaderAvailable(): boolean {
   return Platform.OS === 'android' && !!NativeTapNfcReader;
 }
@@ -46,7 +73,7 @@ export async function stopNativeReaderMode(): Promise<boolean> {
 
 export function subscribeNativeTagRead(
   onText: (text: string) => void,
-  onError?: (message: string) => void,
+  onError?: (event: TapNfcErrorEvent) => void,
 ): () => void {
   if (!emitter) {
     return () => {};
@@ -58,11 +85,15 @@ export function subscribeNativeTagRead(
     }
   });
 
-  const errorSub = emitter.addListener(TAP_NFC_TAG_ERROR, (event: {error?: string}) => {
-    if (event?.error && onError) {
-      onError(event.error);
-    }
-  });
+  const errorSub = emitter.addListener(
+    TAP_NFC_TAG_ERROR,
+    (event: {code?: string; error?: string}) => {
+      if ((event?.error || event?.code) && onError) {
+        const code = (event.code as TapNfcErrorCode) || 'UNKNOWN';
+        onError({code, message: event.error || ''});
+      }
+    },
+  );
 
   return () => {
     readSub.remove();

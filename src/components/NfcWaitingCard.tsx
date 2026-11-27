@@ -25,9 +25,11 @@ type Props = {
   phase: NfcPhaseVisual;
   direction: 'send' | 'receive';
   amount?: string;
+  tokenSymbol?: string;
   counterparty?: string;
   timeLeft?: number;
   gasEstimate?: string;
+  hint?: string | null;
   onClose?: () => void;
   footer?: React.ReactNode;
 };
@@ -160,9 +162,11 @@ export default function NfcWaitingCard({
   phase,
   direction,
   amount,
+  tokenSymbol = 'MON',
   counterparty,
   timeLeft,
   gasEstimate,
+  hint,
   onClose,
   footer,
 }: Props) {
@@ -208,7 +212,9 @@ export default function NfcWaitingCard({
   let sub = '';
   if (isSearching) {
     title = isSend ? 'Hold Near Reader' : 'Ready to Receive';
-    sub = 'Hold the top of your iPhone near the other phone.'.replace('iPhone', 'phone');
+    sub =
+      hint ||
+      'Hold the top of your iPhone near the other phone.'.replace('iPhone', 'phone');
   } else if (isBroadcasting) {
     title = isSend ? 'Sending…' : 'Receiving…';
     sub = 'Keep your phones together';
@@ -259,7 +265,7 @@ export default function NfcWaitingCard({
         <View style={s2.amountWrap}>
           <Text style={s2.amountValue} numberOfLines={1} adjustsFontSizeToFit>
             {amount}
-            <Text style={s2.amountUnit}> MON</Text>
+            <Text style={s2.amountUnit}> {tokenSymbol}</Text>
           </Text>
           {timeLeft != null && timeLeft > 0 && <Text style={s2.expiry}>Expires in {timeLeft}s</Text>}
         </View>

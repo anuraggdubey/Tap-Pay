@@ -5,7 +5,9 @@ import android.nfc.NdefMessage
 import android.nfc.NdefRecord
 import android.nfc.NfcAdapter
 import android.nfc.Tag
+import android.nfc.TagLostException
 import android.nfc.tech.IsoDep
+import android.os.Bundle
 import android.util.Log
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
@@ -60,7 +62,8 @@ class TapNfcReaderModule(private val reactContext: ReactApplicationContext) :
         executor.execute { handleTag(tag) }
       }
 
-      adapter.enableReaderMode(activity, readerCallback, flags, null)
+      val extras = buildReaderModeExtras()
+      adapter.enableReaderMode(activity, readerCallback, flags, extras)
       readerActive.set(true)
       promise.resolve(true)
     } catch (e: Exception) {
@@ -97,10 +100,15 @@ class TapNfcReaderModule(private val reactContext: ReactApplicationContext) :
     readerCallback = null
   }
 
+  private sealed class Type4ReadOutcome {
+    data class Success(val text: String) : Type4ReadOutcome()
+    data class Failure(val code: String, val message: String) : Type4ReadOutcome()
+  }
+
   private fun handleTag(tag: Tag) {
     val isoDep = IsoDep.get(tag)
     if (isoDep == null) {
-      emitError("Tag does not support ISO-DEP (required for Tap Pay HCE)")
+      emitError(ERR_NOT_ISO_DEP, "Tag does not support ISO-DEP (required for Tap Pay HCE)")
       return
     }
 
@@ -108,16 +116,22 @@ class TapNfcReaderModule(private val reactContext: ReactApplicationContext) :
       isoDep.connect()
       isoDep.timeout = 5000
 
-      val text = readType4NdefText(isoDep)
-
-      if (text != null) {
-        emitTagRead(text)
-      } else {
-        emitError("Could not read payment data from HCE card")
+      when (val outcome = readType4NdefText(isoDep)) {
+        is Type4ReadOutcome.Success -> emitTagRead(outcome.text)
+        is Type4ReadOutcome.Failure -> emitError(outcome.code, outcome.message)
       }
+    } catch (e: TagLostException) {
+      Log.w(TAG, "Tag lost during NFC read", e)
+      emitError(ERR_TAG_LOST, e.message ?: "Phone moved too fast")
     } catch (e: Exception) {
       Log.e(TAG, "handleTag failed", e)
-      emitError(e.message ?: "NFC read failed")
+      val code =
+        if (e.message?.contains("Tag was lost", ignoreCase = true) == true) {
+          ERR_TAG_LOST
+        } else {
+          ERR_READ_FAILED
+        }
+      emitError(code, e.message ?: "NFC read failed")
     } finally {
       runCatching { isoDep.close() }
     }
@@ -136,7 +150,7 @@ class TapNfcReaderModule(private val reactContext: ReactApplicationContext) :
     return if (mle > 0) minOf(mle, MAX_SHORT_APDU_LE) else MAX_SHORT_APDU_LE
   }
 
-  private fun readType4NdefText(isoDep: IsoDep): String? {
+  private fun readType4NdefText(isoDep: IsoDep): Type4ReadOutcome {
     val selectApp =
       byteArrayOf(
         0x00,
@@ -172,7 +186,10 @@ class TapNfcReaderModule(private val reactContext: ReactApplicationContext) :
           0x01,
         )
       if (!isApduSuccess(isoDep.transceive(selectAppNoLe))) {
-        return null
+        return Type4ReadOutcome.Failure(
+          ERR_APP_NOT_FOUND,
+          "TapPay Receive screen is not open on the other phone",
+        )
       }
     }
 
@@ -180,17 +197,17 @@ class TapNfcReaderModule(private val reactContext: ReactApplicationContext) :
 
     val selectFile = byteArrayOf(0x00, 0xA4.toByte(), 0x00, 0x0C, 0x02, 0xE1.toByte(), 0x04)
     if (!isApduSuccess(isoDep.transceive(selectFile))) {
-      return null
+      return Type4ReadOutcome.Failure(ERR_READ_FAILED, "Could not select NDEF file on HCE card")
     }
 
     val lenResponse = isoDep.transceive(byteArrayOf(0x00, 0xB0.toByte(), 0x00, 0x00, 0x02))
     if (!isApduSuccess(lenResponse) || lenResponse.size < 4) {
-      return null
+      return Type4ReadOutcome.Failure(ERR_READ_FAILED, "Could not read NDEF length from HCE card")
     }
 
     val nlen = ((lenResponse[0].toInt() and 0xFF) shl 8) or (lenResponse[1].toInt() and 0xFF)
     if (nlen <= 0 || nlen > 0x7FFD) {
-      return null
+      return Type4ReadOutcome.Failure(ERR_READ_FAILED, "Invalid NDEF length on HCE card")
     }
 
     val ndefMessageBytes = ByteArray(nlen)
@@ -209,24 +226,25 @@ class TapNfcReaderModule(private val reactContext: ReactApplicationContext) :
           ),
         )
       if (!isApduSuccess(chunkResponse)) {
-        return null
+        return Type4ReadOutcome.Failure(ERR_READ_FAILED, "Could not read payment data from HCE card")
       }
       val dataLen = chunkResponse.size - 2
       if (dataLen <= 0) {
-        return null
+        return Type4ReadOutcome.Failure(ERR_READ_FAILED, "Truncated NDEF payload from HCE card")
       }
       val take = minOf(dataLen, nlen - copied)
       System.arraycopy(chunkResponse, 0, ndefMessageBytes, copied, take)
       copied += take
       offset += take
     }
-
     val message = NdefMessage(ndefMessageBytes)
     if (message.records.isEmpty()) {
-      return null
+      return Type4ReadOutcome.Failure(ERR_READ_FAILED, "Empty NDEF message on HCE card")
     }
 
-    return decodeNdefRecord(message.records[0])
+    val text = decodeNdefRecord(message.records[0])
+      ?: return Type4ReadOutcome.Failure(ERR_READ_FAILED, "Unsupported NDEF record on HCE card")
+    return Type4ReadOutcome.Success(text)
   }
 
   private fun isApduSuccess(response: ByteArray): Boolean {
@@ -241,8 +259,9 @@ class TapNfcReaderModule(private val reactContext: ReactApplicationContext) :
     sendEvent(EVENT_TAG_READ, params)
   }
 
-  private fun emitError(message: String) {
+  private fun emitError(code: String, message: String) {
     val params: WritableMap = Arguments.createMap()
+    params.putString("code", code)
     params.putString("error", message)
     sendEvent(EVENT_TAG_ERROR, params)
   }
@@ -281,8 +300,19 @@ class TapNfcReaderModule(private val reactContext: ReactApplicationContext) :
   companion object {
     private const val TAG = "TapNfcReader"
     private const val MAX_SHORT_APDU_LE = 0xFF
+    const val PRESENCE_CHECK_DELAY_MS = 250
     const val EVENT_TAG_READ = "TapNfcTagRead"
     const val EVENT_TAG_ERROR = "TapNfcTagError"
+    const val ERR_NOT_ISO_DEP = "NOT_ISO_DEP"
+    const val ERR_APP_NOT_FOUND = "APP_NOT_FOUND"
+    const val ERR_TAG_LOST = "TAG_LOST"
+    const val ERR_READ_FAILED = "READ_FAILED"
+
+    internal fun buildReaderModeExtras(delayMs: Int = PRESENCE_CHECK_DELAY_MS): Bundle {
+      return Bundle().apply {
+        putInt(NfcAdapter.EXTRA_READER_PRESENCE_CHECK_DELAY, delayMs)
+      }
+    }
 
     private val URI_PREFIXES = arrayOf(
       "",

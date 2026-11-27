@@ -342,6 +342,82 @@ export default function SendTapScreen({navigation}: Props) {
     }
   };
 
+  const handleScanRequest = async () => {
+    if (!address) {
+      return;
+    }
+
+    const supported = await isNfcSupported();
+    if (!supported) {
+      setNfcModalVisible(true);
+      return;
+    }
+
+    const enabled = await isNfcEnabled();
+    if (!enabled) {
+      Alert.alert(
+        'NFC Disabled',
+        'Please enable NFC in your device settings to tap and pay.',
+        [
+          {text: 'Cancel', style: 'cancel'},
+          {text: 'Open Settings', onPress: () => openNfcSettings()},
+        ],
+      );
+      return;
+    }
+
+    setActiveAmount('');
+    setPhase('reading');
+    setTimeLeft(120);
+    triggerHaptic.impactMedium();
+
+    clearCountdown();
+    countdownRef.current = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          handleCancel();
+          triggerHaptic.notificationError();
+          Alert.alert('Session Expired', 'Tap session timed out. Please try again.');
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    readTapRecipient(address).then(result => {
+      if (!isMountedRef.current) {
+        return;
+      }
+
+      if (!result.recipient) {
+        triggerHaptic.notificationError();
+        setPhase('failed');
+        Alert.alert(
+          'Tap Failed',
+          result.error || 'Could not read the other device.',
+          [{text: 'OK', onPress: () => handleCancel()}],
+        );
+        return;
+      }
+
+      if (!result.recipient.requestedAmount) {
+        triggerHaptic.notificationError();
+        setPhase('failed');
+        Alert.alert(
+          'Amount Required',
+          'The other phone did not specify a payment amount. Enter an amount and tap Pay.',
+          [{text: 'OK', onPress: () => handleCancel()}],
+        );
+        return;
+      }
+
+      triggerHaptic.notificationSuccess();
+      setPendingRecipient(result.recipient);
+      setPhase('confirming');
+      setConfirmVisible(true);
+    });
+  };
+
   if (phase !== 'idle') {
     const isBusy = phase === 'broadcasting';
     const isCompleted = phase === 'completed';
@@ -403,7 +479,11 @@ export default function SendTapScreen({navigation}: Props) {
           gasCostWei={estimatedGasWei ?? 0n}
           loading={confirming}
           tokenSymbol={confirmToken}
-          displayAmount={confirmDisplayAmount}
+          displayAmount={
+            pendingRecipient?.requestedAmount || confirmToken !== 'MON'
+              ? confirmDisplayAmount
+              : undefined
+          }
           onConfirm={handleConfirmSend}
           onCancel={handleCancel}
         />
@@ -483,6 +563,14 @@ export default function SendTapScreen({navigation}: Props) {
           <Text style={styles.payButtonText}>Pay</Text>
         )}
       </PressableScale>
+
+      <TouchableOpacity
+        style={styles.scanRequestBtn}
+        onPress={handleScanRequest}
+        disabled={loading}
+        activeOpacity={0.7}>
+        <Text style={styles.scanRequestBtnText}>Scan Payment Request</Text>
+      </TouchableOpacity>
 
       {balanceCheckData && (
         <InsufficientBalanceModal
@@ -624,6 +712,16 @@ function createStyles(colors: AppColors, isDark: boolean) {
   cancelLinkText: {
     fontSize: 15,
     fontWeight: '400',
+    color: colors.accent,
+  },
+  scanRequestBtn: {
+    alignSelf: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  scanRequestBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
     color: colors.accent,
   },
   });

@@ -58,10 +58,13 @@ export default function ConfirmPaymentModal({
   );
   const isMon = tokenSymbol === 'MON';
   const totalCostWei = amountWei + gasCostWei;
-  const amountStr = isMon ? formatMon(amountWei) : `${displayAmount} ${tokenSymbol}`;
-  const totalStr = isMon
-    ? formatMon(totalCostWei)
-    : `${displayAmount} ${tokenSymbol} + ${formatMon(gasCostWei)}`;
+  const amountStr = displayAmount
+    ? `${displayAmount} ${tokenSymbol}`
+    : formatMon(amountWei);
+  const totalStr =
+    isMon && !displayAmount
+      ? formatMon(totalCostWei)
+      : `${displayAmount ?? formatMon(amountWei).replace(/ MON$/, '')} ${tokenSymbol} + ~${formatMon(gasCostWei)}`;
 
   const translateY = useRef(new Animated.Value(40)).current;
   const opacity = useRef(new Animated.Value(0)).current;

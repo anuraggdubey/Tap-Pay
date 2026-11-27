@@ -382,6 +382,7 @@ export default function SendTapScreen({navigation}: Props) {
     }
 
     setActiveAmount('');
+    setScanHint(null);
     setPhase('reading');
     setTimeLeft(120);
     triggerHaptic.impactMedium();
@@ -399,11 +400,16 @@ export default function SendTapScreen({navigation}: Props) {
       });
     }, 1000);
 
-    readTapRecipient(address).then(result => {
+    readTapRecipient(address, hint => {
+      if (isMountedRef.current) {
+        setScanHint(hint);
+      }
+    }).then(result => {
       if (!isMountedRef.current) {
         return;
       }
 
+      setScanHint(null);
       if (!result.recipient) {
         triggerHaptic.notificationError();
         setPhase('failed');

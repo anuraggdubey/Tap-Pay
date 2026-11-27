@@ -160,15 +160,12 @@ export default function ReceiveTapScreen({navigation}: Props) {
           await stopReceiverBroadcast();
           return;
         }
-        const isErc20Request =
-          expectedRequest !== undefined &&
-          expectedRequest.tokenSymbol.toUpperCase() !== 'MON';
         const payment = await waitForIncomingPayment(
           address,
           Math.max(0, expiresAt - Date.now()),
           controller.signal,
           {
-            sessionIdHash: isErc20Request ? undefined : expectedSessionIdHash,
+            sessionIdHash: expectedSessionIdHash,
             paymentRequest: expectedRequest,
           },
         );

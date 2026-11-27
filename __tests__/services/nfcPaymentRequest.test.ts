@@ -158,4 +158,25 @@ describe('NFC payment request / merchant mode (#118)', () => {
     expect(accepted?.tokenSymbol).toBe('USDC');
     expect(accepted?.amountWei).toBe(ethers.parseUnits('10', 6));
   });
+
+  it('binds ERC-20 tap payments to the NFC session nonce hash', async () => {
+    const nonce = '0123456789abcdef0123456789abcdef';
+    mockSendTokenTransfer.mockResolvedValue({txHash: '0xbounderc20', success: true});
+
+    const res = await broadcastTapPayment(
+      RECEIVER,
+      ethers.parseUnits('10', 6),
+      'USDC',
+      '10',
+      nonce,
+    );
+
+    expect(res.txHash).toBe('0xbounderc20');
+    expect(mockSendTokenTransfer).toHaveBeenCalledWith({
+      to: RECEIVER,
+      amount: '10',
+      tokenSymbol: 'USDC',
+      sessionIdHash: ethers.keccak256(ethers.toUtf8Bytes(nonce)),
+    });
+  });
 });

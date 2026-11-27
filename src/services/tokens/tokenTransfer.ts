@@ -41,6 +41,8 @@ export interface TransferParams {
   amount: string;
   /** Token symbol (AUSD, USDC, USDT, MON) */
   tokenSymbol: string;
+  /** Optional NFC tap session hash to bind the on-chain PaymentLogged event */
+  sessionIdHash?: string;
 }
 
 // ─── Core Transfer Function ───────────────────────────────────────
@@ -57,7 +59,7 @@ export interface TransferParams {
 export async function sendTokenTransfer(
   params: TransferParams,
 ): Promise<TransferResult> {
-  const {to, amount, tokenSymbol} = params;
+  const {to, amount, tokenSymbol, sessionIdHash} = params;
 
   // Validate token
   const token = SUPPORTED_TOKENS[tokenSymbol.toUpperCase()];
@@ -145,6 +147,7 @@ export async function sendTokenTransfer(
     token.contractAddress,
     token.symbol,
     amount,
+    sessionIdHash,
   );
 }
 
@@ -206,6 +209,7 @@ async function sendERC20Transfer(
   contractAddress: string,
   symbol: string,
   displayAmount: string,
+  sessionIdHash?: string,
 ): Promise<TransferResult> {
   try {
     // Create contract instance connected to the signer
@@ -241,12 +245,20 @@ async function sendERC20Transfer(
 
     let tx;
     if (isMultiTokenLedgerEnabled()) {
-      tx = await sendErc20ViaMultiTokenLedger(
-        signer,
-        contractAddress,
-        to,
-        amountRaw,
-      );
+      tx = sessionIdHash
+        ? await sendErc20ViaMultiTokenLedger(
+            signer,
+            contractAddress,
+            to,
+            amountRaw,
+            sessionIdHash,
+          )
+        : await sendErc20ViaMultiTokenLedger(
+            signer,
+            contractAddress,
+            to,
+            amountRaw,
+          );
     } else {
       tx = await tokenContract.transfer(to, amountRaw);
     }

@@ -163,11 +163,19 @@ export async function broadcastTapPayment(
       return {txHash: null, error: `Unsupported token: ${tokenSymbol}`};
     }
     const amountStr = displayAmount ?? ethers.formatUnits(amountWei, token.decimals);
-    const tokenResult = await sendTokenTransfer({
-      to: receiverAddress,
-      amount: amountStr,
-      tokenSymbol: normalizedToken,
-    });
+    const transferParams = sessionNonce
+      ? {
+          to: receiverAddress,
+          amount: amountStr,
+          tokenSymbol: normalizedToken,
+          sessionIdHash: hashSessionId(sessionNonce),
+        }
+      : {
+          to: receiverAddress,
+          amount: amountStr,
+          tokenSymbol: normalizedToken,
+        };
+    const tokenResult = await sendTokenTransfer(transferParams);
     if (!tokenResult.txHash) {
       return {
         txHash: null,

@@ -26,6 +26,7 @@ import {RootStackParamList} from '../navigation/AppNavigator';
 import {resolveUsernameDetails} from '../services/registry';
 import {warningForResolvedHandle} from '../services/handleTrust';
 import {validateAmount, validateUsername, validateAddress} from '../utils/validation';
+import {confirmPayBehindStuck} from '../utils/confirmAlert';
 import {truncateAddress, formatMon} from '../utils/format';
 import {
   checkSufficientBalance,
@@ -252,6 +253,9 @@ export default function SendPaymentScreen({navigation}: Props) {
       const check = await checkSufficientBalance(address, resolvedAddress, amountWeiForGas);
       if (check.limitError) {
         Alert.alert('Invalid Amount', check.limitError);
+        return;
+      }
+      if (check.stuckPayments && !(await confirmPayBehindStuck(check.stuckPayments))) {
         return;
       }
 

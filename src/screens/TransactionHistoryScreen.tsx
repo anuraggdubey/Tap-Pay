@@ -14,6 +14,7 @@ import {
   getTxTokenSymbol,
   subscribeHistory,
   initHistory,
+  isStuck,
   TransactionRecord,
 } from '../services/history';
 import {reconcilePendingTransactions} from '../services/txReconcile';
@@ -128,9 +129,21 @@ export default function TransactionHistoryScreen() {
     const counterparty = item.counterpartyUsername
       ? `@${item.counterpartyUsername}`
       : truncateAddress(item.counterparty, 6, 4);
+    const stuck = isStuck(item);
+    const notSent = item.status === 'dropped' || item.status === 'cancelled';
     const statusColor =
-      item.status === 'confirmed' ? colors.textMuted : item.status === 'pending' ? colors.warning : colors.danger;
-    const statusLabel = item.status === 'confirmed' ? '' : item.status === 'pending' ? ' · Pending' : ' · Failed';
+      item.status === 'confirmed' || notSent
+        ? colors.textMuted
+        : item.status === 'pending'
+        ? colors.warning
+        : colors.danger;
+    const statusLabel = {
+      confirmed: '',
+      pending: stuck ? ' · Stuck' : ' · Pending',
+      failed: ' · Failed',
+      dropped: ' · Not sent',
+      cancelled: ' · Cancelled',
+    }[item.status];
 
     return (
       <PressableScale
@@ -150,7 +163,7 @@ export default function TransactionHistoryScreen() {
               {statusLabel}
             </Text>
           </View>
-          <Text style={[styles.amount, !isSent && {color: colors.success}, item.status === 'failed' && styles.amountFailed]}>
+          <Text style={[styles.amount, !isSent && {color: colors.success}, (item.status === 'failed' || notSent) && styles.amountFailed]}>
             {isSent ? '−' : '+'}
             {item.amount} {getTxTokenSymbol(item)}
           </Text>

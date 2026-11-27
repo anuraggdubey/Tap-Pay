@@ -1,11 +1,25 @@
 name: Build TapPay APK
 
+# Release signing is isolated (#127):
+#  - Every run (pushes, pull requests) builds an UNSIGNED release APK and signs a copy with a
+#    throwaway key generated in that run. No job that runs npm or Gradle code ever sees the
+#    release key, so a compromised dependency or a same-repo PR cannot steal it.
+#  - Only `sign-release` holds the real key. It runs for a `v*` tag or a manual run on main, in
+#    the `release-signing` environment (required reviewers, secrets scoped to it), checks out no
+#    code and runs only apksigner on the unsigned APK built by this workflow run.
+#  - Passwords reach apksigner through step-level env (`--ks-pass env:...`), never $GITHUB_ENV.
+# See docs/RELEASE_SIGNING.md.
+
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
     branches: [main]
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   # ── Contracts: Compile & Test (fast gate) ──
@@ -15,10 +29,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Set up Node.js 22
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: 'npm'
@@ -39,10 +53,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Set up Node.js 22
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: 'npm'
@@ -53,7 +67,8 @@ jobs:
       - name: Run Jest tests
         run: npm test
 
-  # ── Android: Build APK (depends on all tests passing) ──
+  # ── Android: Build the unsigned release APK (depends on all tests passing) ──
+  # This job runs npm and Gradle code, so it never receives the release key.
   build:
     name: Build Release APK
     runs-on: ubuntu-latest
@@ -61,16 +76,16 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Set up Node.js 22
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: 'npm'
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
         with:
           java-version: '17'
           distribution: 'temurin'
@@ -86,7 +101,7 @@ jobs:
           fi
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
 
       - name: Install npm dependencies
         run: npm ci
@@ -98,54 +113,108 @@ jobs:
         working-directory: android
         run: ./gradlew :app:testDebugUnitTest --no-daemon --stacktrace --max-workers=2
 
-      # Release builds are never signed with the debug key.
-      # With the TAPPAY_KEYSTORE_BASE64 secret set (the real release key) the APK is a real release.
-      # Without it (pull requests, forks) a throwaway key is generated so the build is still verified;
-      # that APK must NOT be distributed.
-      - name: Prepare release signing key
-        id: signing
-        env:
-          TAPPAY_KEYSTORE_BASE64: ${{ secrets.TAPPAY_KEYSTORE_BASE64 }}
-          TAPPAY_KEYSTORE_PASSWORD_SECRET: ${{ secrets.TAPPAY_KEYSTORE_PASSWORD }}
-          TAPPAY_KEY_ALIAS_SECRET: ${{ secrets.TAPPAY_KEY_ALIAS }}
-          TAPPAY_KEY_PASSWORD_SECRET: ${{ secrets.TAPPAY_KEY_PASSWORD }}
-        run: |
-          KEYSTORE="$RUNNER_TEMP/release.jks"
-          if [ -n "$TAPPAY_KEYSTORE_BASE64" ]; then
-            echo "$TAPPAY_KEYSTORE_BASE64" | base64 -d > "$KEYSTORE"
-            STORE_PASS="$TAPPAY_KEYSTORE_PASSWORD_SECRET"
-            KEY_ALIAS="$TAPPAY_KEY_ALIAS_SECRET"
-            KEY_PASS="$TAPPAY_KEY_PASSWORD_SECRET"
-            echo "kind=release" >> "$GITHUB_OUTPUT"
-          else
-            STORE_PASS="$(openssl rand -hex 16)"
-            KEY_ALIAS="ci-throwaway"
-            KEY_PASS="$STORE_PASS"
-            keytool -genkeypair -keystore "$KEYSTORE" -storetype PKCS12 -storepass "$STORE_PASS" \
-              -keypass "$KEY_PASS" -alias "$KEY_ALIAS" -keyalg RSA -keysize 2048 -validity 2 \
-              -dname "CN=TapPay CI throwaway"
-            echo "kind=ci-throwaway" >> "$GITHUB_OUTPUT"
-          fi
-          echo "::add-mask::$STORE_PASS"
-          echo "::add-mask::$KEY_PASS"
-          {
-            echo "TAPPAY_KEYSTORE_FILE=$KEYSTORE"
-            echo "TAPPAY_KEYSTORE_PASSWORD=$STORE_PASS"
-            echo "TAPPAY_KEY_ALIAS=$KEY_ALIAS"
-            echo "TAPPAY_KEY_PASSWORD=$KEY_PASS"
-          } >> "$GITHUB_ENV"
-
-      - name: Build Release APK
+      - name: Build unsigned Release APK
         working-directory: android
         env:
           ANDROID_HOME: /usr/local/lib/android/sdk
           ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/27.1.12297006
           NODE_OPTIONS: --max_old_space_size=4096
-        run: ./gradlew assembleRelease --no-daemon --stacktrace --max-workers=2
+        run: ./gradlew assembleRelease -PtappayUnsignedRelease --no-daemon --stacktrace --max-workers=2
 
-      - name: Upload Release APK
-        uses: actions/upload-artifact@v4
+      - name: Stage unsigned APK
+        run: |
+          shopt -s nullglob
+          apks=(android/app/build/outputs/apk/release/*-unsigned.apk)
+          if [ "${#apks[@]}" -ne 1 ]; then
+            echo "::error::Expected exactly one unsigned release APK, found ${#apks[@]}"
+            exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/apk"
+          cp "${apks[0]}" "$RUNNER_TEMP/apk/tappay-release-unsigned.apk"
+
+      - name: Upload unsigned APK (input of sign-release)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: ${{ steps.signing.outputs.kind == 'release' && 'tappay-release-apk' || 'tappay-ci-apk-NOT-FOR-DISTRIBUTION' }}
-          path: android/app/build/outputs/apk/release/*.apk
+          name: tappay-release-unsigned
+          path: ${{ runner.temp }}/apk/tappay-release-unsigned.apk
+          if-no-files-found: error
+          retention-days: 3
+
+      # Verifies the same zipalign + apksigner path sign-release uses, with a key that exists only
+      # in this run. The result must NOT be distributed.
+      - name: Sign with a throwaway key
+        run: |
+          set -euo pipefail
+          BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+          KS="$RUNNER_TEMP/throwaway.jks"
+          export THROWAWAY_PASS="$(openssl rand -hex 16)"
+          echo "::add-mask::$THROWAWAY_PASS"
+          keytool -genkeypair -keystore "$KS" -storetype PKCS12 -storepass:env THROWAWAY_PASS \
+            -keypass:env THROWAWAY_PASS -alias ci-throwaway -keyalg RSA -keysize 2048 -validity 2 \
+            -dname "CN=TapPay CI throwaway"
+          "$BT/zipalign" -p -f 4 "$RUNNER_TEMP/apk/tappay-release-unsigned.apk" "$RUNNER_TEMP/apk/aligned.apk"
+          "$BT/apksigner" sign --ks "$KS" --ks-key-alias ci-throwaway \
+            --ks-pass env:THROWAWAY_PASS --key-pass env:THROWAWAY_PASS \
+            --out "$RUNNER_TEMP/apk/tappay-ci-NOT-FOR-DISTRIBUTION.apk" "$RUNNER_TEMP/apk/aligned.apk"
+          "$BT/apksigner" verify --print-certs "$RUNNER_TEMP/apk/tappay-ci-NOT-FOR-DISTRIBUTION.apk"
+          rm -f "$KS"
+
+      - name: Upload CI APK
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: tappay-ci-apk-NOT-FOR-DISTRIBUTION
+          path: ${{ runner.temp }}/apk/tappay-ci-NOT-FOR-DISTRIBUTION.apk
+          if-no-files-found: error
+          retention-days: 14
+
+  # ── Release signing: the only job with the release key ──
+  # Runs for a v* tag, or a manual run on main. No checkout, no npm, no Gradle: it downloads the
+  # unsigned APK built above and signs it with apksigner.
+  sign-release:
+    name: Sign Release APK
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: >-
+      startsWith(github.ref, 'refs/tags/v') ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    environment: release-signing
+
+    steps:
+      - name: Download unsigned APK
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: tappay-release-unsigned
+          path: ${{ runner.temp }}/apk
+
+      - name: Sign with the release key
+        env:
+          TAPPAY_KEYSTORE_BASE64: ${{ secrets.TAPPAY_KEYSTORE_BASE64 }}
+          TAPPAY_KEYSTORE_PASSWORD: ${{ secrets.TAPPAY_KEYSTORE_PASSWORD }}
+          TAPPAY_KEY_ALIAS: ${{ secrets.TAPPAY_KEY_ALIAS }}
+          TAPPAY_KEY_PASSWORD: ${{ secrets.TAPPAY_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for name in TAPPAY_KEYSTORE_BASE64 TAPPAY_KEYSTORE_PASSWORD TAPPAY_KEY_ALIAS TAPPAY_KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "::error::$name is not set in the release-signing environment"
+              exit 1
+            fi
+          done
+          KS="$RUNNER_TEMP/release.jks"
+          trap 'rm -f "$KS"' EXIT
+          umask 077
+          printf '%s' "$TAPPAY_KEYSTORE_BASE64" | base64 -d > "$KS"
+          BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+          "$BT/zipalign" -p -f 4 "$RUNNER_TEMP/apk/tappay-release-unsigned.apk" "$RUNNER_TEMP/apk/aligned.apk"
+          "$BT/apksigner" sign --ks "$KS" --ks-key-alias "$TAPPAY_KEY_ALIAS" \
+            --ks-pass env:TAPPAY_KEYSTORE_PASSWORD --key-pass env:TAPPAY_KEY_PASSWORD \
+            --out "$RUNNER_TEMP/apk/tappay-release.apk" "$RUNNER_TEMP/apk/aligned.apk"
+          "$BT/apksigner" verify --print-certs "$RUNNER_TEMP/apk/tappay-release.apk"
+
+      - name: Upload signed release APK
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: tappay-release-apk
+          path: ${{ runner.temp }}/apk/tappay-release.apk
+          if-no-files-found: error
           retention-days: 14

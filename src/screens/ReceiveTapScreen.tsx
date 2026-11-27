@@ -22,10 +22,12 @@ import {
 } from '../services/nfcReader';
 import {
   createReceiverBroadcastLease,
-  createTapSessionNonce,
-  hashSessionId,
   waitForIncomingPayment,
 } from '../services/tapPayment';
+import {
+  createTapSessionNonce,
+  hashSessionId,
+} from '../utils/paymentSession';
 import {reverseResolveAddress} from '../services/registry';
 import {recordTransaction} from '../services/history';
 import NfcNotAvailableModal from '../components/NfcNotAvailableModal';

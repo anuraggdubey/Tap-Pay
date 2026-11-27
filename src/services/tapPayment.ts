@@ -14,6 +14,7 @@ import {
   stopContinuousHceScan,
 } from './nfcReader';
 import {sendPayment, withRpcFailover} from './wallet';
+import {sendTokenTransfer} from './tokens/tokenTransfer';
 import {reverseResolveAddress} from './registry';
 import {createSessionIdHash} from '../utils/paymentSession';
 import {SUPPORTED_TOKENS} from '../config/tokens';
@@ -59,6 +60,13 @@ export type TapSenderPhase =
 export type TapRecipient = {
   receiverAddress: string;
   receiverUsername?: string;
+  requestedAmount?: string;
+  requestedToken?: string;
+};
+
+export type ExpectedPaymentRequest = {
+  amountWei: bigint;
+  tokenSymbol: string;
 };
 
 export {createSessionId, createSessionIdHash} from '../utils/paymentSession';
@@ -72,8 +80,9 @@ export {createSessionId, createSessionIdHash} from '../utils/paymentSession';
  */
 export async function readTapRecipient(
   senderAddress: string,
+  onHint?: (hint: string) => void,
 ): Promise<{recipient?: TapRecipient; error?: string}> {
-  const readResult = await readReceiverAddress();
+  const readResult = await readReceiverAddress({onHint});
 
   if (readResult.status !== 'SUCCESS' || !readResult.receiverAddress) {
     await stopContinuousHceScan();
@@ -102,7 +111,14 @@ export async function readTapRecipient(
     // Username is optional; the address is what the user confirms.
   }
 
-  return {recipient: {receiverAddress, receiverUsername}};
+  return {
+    recipient: {
+      receiverAddress,
+      receiverUsername,
+      requestedAmount: readResult.requestedAmount,
+      requestedToken: readResult.requestedToken,
+    },
+  };
 }
 
 /**
@@ -112,7 +128,30 @@ export async function readTapRecipient(
 export async function broadcastTapPayment(
   receiverAddress: string,
   amountWei: bigint,
+  tokenSymbol = 'MON',
+  displayAmount?: string,
 ): Promise<{txHash: string | null; error?: string}> {
+  const normalizedToken = tokenSymbol.toUpperCase();
+  if (normalizedToken !== 'MON') {
+    const token = SUPPORTED_TOKENS[normalizedToken];
+    if (!token) {
+      return {txHash: null, error: `Unsupported token: ${tokenSymbol}`};
+    }
+    const amountStr = displayAmount ?? ethers.formatUnits(amountWei, token.decimals);
+    const tokenResult = await sendTokenTransfer({
+      to: receiverAddress,
+      amount: amountStr,
+      tokenSymbol: normalizedToken,
+    });
+    if (!tokenResult.txHash) {
+      return {
+        txHash: null,
+        error: tokenResult.error || 'Transaction could not be broadcast.',
+      };
+    }
+    return {txHash: tokenResult.txHash};
+  }
+
   const sessionIdHash = createSessionIdHash();
 
   const result = await sendPayment(
@@ -161,6 +200,7 @@ async function scanIncomingTapPaymentChunk(
   recipientAddress: string,
   fromBlock: number,
   signal?: AbortSignal,
+  expectedRequest?: ExpectedPaymentRequest,
   toBlock?: number,
 ): Promise<ScanChunkResult> {
   const tapLedger = MONAD_CONFIG.contracts.tapPayLedger;
@@ -224,6 +264,16 @@ async function scanIncomingTapPaymentChunk(
         if (!args?.from) {
           continue;
         }
+        const {symbol, decimals} = describeToken(tokenAddress);
+        const amountWei = args.amount as bigint;
+        if (expectedRequest) {
+          if (
+            symbol.toUpperCase() !== expectedRequest.tokenSymbol.toUpperCase() ||
+            amountWei !== expectedRequest.amountWei
+          ) {
+            continue;
+          }
+        }
         const receipt = await provider.getTransactionReceipt(event.transactionHash);
         if (signal?.aborted) return {match: null, scannedToBlock: null, head: null};
         if (!receipt) {
@@ -238,8 +288,6 @@ async function scanIncomingTapPaymentChunk(
         if (receipt.status !== 1) {
           continue;
         }
-        const {symbol, decimals} = describeToken(tokenAddress);
-        const amountWei = args.amount as bigint;
         return {
           match: {
             senderAddress: args.from as string,
@@ -272,6 +320,7 @@ export async function scanForIncomingTapPayment(
   recipientAddress: string,
   fromBlock: number,
   signal?: AbortSignal,
+  expectedRequest?: ExpectedPaymentRequest,
 ): Promise<IncomingPaymentMatch | null> {
   if (signal?.aborted) {
     return null;
@@ -296,6 +345,7 @@ export async function scanForIncomingTapPayment(
       recipientAddress,
       chunkStart,
       signal,
+      expectedRequest,
       chunkEnd,
     );
     if (result.match) {
@@ -314,6 +364,7 @@ export async function waitForIncomingPayment(
   address: string,
   timeoutMs = SESSION_TIMEOUT_MS,
   signal?: AbortSignal,
+  expectedRequest?: ExpectedPaymentRequest,
 ): Promise<IncomingPaymentInfo> {
   if (signal?.aborted || timeoutMs <= 0) {
     return {detected: false};
@@ -366,6 +417,7 @@ export async function waitForIncomingPayment(
         address,
         nextFromBlock,
         scanController.signal,
+        expectedRequest,
       );
       if (finished || signal?.aborted || Date.now() >= deadline) break;
       if (match) {

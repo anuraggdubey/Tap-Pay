@@ -10,7 +10,11 @@ const B = '0x2222222222222222222222222222222222222222';
 const mockWallet = {address: A, balance: 0n, refreshBalance: jest.fn()};
 jest.mock('../src/context/WalletContext', () => ({useWallet: () => mockWallet}));
 jest.mock('../src/context/ThemeContext', () => ({useTheme: () => jest.requireActual('../src/theme')}));
-jest.mock('../src/services/wallet', () => ({withRpcFailover: jest.fn()}));
+jest.mock('../src/services/wallet', () => ({
+  withRpcFailover: jest.fn(),
+  getActiveRpcUrl: () => 'https://rpc-a.example',
+  corroborateLog: async () => 'confirmed',
+}));
 jest.mock('../src/services/nfcReader', () => ({
   initNfc: async () => true, isNfcSupported: async () => true, isNfcEnabled: async () => true,
 }));

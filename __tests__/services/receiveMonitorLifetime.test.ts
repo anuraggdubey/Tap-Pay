@@ -1,6 +1,10 @@
 const mockQuery = jest.fn();
 const mockRpc = jest.fn();
-jest.mock('../../src/services/wallet', () => ({withRpcFailover: (...args: unknown[]) => mockRpc(...args)}));
+jest.mock('../../src/services/wallet', () => ({
+  withRpcFailover: (...args: unknown[]) => mockRpc(...args),
+  getActiveRpcUrl: () => 'https://rpc-a.example',
+  corroborateLog: async () => 'confirmed',
+}));
 jest.mock('../../src/services/hce', () => ({createHceReceiverLease: jest.fn(), stopHceSession: jest.fn()}));
 jest.mock('../../src/services/nfcReader', () => ({}));
 jest.mock('../../src/services/registry', () => ({}));

@@ -11,6 +11,7 @@ const mockQueryFilter = jest.fn();
 const mockGetBlockNumber = jest.fn();
 const mockGetTransactionReceipt = jest.fn();
 const mockSendPayment = jest.fn();
+const mockCorroborate = jest.fn(async (..._args: any[]) => 'confirmed');
 const mockSendTokenTransfer = jest.fn();
 
 jest.mock('../../src/services/wallet', () => ({
@@ -21,6 +22,8 @@ jest.mock('../../src/services/wallet', () => ({
     }),
   ),
   sendPayment: (...args: any[]) => mockSendPayment(...args),
+  getActiveRpcUrl: () => 'https://rpc-a.example',
+  corroborateLog: (...args: any[]) => mockCorroborate(...args),
 }));
 
 jest.mock('../../src/services/tokens/tokenTransfer', () => ({

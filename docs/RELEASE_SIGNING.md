@@ -50,6 +50,9 @@ passed through step-level environment variables (`--ks-pass env:...`), never thr
    workflow job could read): `TAPPAY_KEYSTORE_BASE64` (`base64 -w0 tappay-release.jks`),
    `TAPPAY_KEYSTORE_PASSWORD`, `TAPPAY_KEY_ALIAS`, `TAPPAY_KEY_PASSWORD`.
 3. Delete any repository-level `TAPPAY_*` secrets.
+4. Add the **repository variables** `TAPPAY_SUPABASE_URL` and `TAPPAY_SUPABASE_ANON_KEY`
+   (Settings → Secrets and variables → Actions → Variables). They are build-time app config
+   (#27), not signing secrets. Release runs fail without them; other runs use a placeholder.
 
 To release: push a tag such as `v1.2.0` (or run the workflow on `main`), approve the
 `release-signing` deployment, then download `tappay-release-apk`.

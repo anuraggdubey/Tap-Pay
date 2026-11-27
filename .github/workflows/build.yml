@@ -113,6 +113,30 @@ jobs:
         working-directory: android
         run: ./gradlew :app:testDebugUnitTest --no-daemon --stacktrace --max-workers=2
 
+      # Build-time app config (#27). Set the repository variables TAPPAY_SUPABASE_URL and
+      # TAPPAY_SUPABASE_ANON_KEY (Settings → Secrets and variables → Actions → Variables). A
+      # release run (v* tag or manual run) fails without them. Other runs fall back to an
+      # unroutable placeholder: their APK is not for distribution.
+      - name: Resolve app config
+        env:
+          URL_VAR: ${{ vars.TAPPAY_SUPABASE_URL }}
+          KEY_VAR: ${{ vars.TAPPAY_SUPABASE_ANON_KEY }}
+          IS_RELEASE: ${{ startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' }}
+        run: |
+          if [ -n "$URL_VAR" ] && [ -n "$KEY_VAR" ]; then
+            URL="$URL_VAR"; KEY="$KEY_VAR"
+          elif [ "$IS_RELEASE" = "true" ]; then
+            echo "::error::Set the TAPPAY_SUPABASE_URL and TAPPAY_SUPABASE_ANON_KEY repository variables for release builds."
+            exit 1
+          else
+            echo "::warning::TAPPAY_SUPABASE_* variables are not set; building with a placeholder backend."
+            URL="https://supabase-not-configured.invalid"; KEY="ci-placeholder"
+          fi
+          {
+            echo "TAPPAY_SUPABASE_URL=$URL"
+            echo "TAPPAY_SUPABASE_ANON_KEY=$KEY"
+          } >> "$GITHUB_ENV"
+
       - name: Build unsigned Release APK
         working-directory: android
         env:

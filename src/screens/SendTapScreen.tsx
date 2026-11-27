@@ -76,6 +76,7 @@ export default function SendTapScreen({navigation}: Props) {
   const [pendingRecipient, setPendingRecipient] = useState<TapRecipient | null>(null);
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [scanHint, setScanHint] = useState<string | null>(null);
 
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isMountedRef = useRef(true);
@@ -130,6 +131,7 @@ export default function SendTapScreen({navigation}: Props) {
     setConfirmVisible(false);
     setConfirming(false);
     setPendingRecipient(null);
+    setScanHint(null);
     setPhase('idle');
     setActiveAmount('');
   };
@@ -281,6 +283,7 @@ export default function SendTapScreen({navigation}: Props) {
       }
 
       setActiveAmount(amount);
+      setScanHint(null);
       setPhase('reading');
       setTimeLeft(120);
       triggerHaptic.impactMedium();
@@ -299,7 +302,11 @@ export default function SendTapScreen({navigation}: Props) {
       }, 1000);
 
       // Step 1: read the recipient. This does NOT sign or broadcast anything.
-      readTapRecipient(address).then(result => {
+      readTapRecipient(address, hint => {
+        if (isMountedRef.current) {
+          setScanHint(hint);
+        }
+      }).then(result => {
         if (!isMountedRef.current) {
           return;
         }
@@ -317,6 +324,7 @@ export default function SendTapScreen({navigation}: Props) {
 
         // Step 2: show the recipient and wait for explicit confirmation before signing.
         triggerHaptic.notificationSuccess();
+        setScanHint(null);
         setPendingRecipient(result.recipient);
         setPhase('confirming');
         setConfirmVisible(true);
@@ -365,6 +373,7 @@ export default function SendTapScreen({navigation}: Props) {
           amount={activeAmount || amount}
           timeLeft={timeLeft}
           gasEstimate={gasDisplay}
+          hint={scanHint}
           onClose={isBusy ? undefined : handleCancel}
           footer={
             !isBusy && !isCompleted ? (

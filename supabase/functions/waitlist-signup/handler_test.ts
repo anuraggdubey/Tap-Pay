@@ -15,7 +15,8 @@ const config: Config = {
 const valid = {name: ' Ada ', email: 'ADA@EXAMPLE.COM', token: 'test-token'};
 function request(body: unknown = valid, origin = config.origins[0], method = 'POST') {
   return new Request('https://edge.example.com/waitlist-signup', {
-    method, headers: {origin, 'content-type': 'application/json', 'x-forwarded-for': '198.51.100.9, 192.0.2.1'},
+    // The platform appends the real client address as the right-most hop; the left-most is client-controlled.
+    method, headers: {origin, 'content-type': 'application/json', 'x-forwarded-for': '192.0.2.1, 198.51.100.9'},
     body: method === 'POST' ? JSON.stringify(body) : undefined,
   });
 }
@@ -50,7 +51,7 @@ Deno.test('valid signup verifies CAPTCHA and inserts only normalized fields', as
 });
 
 Deno.test('Cloudflare client IP takes precedence over forwarded proxy hops', async () => {
-  for (const forwarded of ['198.51.100.9, 192.0.2.1', null]) {
+  for (const forwarded of ['192.0.2.1, 198.51.100.9', null]) {
     const {handler, calls} = setup([json(1), json(captcha), new Response(null, {status: 201})]);
     const req = request();
     req.headers.set('cf-connecting-ip', '203.0.113.7');
@@ -223,4 +224,16 @@ Deno.test('without an email provider signups are stored unconfirmed and nothing 
   const {handler, calls} = setup([json(1), json(captcha), new Response(null, {status: 201})]);
   assert((await handler(request())).status === 200);
   assert(calls.length === 3);
+});
+
+Deno.test('a spoofed left-most X-Forwarded-For does not change the rate-limit bucket', async () => {
+  const hashes: string[] = [];
+  for (const spoofed of ['10.9.9.9', '172.16.0.1']) {
+    const {handler, calls} = setup([json(1), json(captcha), new Response(null, {status: 201})]);
+    const req = request();
+    req.headers.set('x-forwarded-for', `${spoofed}, 198.51.100.9`);
+    assert((await handler(req)).status === 200);
+    hashes.push(JSON.parse(String(calls[0].init?.body)).p_ip_hash);
+  }
+  assert(hashes[0] === hashes[1] && hashes[0] === await hashIp('198.51.100.9', config.ipSalt));
 });

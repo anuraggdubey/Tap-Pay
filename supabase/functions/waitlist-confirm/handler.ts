@@ -1,3 +1,5 @@
+import {trustedClientIp} from '../_shared/client_ip.ts';
+
 export type Config = {
   origins: string[];
   supabaseUrl: string;
@@ -60,9 +62,8 @@ export function createHandler(config: Config | null, fetcher: typeof fetch = fet
       return reply(400, INVALID);
     }
 
-    const ip = request.headers.get('cf-connecting-ip')?.trim() ??
-      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
-    if (!ip || ip.length > 45 || !/^[0-9a-fA-F:.]+$/.test(ip)) {
+    const ip = trustedClientIp(request);
+    if (!ip) {
       log('waitlist-confirm: missing trusted client IP');
       return reply(503);
     }

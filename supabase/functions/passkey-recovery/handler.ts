@@ -1,5 +1,6 @@
 import {buildPasskeyProofMessage} from './message.ts';
 import {validatePasskeyRequest} from './validation.ts';
+import {trustedClientIp} from '../_shared/client_ip.ts';
 
 export type Config = {
   origins: string[];
@@ -18,14 +19,6 @@ const WRITE_LIMIT = 20; // writes per wallet per window
 async function sha256Hex(text: string): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
   return Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
-}
-
-function clientId(request: Request): string {
-  return (
-    request.headers.get('cf-connecting-ip') ||
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    'unknown'
-  );
 }
 
 export function createHandler(
@@ -105,7 +98,14 @@ export function createHandler(
 
     try {
       if (req.action === 'get') {
-        if (await limited(`get:${clientId(request)}`, READ_LIMIT)) {
+        // Blob reads are protected only by this per-client limit, so a caller without a trusted
+        // address is refused rather than sharing one bucket with every other such caller.
+        const ip = trustedClientIp(request);
+        if (!ip) {
+          log('passkey-recovery: missing trusted client IP');
+          return reply(503);
+        }
+        if (await limited(`get:${ip}`, READ_LIMIT)) {
           return reply(429, {error: 'Too many attempts. Try again later.'});
         }
         const res = await rest(

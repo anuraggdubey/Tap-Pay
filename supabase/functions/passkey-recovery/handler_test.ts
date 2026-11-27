@@ -48,7 +48,7 @@ const deleteBody = (overrides: Record<string, unknown> = {}) => ({
 const getBody = (overrides: Record<string, unknown> = {}) => ({action: 'get', credentialId: CRED, ...overrides});
 
 function request(b: unknown, origin?: string, extra: Record<string, string> = {}) {
-  const headers: Record<string, string> = {'content-type': 'application/json', ...extra};
+  const headers: Record<string, string> = {'content-type': 'application/json', 'x-forwarded-for': '203.0.113.9', ...extra};
   if (origin) {
     headers.origin = origin;
   }
@@ -185,4 +185,22 @@ Deno.test('upstream failures return a generic 503 and never leak details', async
   assert(res.status === 503);
   const text = await res.text();
   assert(!text.includes('rate limiter'));
+});
+
+Deno.test('get buckets use the trusted client address, never a spoofed one', async () => {
+  const bucket = async (forwarded: string) => {
+    const s = stub({rows: []});
+    await createHandler(config, verifyAs(null), s.fetcher, quiet)(request(getBody(), undefined, {'x-forwarded-for': forwarded}));
+    return JSON.parse(String(s.calls[0].init?.body)).p_bucket as string;
+  };
+  assert(await bucket('10.0.0.1, 203.0.113.9') === await bucket('10.0.0.2, 203.0.113.9'));
+  assert(await bucket('10.0.0.1, 203.0.113.9') !== await bucket('10.0.0.1, 203.0.113.10'));
+});
+
+Deno.test('get without a trusted client address fails closed (no shared bucket)', async () => {
+  const s = stub({rows: []});
+  const req = request(getBody());
+  req.headers.delete('x-forwarded-for');
+  assert((await createHandler(config, verifyAs(null), s.fetcher, quiet)(req)).status === 503);
+  assert(s.calls.length === 0);
 });

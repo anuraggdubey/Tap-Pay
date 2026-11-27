@@ -13,6 +13,7 @@ const config: Config = {
   serviceKey: 'service-key',
 };
 const WALLET = '0x1111111111111111111111111111111111111111';
+const CLIENT_IP = '203.0.113.9';
 const issuedAt = new Date().toISOString();
 
 function body(overrides: Record<string, unknown> = {}) {
@@ -27,7 +28,7 @@ function body(overrides: Record<string, unknown> = {}) {
   };
 }
 function request(b: unknown = body(), origin?: string) {
-  const headers: Record<string, string> = {'content-type': 'application/json'};
+  const headers: Record<string, string> = {'content-type': 'application/json', 'x-forwarded-for': CLIENT_IP};
   if (origin) {
     headers.origin = origin;
   }
@@ -57,11 +58,11 @@ function setup(responses: Response[], verify = goodVerify) {
 }
 
 Deno.test('registers when the signature matches the wallet', async () => {
-  const {handler, calls} = setup([json(1), json(true), json([]), new Response(null, {status: 201})]);
+  const {handler, calls} = setup([json(1), json(1), json(true), json([]), new Response(null, {status: 201})]);
   const res = await handler(request());
   assert(res.status === 200 && (await res.json()).ok === true);
   // Inserted row carries the recovered wallet and normalized username.
-  const inserted = JSON.parse(String(calls[3].init?.body));
+  const inserted = JSON.parse(String(calls[4].init?.body));
   assert(inserted.wallet_address === WALLET && inserted.username === 'alice');
 });
 
@@ -80,38 +81,38 @@ Deno.test('rejects a forged wallet (signature for a different address)', async (
 });
 
 Deno.test('refuses when the wallet already has a username', async () => {
-  const {handler} = setup([json(1), json(true), json([{username: 'bob'}])]);
+  const {handler} = setup([json(1), json(1), json(true), json([{username: 'bob'}])]);
   const res = await handler(request());
   assert(res.status === 409 && (await res.json()).reason === 'wallet_taken');
 });
 
 Deno.test('maps a unique-violation to taken', async () => {
-  const {handler} = setup([json(1), json(true), json([]), json({code: '23505', message: 'username unique'}, 409)]);
+  const {handler} = setup([json(1), json(1), json(true), json([]), json({code: '23505', message: 'username unique'}, 409)]);
   const res = await handler(request());
   assert(res.status === 409 && (await res.json()).reason === 'taken');
 });
 
 Deno.test('release deletes only the signed username owned by the signer', async () => {
-  const {handler, calls} = setup([json(1), json(true), json([{username: 'alice'}])]);
+  const {handler, calls} = setup([json(1), json(1), json(true), json([{username: 'alice'}])]);
   const res = await handler(request(body({action: 'release'})));
   assert(res.status === 200);
-  assert(calls[2].init?.method === 'DELETE');
-  assert(calls[2].url.includes(`wallet_address=eq.${WALLET}`));
+  assert(calls[3].init?.method === 'DELETE');
+  assert(calls[3].url.includes(`wallet_address=eq.${WALLET}`));
   // Scoped to the username in the signed proof, not just the wallet.
-  assert(calls[2].url.includes('normalized_username=eq.alice'));
+  assert(calls[3].url.includes('normalized_username=eq.alice'));
 });
 
 Deno.test('release normalizes look-alike characters like registration does', async () => {
-  const {handler, calls} = setup([json(1), json(true), json([{username: 'al1c3'}])]);
+  const {handler, calls} = setup([json(1), json(1), json(true), json([{username: 'al1c3'}])]);
   const res = await handler(request(body({action: 'release', username: 'al1c3'})));
   assert(res.status === 200);
   // 1 -> l, matching normalizeUsername() used at registration.
-  assert(calls[2].url.includes('normalized_username=eq.allc3'));
+  assert(calls[3].url.includes('normalized_username=eq.allc3'));
 });
 
 Deno.test('release succeeds only when a row was actually deleted', async () => {
   // A proof for a username the wallet does not hold deletes nothing and reports not found.
-  const {handler} = setup([json(1), json(true), json([])]);
+  const {handler} = setup([json(1), json(1), json(true), json([])]);
   const res = await handler(request(body({action: 'release', username: 'bob'})));
   assert(res.status === 404 && (await res.json()).reason === 'not_found');
 });
@@ -153,10 +154,10 @@ Deno.test('message is stable and deterministic', () => {
 
 Deno.test('a replayed proof is rejected before any database change', async () => {
   // The single-use check reports the proof was already consumed.
-  const {handler, calls} = setup([json(1), json(false)]);
+  const {handler, calls} = setup([json(1), json(1), json(false)]);
   const res = await handler(request(body({action: 'release'})));
   assert(res.status === 409 && (await res.json()).reason === 'replayed');
-  assert(calls.length === 2 && calls[1].url.includes('rpc/consume_username_proof'));
+  assert(calls.length === 3 && calls[2].url.includes('rpc/consume_username_proof'));
 });
 
 Deno.test('the same signed request cannot be used twice', async () => {
@@ -187,10 +188,10 @@ Deno.test('the same signed request cannot be used twice', async () => {
 });
 
 Deno.test('fails closed when the replay check is unavailable', async () => {
-  const {handler, calls} = setup([json(1), new Response(null, {status: 500})]);
+  const {handler, calls} = setup([json(1), json(1), new Response(null, {status: 500})]);
   const res = await handler(request());
   assert(res.status === 503);
-  assert(calls.length === 2);
+  assert(calls.length === 3);
 });
 
 Deno.test('over the registration limit is refused before any proof or table access', async () => {
@@ -201,14 +202,14 @@ Deno.test('over the registration limit is refused before any proof or table acce
 });
 
 Deno.test('the limit boundary: the 10th registration is allowed, the 11th is not', async () => {
-  const ok = setup([json(10), json(true), json([]), new Response(null, {status: 201})]);
+  const ok = setup([json(10), json(5), json(true), json([]), new Response(null, {status: 201})]);
   assert((await ok.handler(request())).status === 200);
   const over = setup([json(11)]);
   assert((await over.handler(request())).status === 429);
 });
 
 Deno.test('releases use a separate, higher limit', async () => {
-  const {handler} = setup([json(15), json(true), json([{username: 'alice'}])]);
+  const {handler} = setup([json(15), json(5), json(true), json([{username: 'alice'}])]);
   assert((await handler(request(body({action: 'release'})))).status === 200);
   const over = setup([json(21)]);
   assert((await over.handler(request(body({action: 'release'})))).status === 429);
@@ -225,7 +226,7 @@ Deno.test('buckets are per client address and never contain the raw address', as
     const {handler, calls} = setup([json(99)]);
     const req = new Request('https://edge.example.com/register-username', {
       method: 'POST',
-      headers: {'content-type': 'application/json', 'x-forwarded-for': `${ip}, 10.0.0.1`},
+      headers: {'content-type': 'application/json', 'x-forwarded-for': `10.0.0.1, ${ip}`},
       body: JSON.stringify(body()),
     });
     await handler(req);
@@ -247,6 +248,59 @@ Deno.test('reserved and look-alike reserved names cannot be registered', async (
 });
 
 Deno.test('reserved names do not block releasing', async () => {
-  const {handler} = setup([json(1), json(true), json([{username: 'admin'}])]);
+  const {handler} = setup([json(1), json(1), json(true), json([{username: 'admin'}])]);
   assert((await handler(request(body({action: 'release', username: 'admin'})))).status === 200);
+});
+
+const bucketOf = (call: {init?: RequestInit}) => JSON.parse(String(call.init?.body)).p_bucket as string;
+function requestWithHeaders(extra: Record<string, string>, b: unknown = body()) {
+  return new Request('https://edge.example.com/register-username', {
+    method: 'POST',
+    headers: {'content-type': 'application/json', ...extra},
+    body: JSON.stringify(b),
+  });
+}
+
+Deno.test('spoofed left-most X-Forwarded-For values share the real client bucket', async () => {
+  const a = setup([json(99)]);
+  await a.handler(requestWithHeaders({'x-forwarded-for': `198.51.100.1, ${CLIENT_IP}`}));
+  const b = setup([json(99)]);
+  await b.handler(requestWithHeaders({'x-forwarded-for': `192.0.2.77, ${CLIENT_IP}`}));
+  assert(bucketOf(a.calls[0]) === bucketOf(b.calls[0]));
+});
+
+Deno.test('cf-connecting-ip is the client address when present', async () => {
+  const a = setup([json(99)]);
+  await a.handler(requestWithHeaders({'cf-connecting-ip': '203.0.113.50', 'x-forwarded-for': '1.1.1.1, 203.0.113.60'}));
+  const b = setup([json(99)]);
+  await b.handler(requestWithHeaders({'cf-connecting-ip': '203.0.113.50', 'x-forwarded-for': '2.2.2.2, 203.0.113.61'}));
+  assert(bucketOf(a.calls[0]) === bucketOf(b.calls[0]));
+});
+
+Deno.test('no trusted client address fails closed with 503 and touches nothing', async () => {
+  const cases: Record<string, string>[] = [{}, {'x-forwarded-for': 'unknown'}, {'cf-connecting-ip': 'nonsense', 'x-forwarded-for': CLIENT_IP}];
+  for (const extra of cases) {
+    const {handler, calls} = setup([]);
+    assert((await handler(requestWithHeaders(extra))).status === 503);
+    assert(calls.length === 0);
+  }
+});
+
+Deno.test('registrations are also limited per wallet, whatever the client address', async () => {
+  const {handler, calls} = setup([json(1), json(6)]);
+  const res = await handler(requestWithHeaders({'x-forwarded-for': '203.0.113.200'}));
+  assert(res.status === 429 && (await res.json()).reason === 'rate_limited');
+  assert(calls.length === 2);
+  // The second bucket depends on the wallet only, so it is the same from any address.
+  const other = setup([json(1), json(6)]);
+  await other.handler(requestWithHeaders({'x-forwarded-for': '198.51.100.200'}));
+  assert(bucketOf(calls[1]) === bucketOf(other.calls[1]));
+  assert(bucketOf(calls[0]) !== bucketOf(other.calls[0]));
+});
+
+Deno.test('the per-wallet boundary: the 5th registration is allowed, the 6th is not', async () => {
+  const ok = setup([json(1), json(5), json(true), json([]), new Response(null, {status: 201})]);
+  assert((await ok.handler(request())).status === 200);
+  const over = setup([json(1), json(6)]);
+  assert((await over.handler(request())).status === 429);
 });

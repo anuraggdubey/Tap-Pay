@@ -108,3 +108,15 @@ Deno.test('upstream failures are generic and missing config or IP fail closed', 
   });
   assert((await setup([]).handler(noIp)).status === 503);
 });
+
+Deno.test('a spoofed left-most X-Forwarded-For does not change the rate-limit bucket', async () => {
+  const buckets: string[] = [];
+  for (const spoofed of ['10.9.9.9', '172.16.0.1']) {
+    const {handler, calls} = setup([json(1), json(true)]);
+    const req = request();
+    req.headers.set('x-forwarded-for', `${spoofed}, 198.51.100.9`);
+    assert((await handler(req)).status === 200);
+    buckets.push(String(calls[0].init?.body));
+  }
+  assert(buckets[0] === buckets[1]);
+});

@@ -1,13 +1,10 @@
 import { Link } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
-import { HeroMeshCanvas } from './effects/HeroMeshCanvas';
 import {
-  Smartphone,
   ArrowUpRight,
   Wifi,
   Battery,
   Play,
-  Pause,
 } from 'lucide-react';
 import {
   TapPayMockHome,
@@ -176,183 +173,121 @@ export const Hero: React.FC = () => {
 
   return (
     <section id="hero" className="hero-section">
-      <HeroMeshCanvas />
-
-      {/* NFC signal rings — decorative background */}
-      <div className="hero-nfc-rings" aria-hidden>
-        <div className="nfc-ring nfc-ring-1" />
-        <div className="nfc-ring nfc-ring-2" />
-        <div className="nfc-ring nfc-ring-3" />
-      </div>
-
-      <div className="phantom-container hero-split-grid">
-        {/* LEFT — Copy & CTAs */}
-        <div className="hero-copy-col">
-          <div className="field-kicker hero-kicker">Android · NFC · Non-custodial</div>
+      <div className="phantom-container hero-grid">
+        <div className="hero-copy">
+          <p className="hero-eyebrow">Tap&nbsp;to&nbsp;Pay · Android · Non-custodial</p>
 
           <h1 className="hero-headline">
-            <span className="hero-headline-line1">Tap phones.</span>
-            <span className="hero-headline-line2">Move money.</span>
+            Tap phones.
+            <br />
+            <em>Move money.</em>
           </h1>
 
           <p className="hero-description">
-            Self-custodial payments over a physical NFC tap — no QR codes,
-            no wallet addresses, no seed-phrase theatre. Two Android phones
-            within <strong>4&nbsp;cm</strong>, settled on-chain in under a second.
+            Hold two phones together and the payment settles on-chain in under a second.
+            No QR codes. No wallet addresses.
           </p>
 
-          <div className="hero-action-buttons">
-            <Link to="/download" className="hero-btn-primary" style={{ textDecoration: 'none' }}>
-              <Smartphone size={18} />
-              <span>Multi-Chain APK — Coming Soon</span>
-              <span className="btn-version-badge">Android</span>
+          <div className="hero-actions">
+            <Link to="/download" className="hero-btn hero-btn--primary">
+              <span>Get the app</span>
+              <ArrowUpRight size={16} />
             </Link>
-            <a
-              href="https://x.com/tapxpay"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hero-btn-secondary"
-            >
-              <span>Follow @tapxpay</span>
-              <ArrowUpRight size={15} />
-            </a>
-          </div>
-
-          {/* Inline metrics */}
-          <div className="hero-metrics-bar">
-            <div className="metric-item">
-              <div className="metric-value">~0.8s</div>
-              <div className="metric-label">Fast Finality</div>
-            </div>
-            <div className="metric-divider" />
-            <div className="metric-item">
-              <div className="metric-value">4cm</div>
-              <div className="metric-label">NFC Range</div>
-            </div>
-            <div className="metric-divider" />
-            <div className="metric-item">
-              <div className="metric-value">100%</div>
-              <div className="metric-label">Non-Custodial</div>
-            </div>
+            <Link to="/#watch-demo" className="hero-btn hero-btn--ghost">
+              <Play size={13} />
+              <span>Watch the film</span>
+            </Link>
           </div>
         </div>
 
-        {/* RIGHT — 3D Phone with glow */}
-        <div className="hero-phone-col">
-          <div className="hero-phone-glow" />
-          <div className="hero-phone-glow-secondary" />
+        <div className="hero-visual">
+          <div
+            className="realistic-phone-chassis hero-phone-device"
+            onMouseEnter={() => setIsPaused(true)}
+            onMouseLeave={() => setIsPaused(false)}
+          >
+            <div className="realistic-phone-screen tp-mock-root">
+              <div className="realistic-phone-camera" />
 
-          <div className="hero-phone-tilt">
-            <div
-              className="realistic-phone-chassis hero-phone-device"
-              onMouseEnter={() => setIsPaused(true)}
-              onMouseLeave={() => setIsPaused(false)}
-            >
-              <div className="realistic-phone-btn-vol" />
-              <div className="realistic-phone-btn-pwr" />
-
-              <div className="realistic-phone-screen tp-mock-root">
-                <div className="realistic-phone-camera" />
-
-                <div className="sim-status-bar">
-                  <span className="sim-status-time">9:41</span>
-                  <div className="sim-status-chip">
-                    <span className="sim-chip-dot" />
-                    <span>Multi-Chain</span>
-                  </div>
-                  <div className="sim-status-icons">
-                    <Wifi size={12} />
-                    <Battery size={12} />
-                  </div>
+              <div className="sim-status-bar">
+                <span className="sim-status-time">9:41</span>
+                <div className="sim-status-chip">
+                  <span className="sim-chip-dot" />
+                  <span>Multi-Chain</span>
                 </div>
-
-                <div className="sim-screen-container">
-                  {currentStep === 'home' && (
-                    <TapPayMockHome compact username="@anurag" avatarLetter="A" sendActive={simulatedTapActive} />
-                  )}
-                  {currentStep === 'amount' && (
-                    <TapPayMockPay
-                      compact
-                      typedAmount={typedAmount}
-                      activeKey={null}
-                      availableBalance={balance.toFixed(4)}
-                      addressShort="0x1a70…1A4E"
-                      primaryLabel="Ready to Tap"
-                      primaryTapped={simulatedTapActive}
-                    />
-                  )}
-                  {currentStep === 'nfc_search' && (
-                    <TapPayMockNfcSession
-                      title="Hold phones together"
-                      subtitle="Sending 12.5 MON"
-                      peerName="@misbah (Receiver)"
-                      peerAddr="0x8F21…4E29"
-                      peerLetter="M"
-                      statusLine="NFC session active…"
-                    />
-                  )}
-                  {currentStep === 'success' && (
-                    <TapPayMockSuccess
-                      amount="12.5"
-                      signed="-"
-                      headline="Payment confirmed"
-                      subline="Sent to @misbah"
-                      rows={[
-                        { label: 'Balance', value: `${balance.toFixed(3)} MON` },
-                        { label: 'Finality', value: '~0.8s' },
-                        { label: 'Chain', value: '143 ✓' },
-                      ]}
-                    />
-                  )}
-                  {currentStep === 'history' && (
-                    <TapPayMockHistory compact highlightFirstRow={simulatedTapActive} />
-                  )}
-                  {currentStep === 'tx_detail' && <TapPayMockTxDetail compact />}
-                  {currentStep === 'settings' && <TapPayMockSettings compact />}
-
-                  {tapCursorPos.visible && (
-                    <div
-                      className={`sim-tap-cursor ${simulatedTapActive ? 'tap-clicked' : ''}`}
-                      style={{ left: `${tapCursorPos.x}%`, top: `${tapCursorPos.y}%` }}
-                    >
-                      <div className="cursor-pointer" />
-                      <div className="cursor-ripple" />
-                    </div>
-                  )}
+                <div className="sim-status-icons">
+                  <Wifi size={12} />
+                  <Battery size={12} />
                 </div>
-
-                <TapPayMockTabBar active={activeNavTab} />
-                <div className="sim-home-bar" />
               </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Flow controller — full-width below the split */}
-      <div className="phantom-container">
-        <div className="hero-flow-controller">
-          <div className="flow-controller-header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span className="flow-live-dot" />
-              <span className="flow-title">Interactive Walkthrough</span>
+              <div className="sim-screen-container">
+                {currentStep === 'home' && (
+                  <TapPayMockHome compact username="@anurag" avatarLetter="A" sendActive={simulatedTapActive} />
+                )}
+                {currentStep === 'amount' && (
+                  <TapPayMockPay
+                    compact
+                    typedAmount={typedAmount}
+                    activeKey={null}
+                    availableBalance={balance.toFixed(4)}
+                    addressShort="0x1a70…1A4E"
+                    primaryLabel="Ready to Tap"
+                    primaryTapped={simulatedTapActive}
+                  />
+                )}
+                {currentStep === 'nfc_search' && (
+                  <TapPayMockNfcSession
+                    title="Hold phones together"
+                    subtitle="Sending 12.5 MON"
+                    peerName="@misbah (Receiver)"
+                    peerAddr="0x8F21…4E29"
+                    peerLetter="M"
+                    statusLine="NFC session active…"
+                  />
+                )}
+                {currentStep === 'success' && (
+                  <TapPayMockSuccess
+                    amount="12.5"
+                    signed="-"
+                    headline="Payment confirmed"
+                    subline="Sent to @misbah"
+                    rows={[
+                      { label: 'Balance', value: `${balance.toFixed(3)} MON` },
+                      { label: 'Finality', value: '~0.8s' },
+                      { label: 'Chain', value: '143 ✓' },
+                    ]}
+                  />
+                )}
+                {currentStep === 'history' && (
+                  <TapPayMockHistory compact highlightFirstRow={simulatedTapActive} />
+                )}
+                {currentStep === 'tx_detail' && <TapPayMockTxDetail compact />}
+                {currentStep === 'settings' && <TapPayMockSettings compact />}
+
+                {tapCursorPos.visible && (
+                  <div
+                    className={`sim-tap-cursor ${simulatedTapActive ? 'tap-clicked' : ''}`}
+                    style={{ left: `${tapCursorPos.x}%`, top: `${tapCursorPos.y}%` }}
+                  >
+                    <div className="cursor-pointer" />
+                    <div className="cursor-ripple" />
+                  </div>
+                )}
+              </div>
+
+              <TapPayMockTabBar active={activeNavTab} />
+              <div className="sim-home-bar" />
             </div>
-            <button
-              onClick={() => setIsPaused(!isPaused)}
-              className="flow-pause-btn"
-              title={isPaused ? 'Resume walkthrough' : 'Pause walkthrough'}
-            >
-              {isPaused ? <Play size={12} /> : <Pause size={12} />}
-              <span>{isPaused ? 'Resume' : 'Pause'}</span>
-            </button>
           </div>
-          <div className="flow-steps-grid">
+
+          <div className="hero-steps" role="tablist" aria-label="App walkthrough">
             {[
-              { id: 'home' as FlowStep, label: '1. Home' },
-              { id: 'amount' as FlowStep, label: '2. Send NFC' },
-              { id: 'success' as FlowStep, label: '3. GPay Receipt' },
-              { id: 'history' as FlowStep, label: '4. History & Tx' },
-              { id: 'settings' as FlowStep, label: '5. Profile' },
+              { id: 'home' as FlowStep, label: 'Home' },
+              { id: 'amount' as FlowStep, label: 'Tap' },
+              { id: 'success' as FlowStep, label: 'Receipt' },
+              { id: 'history' as FlowStep, label: 'History' },
+              { id: 'settings' as FlowStep, label: 'Profile' },
             ].map((s) => {
               const isActive =
                 s.id === 'amount'
@@ -363,13 +298,15 @@ export const Hero: React.FC = () => {
               return (
                 <button
                   key={s.id}
+                  role="tab"
+                  aria-selected={isActive}
                   onClick={() => handleSelectStep(s.id)}
-                  className={`flow-step-tab ${isActive ? 'is-active' : ''}`}
+                  className={`hero-step ${isActive ? 'is-active' : ''}`}
                 >
-                  <div className="step-bar-track">
-                    <div className="step-bar-fill" style={{ width: isActive ? `${stepProgress}%` : '0%' }} />
-                  </div>
-                  <span className="step-label">{s.label}</span>
+                  <span className="hero-step-track">
+                    <span className="hero-step-fill" style={{ width: isActive ? `${stepProgress}%` : '0%' }} />
+                  </span>
+                  <span className="hero-step-label">{s.label}</span>
                 </button>
               );
             })}
@@ -377,261 +314,83 @@ export const Hero: React.FC = () => {
         </div>
       </div>
 
-      {/* Accent glow line */}
-      <div className="hero-bottom-glow" aria-hidden />
-
       <style>{`
-        /* ========================================================= */
-        /* HERO — SPLIT ASYMMETRIC WITH 3D PHONE                     */
-        /* ========================================================= */
         .hero-section {
           position: relative;
-          overflow: hidden;
-          padding: 140px 0 48px;
           min-height: 100vh;
           display: flex;
-          flex-direction: column;
           align-items: center;
-          background: transparent;
+          padding: 120px 0 72px;
           color: var(--text-dark);
         }
-
-        /* NFC signal rings — positioned behind phone */
-        .hero-nfc-rings {
-          position: absolute;
-          top: 50%;
-          right: 12%;
-          transform: translate(0, -45%);
-          width: 600px;
-          height: 600px;
-          pointer-events: none;
-          z-index: 0;
-        }
-        .nfc-ring {
-          position: absolute;
-          inset: 0;
-          border-radius: 50%;
-          border: 1px solid rgba(10, 132, 255, 0.08);
-          animation: nfcPulse 4s ease-out infinite;
-        }
-        .nfc-ring-1 { animation-delay: 0s; }
-        .nfc-ring-2 { animation-delay: 1.3s; transform: scale(0.7); }
-        .nfc-ring-3 { animation-delay: 2.6s; transform: scale(0.4); }
-        @keyframes nfcPulse {
-          0% { transform: scale(0.3); opacity: 0.6; }
-          100% { transform: scale(1.2); opacity: 0; }
-        }
-
-        /* Split grid */
-        .hero-split-grid {
-          position: relative;
-          z-index: 2;
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          align-items: center;
-          gap: 40px;
+        .hero-grid {
           width: 100%;
+          display: grid;
+          grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+          align-items: center;
+          gap: clamp(32px, 6vw, 96px);
+        }
+        .hero-eyebrow {
+          font-family: var(--font-mono);
+          font-size: 12px;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          color: var(--text-dark-subtle);
           margin-bottom: 32px;
         }
-
-        /* Left column — copy */
-        .hero-copy-col {
-          display: flex;
-          flex-direction: column;
-          align-items: flex-start;
-        }
-
-        .hero-kicker { margin-bottom: 20px; }
-
         .hero-headline {
           font-family: var(--font-serif);
-          font-size: clamp(48px, 6.5vw, 100px);
           font-weight: 400;
-          letter-spacing: -0.03em;
-          line-height: 0.92;
-          margin-bottom: 28px;
-        }
-        .hero-headline-line1 {
-          display: block;
-          color: var(--text-dark);
-        }
-        .hero-headline-line2 {
-          display: block;
-          font-style: italic;
-        }
-
-        .hero-description {
-          font-family: var(--font-sans);
-          font-size: 17px;
-          line-height: 1.65;
-          color: var(--text-dark-muted);
-          max-width: 460px;
+          font-size: clamp(56px, 8.4vw, 132px);
+          line-height: 0.95;
+          letter-spacing: -0.04em;
           margin-bottom: 32px;
-          font-weight: 400;
         }
-        .hero-description strong {
-          color: var(--text-dark);
-          font-weight: 600;
+        .hero-headline em { font-style: italic; color: var(--text-dark-muted); }
+        .hero-description {
+          font-size: 18px;
+          line-height: 1.6;
+          color: var(--text-dark-muted);
+          max-width: 400px;
+          margin-bottom: 40px;
         }
-
-        .hero-action-buttons {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          flex-wrap: wrap;
-          margin-bottom: 48px;
-        }
-
-        .hero-btn-primary {
+        .hero-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .hero-btn {
           display: inline-flex;
           align-items: center;
-          gap: 10px;
-          background: var(--accent);
-          color: var(--text-on-accent);
-          padding: 15px 26px;
-          border-radius: var(--radius-card-sm);
-          font-family: var(--font-mono);
-          font-size: 13px;
+          gap: 8px;
+          height: 48px;
+          padding: 0 22px;
+          border-radius: 9999px;
+          font-size: 14px;
           font-weight: 600;
-          letter-spacing: 0.01em;
-          border: 1px solid var(--accent);
-          transition: transform 0.18s var(--ease-tap), background 0.18s ease;
-          cursor: pointer;
+          transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
         }
-        .hero-btn-primary:hover {
-          background: var(--accent-bright);
-          border-color: var(--accent-bright);
-        }
-        .hero-btn-primary:active { transform: scale(0.96); }
-        .btn-version-badge {
-          background: rgba(6, 6, 8, 0.22);
-          padding: 2px 8px;
-          border-radius: 2px;
-          font-size: 11px;
-          font-weight: 600;
-        }
+        .hero-btn--primary { background: var(--text-dark); color: #0A0A0D; }
+        .hero-btn--primary:hover { background: #fff; }
+        .hero-btn--ghost { color: var(--text-dark-muted); border: 1px solid var(--canvas-line-bright); }
+        .hero-btn--ghost:hover { color: var(--text-dark); border-color: var(--text-dark-subtle); }
 
-        .hero-btn-secondary {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          background: transparent;
-          color: var(--text-dark);
-          padding: 15px 22px;
-          border-radius: var(--radius-card-sm);
-          font-family: var(--font-mono);
-          font-size: 13px;
-          font-weight: 600;
-          border: 1px solid var(--canvas-line-bright);
-          transition: all 0.18s ease;
-          text-decoration: none;
-        }
-        .hero-btn-secondary:hover {
-          border-color: var(--accent);
-          color: var(--accent-bright);
-        }
-
-        /* Metrics inline on the left */
-        .hero-metrics-bar {
-          display: flex;
-          align-items: center;
-          gap: 32px;
-          padding-top: 28px;
-          border-top: 1px solid var(--canvas-line);
-        }
-        .metric-item {
-          display: flex;
-          flex-direction: column;
-        }
-        .metric-value {
-          font-family: var(--font-serif);
-          font-size: 28px;
-          font-weight: 400;
-          letter-spacing: -0.01em;
-          color: var(--text-dark);
-        }
-        .metric-label {
-          font-family: var(--font-mono);
-          font-size: 11px;
-          color: var(--text-dark-subtle);
-          font-weight: 500;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-          margin-top: 2px;
-        }
-        .metric-divider {
-          width: 1px;
-          height: 32px;
-          background: var(--canvas-line);
-        }
-
-        /* Right column — 3D phone */
-        .hero-phone-col {
-          position: relative;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          min-height: 650px;
-        }
-
-        .hero-phone-glow {
-          position: absolute;
-          width: 500px;
-          height: 500px;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          background: radial-gradient(circle, rgba(10, 132, 255, 0.12) 0%, rgba(10, 132, 255, 0.04) 40%, transparent 70%);
-          pointer-events: none;
-          z-index: 0;
-        }
-        .hero-phone-glow-secondary {
-          position: absolute;
-          width: 350px;
-          height: 350px;
-          top: 25%;
-          left: 60%;
-          transform: translate(-50%, -50%);
-          background: radial-gradient(circle, rgba(110, 84, 255, 0.08) 0%, transparent 65%);
-          pointer-events: none;
-          z-index: 0;
-        }
-
-        .hero-phone-tilt {
-          position: relative;
-          z-index: 1;
-          transform: perspective(1200px) rotateY(-8deg) rotateX(3deg);
-          transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        .hero-phone-tilt:hover {
-          transform: perspective(1200px) rotateY(-2deg) rotateX(1deg);
-        }
-
+        .hero-visual { display: flex; flex-direction: column; align-items: center; gap: 28px; }
         .hero-phone-device {
-          width: 290px;
-          height: 600px;
-          border-radius: 46px;
-          background: #111218;
+          width: 280px;
+          height: 580px;
+          border-radius: 44px;
+          background: #0E0E12;
           padding: 8px;
           position: relative;
-          box-shadow:
-            0 0 0 1px rgba(255, 255, 255, 0.12),
-            0 0 0 4px #22232E,
-            0 50px 100px -20px rgba(0, 0, 0, 0.6),
-            0 0 80px -10px rgba(10, 132, 255, 0.15);
+          box-shadow: 0 0 0 1px var(--canvas-line-bright), 0 40px 80px -30px rgba(0, 0, 0, 0.8);
         }
-
         .realistic-phone-screen {
           width: 100%;
           height: 100%;
-          border-radius: 38px;
+          border-radius: 36px;
           overflow: hidden;
           background: #09090D;
           display: flex;
           flex-direction: column;
           position: relative;
         }
-
         .sim-status-bar {
           height: 38px;
           padding: 10px 18px 0;
@@ -644,52 +403,19 @@ export const Hero: React.FC = () => {
           background: #09090D;
           z-index: 10;
         }
-        .sim-status-chip {
-          display: flex;
-          align-items: center;
-          gap: 5px;
-          background: rgba(255, 255, 255, 0.08);
-          padding: 2px 8px;
-          border-radius: 9999px;
-          font-size: 10px;
-        }
-        .sim-chip-dot {
-          width: 5px;
-          height: 5px;
-          border-radius: 50%;
-          background: #10B981;
-        }
-        .sim-status-icons {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-        }
+        .sim-status-chip { display: flex; align-items: center; gap: 5px; background: rgba(255,255,255,0.08); padding: 2px 8px; border-radius: 9999px; font-size: 10px; }
+        .sim-chip-dot { width: 5px; height: 5px; border-radius: 50%; background: #10B981; }
+        .sim-status-icons { display: flex; align-items: center; gap: 4px; }
+        .sim-screen-container { flex: 1; position: relative; overflow: hidden; background: #09090D; }
 
-        .sim-screen-container {
-          flex: 1;
-          position: relative;
-          overflow: hidden;
-          background: #09090D;
-        }
+        .hero-steps { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; width: 280px; }
+        .hero-step { padding: 0; text-align: left; }
+        .hero-step-track { display: block; height: 2px; background: var(--canvas-line); overflow: hidden; margin-bottom: 8px; }
+        .hero-step-fill { display: block; height: 100%; background: var(--text-dark); }
+        .hero-step-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.04em; color: var(--text-dark-subtle); transition: color 0.2s ease; }
+        .hero-step.is-active .hero-step-label, .hero-step:hover .hero-step-label { color: var(--text-dark); }
 
-        .screen-fade-in {
-          animation: screenFade 0.18s cubic-bezier(0.16, 1, 0.3, 1);
-          height: 100%;
-          display: flex;
-          flex-direction: column;
-        }
-        @keyframes screenFade {
-          from { opacity: 0; transform: scale(0.98); }
-          to { opacity: 1; transform: scale(1); }
-        }
-
-        .sim-screen-title-bar {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 12px;
-        }
-
+        /* ---- phone screen internals (shared with the mock UI) ---- */
         /* ========================================================= */
         /* ALL PHONE SCREEN STYLES (unchanged)                        */
         /* ========================================================= */
@@ -855,123 +581,18 @@ export const Hero: React.FC = () => {
         .nav-tab-item.active { color: #FFFFFF; font-weight: 700; }
         .sim-home-bar { width: 85px; height: 4px; background: rgba(255, 255, 255, 0.25); border-radius: 2px; margin: 4px auto 5px; }
 
-        /* Flow Controller — full width */
-        .hero-flow-controller {
-          max-width: 580px;
-          margin: 0 auto;
-          background: var(--canvas-bg-raised);
-          border: 1px solid var(--canvas-line-bright);
-          border-radius: 18px;
-          padding: 10px 14px;
-        }
-        .flow-controller-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-        .flow-live-dot { width: 6px; height: 6px; border-radius: 50%; background: #10B981; animation: livePing 1.8s infinite; }
-        .flow-title { font-size: 11px; font-weight: 600; color: var(--text-dark); }
-        .flow-pause-btn { display: flex; align-items: center; gap: 4px; background: rgba(255, 255, 255, 0.06); border: none; border-radius: 9999px; padding: 2px 7px; font-size: 10px; font-weight: 600; color: var(--text-dark-muted); cursor: pointer; transition: background 0.15s ease; }
-        .flow-pause-btn:hover { background: rgba(255, 255, 255, 0.12); }
-        .flow-steps-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
-        .flow-step-tab { background: none; border: none; padding: 0; cursor: pointer; text-align: left; }
-        .step-bar-track { height: 3px; background: rgba(255, 255, 255, 0.08); border-radius: 2px; overflow: hidden; margin-bottom: 4px; }
-        .step-bar-fill { height: 100%; background: #10B981; border-radius: 2px; transition: width 0.08s linear; }
-        .step-label { display: block; font-size: 8.5px; font-weight: 500; color: var(--text-dark-subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .flow-step-tab.is-active .step-label { color: var(--text-dark); font-weight: 700; }
 
-        /* Bottom accent glow */
-        .hero-bottom-glow {
-          position: absolute;
-          bottom: 0;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 60%;
-          height: 1px;
-          background: linear-gradient(90deg, transparent 0%, var(--accent-dim) 30%, var(--accent) 50%, var(--accent-dim) 70%, transparent 100%);
-          opacity: 0.5;
+        @media (max-width: 860px) {
+          .hero-section { padding: 104px 0 56px; min-height: auto; }
+          .hero-grid { grid-template-columns: 1fr; gap: 56px; }
+          .hero-headline { font-size: clamp(52px, 15vw, 84px); }
+          .hero-description { font-size: 16px; }
         }
-
-        /* ========================================================= */
-        /* RESPONSIVE                                                 */
-        /* ========================================================= */
-        @media (max-width: 1024px) {
-          .hero-split-grid {
-            grid-template-columns: 1fr 1fr;
-            gap: 24px;
-          }
-          .hero-headline {
-            font-size: clamp(40px, 5.5vw, 72px);
-          }
-          .hero-phone-device {
-            width: 260px !important;
-            height: 540px !important;
-          }
-          .hero-phone-col {
-            min-height: 580px;
-          }
-        }
-
-        @media (max-width: 768px) {
-          .hero-section {
-            padding: 110px 0 36px;
-          }
-          .hero-split-grid {
-            grid-template-columns: 1fr;
-            text-align: center;
-          }
-          .hero-copy-col {
-            align-items: center;
-          }
-          .hero-action-buttons {
-            justify-content: center;
-            width: 100%;
-            flex-direction: column;
-          }
-          .hero-btn-primary, .hero-btn-secondary {
-            width: 100%;
-            justify-content: center;
-          }
-          .hero-metrics-bar {
-            justify-content: center;
-          }
-          .hero-phone-col {
-            min-height: auto;
-            margin-top: -16px;
-          }
-          .hero-phone-tilt {
-            transform: perspective(1200px) rotateY(-4deg) rotateX(2deg);
-          }
-          .hero-phone-tilt:hover {
-            transform: perspective(1200px) rotateY(-1deg) rotateX(0.5deg);
-          }
-          .hero-nfc-rings {
-            top: 60%;
-            right: 50%;
-            transform: translate(50%, -50%);
-            width: 400px;
-            height: 400px;
-          }
-          .hero-phone-glow {
-            width: 350px;
-            height: 350px;
-          }
-        }
-
         @media (max-width: 480px) {
-          .hero-headline {
-            font-size: clamp(38px, 11vw, 52px) !important;
-          }
-          .hero-phone-device {
-            width: 250px !important;
-            height: 520px !important;
-          }
-          .hero-metrics-bar {
-            gap: 20px;
-          }
-          .metric-value {
-            font-size: 22px;
-          }
-          .hero-phone-glow {
-            width: 280px;
-            height: 280px;
-          }
+          .hero-actions { flex-direction: column; align-items: stretch; }
+          .hero-btn { justify-content: center; }
+          .hero-phone-device { width: 252px; height: 524px; }
+          .hero-steps { width: 252px; }
         }
       `}</style>
     </section>

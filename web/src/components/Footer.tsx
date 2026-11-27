@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowUpRight, FileText } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 
 function GitHubIcon({ size = 16 }: { size?: number }) {
   return (
@@ -14,36 +14,46 @@ function GitHubIcon({ size = 16 }: { size?: number }) {
   );
 }
 
-
-function ExtLink({
-  href,
-  children,
-  external = true,
-}: {
-  href: string;
-  children: React.ReactNode;
-  external?: boolean;
-}) {
-  if (external && href.startsWith('http')) {
-    return (
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="footer-editorial-link footer-editorial-link--external"
-      >
-        <FileText size={15} strokeWidth={1.75} />
-        <span>{children}</span>
-        <ArrowUpRight size={13} className="footer-ext-arrow" />
-      </a>
-    );
-  }
+function XIcon({ size = 14 }: { size?: number }) {
   return (
-    <a href={href} className="footer-editorial-link">
-      <span>{children}</span>
-    </a>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
   );
 }
+
+const GITHUB = 'https://github.com/anuraggdubey/Tap-Pay';
+const X_URL = 'https://x.com/tapxpay';
+
+const COLUMNS: { title: string; links: { label: string; to?: string; href?: string }[] }[] = [
+  {
+    title: 'Product',
+    links: [
+      { label: 'How it works', to: '/#how-it-works' },
+      { label: 'NFC simulator', to: '/#demo' },
+      { label: 'Product film', to: '/#watch-demo' },
+      { label: 'Download', to: '/download' },
+    ],
+  },
+  {
+    title: 'Developers',
+    links: [
+      { label: 'Documentation', to: '/docs' },
+      { label: 'GitHub', href: GITHUB },
+      { label: 'Monad docs', href: 'https://docs.monad.xyz' },
+      { label: 'Requirements', to: '/#prerequisites' },
+    ],
+  },
+  {
+    title: 'Trust',
+    links: [
+      { label: 'Non-custodial keys', to: '/#security' },
+      { label: 'Android Keystore', to: '/#security' },
+      { label: 'Host card emulation', to: '/#security' },
+      { label: 'On-chain settlement', to: '/#security' },
+    ],
+  },
+];
 
 export const Footer: React.FC = () => {
   const year = new Date().getFullYear();
@@ -51,142 +61,85 @@ export const Footer: React.FC = () => {
   return (
     <footer className="site-footer-editorial">
       <div className="phantom-container">
+        {/* Closing call to action */}
+        <div className="footer-cta">
+          <h2 className="footer-cta-title">
+            One tap.
+            <br />
+            <em>Money moved.</em>
+          </h2>
+          <div className="footer-cta-side">
+            <p>Non-custodial NFC payments for Android, settled on-chain in under a second.</p>
+            <Link to="/download" className="footer-cta-btn">
+              <span>Get the app</span>
+              <ArrowUpRight size={16} />
+            </Link>
+          </div>
+        </div>
+
+        {/* Link grid */}
         <div className="footer-editorial-grid">
-          <div className="footer-editorial-col">
-            <h3 className="footer-editorial-col-title">Product</h3>
-            <nav className="footer-editorial-links" aria-label="Product">
-              <Link to="/docs" className="footer-editorial-link">Documentation</Link>
-              <Link to="/#how-it-works" className="footer-editorial-link">Features</Link>
-              <Link to="/#watch-demo" className="footer-editorial-link">Product film</Link>
-              <Link to="/#demo" className="footer-editorial-link">NFC Simulator</Link>
-              <Link to="/download" className="footer-editorial-link">APK Coming Soon</Link>
-            </nav>
-          </div>
-
-          <div className="footer-editorial-col footer-editorial-col--mobile-hide">
-            <h3 className="footer-editorial-col-title">Developers &amp; Docs</h3>
-            <nav className="footer-editorial-links" aria-label="Developers">
-              <Link to="/docs" className="footer-editorial-link">TapPay Docs</Link>
-              <ExtLink href="https://docs.monad.xyz">Monad Documentation</ExtLink>
-              <a
-                href="https://github.com/anuraggdubey/Tap-Pay"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="footer-editorial-link footer-editorial-link--external"
-              >
-                <GitHubIcon size={15} />
-                <span>GitHub Repository</span>
-                <ArrowUpRight size={13} className="footer-ext-arrow" />
+          <div className="footer-brand">
+            <Link to="/" className="footer-brand-link" aria-label="TapPay home">
+              <svg width="26" height="26" viewBox="0 0 512 512" fill="none" aria-hidden>
+                <circle cx="200" cy="120" r="62" fill="currentColor" />
+                <circle cx="340" cy="215" r="44" fill="currentColor" opacity="0.6" />
+                <circle cx="200" cy="400" r="72" fill="currentColor" />
+                <path d="M200 182 C200 215, 240 215, 340 215" stroke="currentColor" strokeWidth="52" strokeLinecap="round" fill="none" />
+                <path d="M200 328 L200 182" stroke="currentColor" strokeWidth="52" strokeLinecap="round" fill="none" />
+              </svg>
+              <span>TapPay</span>
+            </Link>
+            <p className="footer-brand-copy">
+              Tap-to-pay across Monad, Stellar, Solana and Base.
+            </p>
+            <div className="footer-socials">
+              <a href={GITHUB} target="_blank" rel="noopener noreferrer" aria-label="GitHub" className="footer-social">
+                <GitHubIcon size={16} />
               </a>
-              <a
-                href="https://x.com/tapxpay"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="footer-editorial-link footer-editorial-link--external"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                </svg>
-                <span>@tapxpay on X</span>
-                <ArrowUpRight size={13} className="footer-ext-arrow" />
+              <a href={X_URL} target="_blank" rel="noopener noreferrer" aria-label="TapPay on X" className="footer-social">
+                <XIcon size={14} />
               </a>
-            </nav>
-            <p className="footer-editorial-tagline">
-              Phone-to-phone NFC tap payments across Monad, Stellar, Solana, Base and more — non-custodial, fast settlement.
-            </p>
-          </div>
-
-          <div className="footer-editorial-col footer-editorial-col--mobile-hide">
-            <h3 className="footer-editorial-col-title">Network</h3>
-            <p className="footer-editorial-meta">Multi-Chain · Monad · Stellar · Solana · Base</p>
-            <p className="footer-editorial-locales">
-              NFC HCE · ISO-DEP · @username sends · Android 10+ · ~0.8s finality · hardware keystore
-            </p>
-            <a href="/#prerequisites" className="footer-editorial-link" style={{ marginTop: 14 }}>
-              View device requirements →
-            </a>
-          </div>
-
-          <div className="footer-editorial-col footer-editorial-col--mobile-hide">
-            <h3 className="footer-editorial-col-title">Trust &amp; Security</h3>
-            <nav className="footer-editorial-links" aria-label="Security">
-              <Link to="/#security" className="footer-editorial-link">Non-custodial keys</Link>
-              <Link to="/#security" className="footer-editorial-link">Android Keystore / StrongBox</Link>
-              <Link to="/#security" className="footer-editorial-link">Host card emulation</Link>
-              <Link to="/#security" className="footer-editorial-link">Atomic on-chain settlement</Link>
-            </nav>
-          </div>
-        </div>
-
-        <div className="footer-wordmark-block" aria-hidden>
-          <div className="footer-wordmark-inner">
-            <svg className="footer-wordmark-mark" viewBox="0 0 512 512" fill="none">
-              <circle cx="200" cy="120" r="62" fill="currentColor" />
-              <circle cx="340" cy="215" r="44" fill="currentColor" opacity="0.65" />
-              <circle cx="200" cy="400" r="72" fill="currentColor" />
-              <path
-                d="M200 182 C200 215, 240 215, 340 215"
-                stroke="currentColor"
-                strokeWidth="52"
-                strokeLinecap="round"
-                fill="none"
-              />
-              <path d="M200 328 L200 182" stroke="currentColor" strokeWidth="52" strokeLinecap="round" fill="none" />
-            </svg>
-            <div className="footer-wordmark-text">TapPay</div>
-          </div>
-        </div>
-
-        <div className="footer-legal-bar">
-          <div>
-            <p className="footer-legal-copy">
-              © {year} TapPay. Contactless decentralized payments, multi-chain.
-            </p>
-            <div className="footer-status-pill">
-              <span className="footer-status-dot" />
-              <span>All chains operational</span>
             </div>
           </div>
-          <div className="footer-legal-actions">
-            <a
-              href="https://github.com/anuraggdubey/Tap-Pay"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="footer-legal-action"
-            >
-              <GitHubIcon size={16} />
-              GitHub
-            </a>
-            <a
-              href="https://x.com/tapxpay"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="footer-legal-action"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-              </svg>
-              Twitter / X
-            </a>
-            <a
-              href="https://docs.monad.xyz"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="footer-legal-action"
-            >
-              <FileText size={16} strokeWidth={1.75} />
-              Documentation
-            </a>
-            <a
-              href="https://drive.google.com/file/d/1f8ZO1ian1y1d4o98g1C-SuV6wPYAysDC/view?usp=sharing"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="footer-legal-action"
-            >
-              Video demo
-              <ArrowUpRight size={13} />
-            </a>
+
+          {COLUMNS.map((col) => (
+            <nav key={col.title} className="footer-editorial-col" aria-label={col.title}>
+              <h3 className="footer-editorial-col-title">{col.title}</h3>
+              <ul className="footer-editorial-links">
+                {col.links.map((l) => (
+                  <li key={l.label}>
+                    {l.href ? (
+                      <a href={l.href} target="_blank" rel="noopener noreferrer" className="footer-editorial-link">
+                        {l.label}
+                        <ArrowUpRight size={12} className="footer-ext-arrow" />
+                      </a>
+                    ) : (
+                      <Link to={l.to!} className="footer-editorial-link">{l.label}</Link>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          ))}
+        </div>
+
+        {/* Watermark */}
+        <div className="footer-wordmark-block" aria-hidden>
+          <div className="footer-wordmark-text">TapPay</div>
+        </div>
+
+        {/* Legal */}
+        <div className="footer-legal-bar">
+          <p className="footer-legal-copy">© {year} TapPay</p>
+          <div className="footer-status-pill">
+            <span className="footer-status-dot" />
+            <span>All chains operational</span>
           </div>
+          <a href={X_URL} target="_blank" rel="noopener noreferrer" className="footer-legal-action">
+            Follow @tapxpay
+            <ArrowUpRight size={13} />
+          </a>
         </div>
       </div>
     </footer>

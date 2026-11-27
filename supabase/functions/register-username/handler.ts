@@ -198,6 +198,13 @@ export function createHandler(
         return reply(200, {ok: true, walletAddress: req.walletAddress});
       }
       const body = await insert.json().catch(() => ({}));
+      // Migration 011: a handle released less than 60 days ago is reserved for its previous wallet.
+      if (body.code === 'P0001' && body.message === 'username_cooldown') {
+        return reply(409, {
+          error: 'This username was released recently and cannot be registered yet. Please choose another.',
+          reason: 'released_recently',
+        });
+      }
       if (insert.status === 409 || body.code === '23505') {
         const reason = String(body.message || '').includes('wallet') ? 'wallet_taken' : 'taken';
         return reply(409, {error: 'Already registered.', reason});

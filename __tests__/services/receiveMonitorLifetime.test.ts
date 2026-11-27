@@ -11,7 +11,7 @@ jest.mock('ethers', () => {
   }))}};
 });
 
-import {waitForIncomingPayment} from '../../src/services/tapPayment';
+import {scanForIncomingTapPayment, waitForIncomingPayment} from '../../src/services/tapPayment';
 import {SESSION_TIMEOUT_MS} from '../../src/config/monad';
 
 const ADDRESS = '0x1111111111111111111111111111111111111111';
@@ -152,4 +152,139 @@ it('still expires when RPC requests fail', async () => {
   await jest.advanceTimersByTimeAsync(3000);
   expect(await pending).toEqual({detected: false});
   expect(jest.getTimerCount()).toBe(0);
+});
+
+it('detects a payment more than 100 blocks after startBlock while keeping every query <= 100 blocks (#116)', async () => {
+  let head = 1000;
+  provider.getBlockNumber.mockImplementation(async () => head);
+  mockQuery.mockImplementation(async (_filter: unknown, fromBlock: number, toBlock: number) => {
+    if (toBlock - fromBlock + 1 > 100) {
+      throw new Error('block range too large');
+    }
+    if (fromBlock <= 1250 && toBlock >= 1250) {
+      return [{
+        args: {from: ADDRESS, amount: 2_000_000_000_000_000_000n},
+        blockNumber: 1250,
+        index: 0,
+        transactionHash: '0xlateblock',
+      }];
+    }
+    return [];
+  });
+
+  const pending = waitForIncomingPayment(ADDRESS, SESSION_TIMEOUT_MS);
+  // Start block read at 1000, first poll at 1000
+  await jest.advanceTimersByTimeAsync(0);
+  // Advance chain head past 100 blocks to 1260 (simulating >30s on Monad)
+  head = 1260;
+  await jest.advanceTimersByTimeAsync(5000);
+
+  const result = await pending;
+  expect(result).toEqual(expect.objectContaining({
+    detected: true,
+    txHash: '0xlateblock',
+    amountDisplay: '2.0',
+  }));
+  expect(mockQuery).toHaveBeenCalled();
+  for (const [, fromBlock, toBlock] of mockQuery.mock.calls) {
+    expect(toBlock - fromBlock + 1).toBeLessThanOrEqual(100);
+    expect(fromBlock).toBeGreaterThanOrEqual(1000);
+  }
+  expect(jest.getTimerCount()).toBe(0);
+});
+
+it('does not advance cursor past a failed RPC scan (#116)', async () => {
+  let head = 1000;
+  let shouldFail = true;
+  provider.getBlockNumber.mockImplementation(async () => head);
+  mockQuery.mockImplementation(async (_filter: unknown, fromBlock: number, toBlock: number) => {
+    if (shouldFail) {
+      throw new Error('transient RPC error');
+    }
+    if (fromBlock <= 1050 && toBlock >= 1050) {
+      return [{
+        args: {from: ADDRESS, amount: 1_000_000_000_000_000_000n},
+        blockNumber: 1050,
+        index: 0,
+        transactionHash: '0xrecovered',
+      }];
+    }
+    return [];
+  });
+
+  const pending = waitForIncomingPayment(ADDRESS, 10_000);
+  await jest.advanceTimersByTimeAsync(0);
+  head = 1150;
+  await jest.advanceTimersByTimeAsync(1000);
+  // Now RPC recovers; cursor must still be at 1000 so block 1050 is not skipped.
+  shouldFail = false;
+  await jest.advanceTimersByTimeAsync(2000);
+
+  const result = await pending;
+  expect(result).toEqual(expect.objectContaining({detected: true, txHash: '0xrecovered'}));
+  expect(jest.getTimerCount()).toBe(0);
+});
+
+it('does not advance cursor past a block whose receipt is still null (#116)', async () => {
+  let head = 1000;
+  let receiptAvailable = false;
+  provider.getBlockNumber.mockImplementation(async () => head);
+  provider.getTransactionReceipt.mockImplementation(async () =>
+    receiptAvailable ? {status: 1} : null,
+  );
+  mockQuery.mockImplementation(async (_filter: unknown, fromBlock: number, toBlock: number) => {
+    if (fromBlock <= 1001 && toBlock >= 1001) {
+      return [{
+        args: {from: ADDRESS, amount: 1_000_000_000_000_000_000n},
+        blockNumber: 1001,
+        index: 0,
+        transactionHash: '0xlaggedreceipt',
+      }];
+    }
+    return [];
+  });
+
+  const pending = waitForIncomingPayment(ADDRESS, 10_000);
+  await jest.advanceTimersByTimeAsync(0);
+  // Head moves to 1005 while block 1001's receipt is still null
+  head = 1005;
+  await jest.advanceTimersByTimeAsync(1000);
+  // Receipt becomes available on the next poll — block 1001 must still be rescanned
+  receiptAvailable = true;
+  await jest.advanceTimersByTimeAsync(1000);
+
+  const result = await pending;
+  expect(result).toEqual(expect.objectContaining({detected: true, txHash: '0xlaggedreceipt'}));
+  expect(jest.getTimerCount()).toBe(0);
+});
+
+it('scanForIncomingTapPayment scans full window >100 blocks newest-first in <=100 block chunks (#116)', async () => {
+  provider.getBlockNumber.mockResolvedValue(1250);
+  provider.getTransactionReceipt.mockResolvedValue({status: 1});
+  mockQuery.mockImplementation(async (_filter: unknown, fromBlock: number, toBlock: number) => {
+    const out = [];
+    if (fromBlock <= 1050 && toBlock >= 1050) {
+      out.push({
+        args: {from: ADDRESS, amount: 1_000_000_000_000_000_000n},
+        blockNumber: 1050,
+        index: 0,
+        transactionHash: '0xolder',
+      });
+    }
+    if (fromBlock <= 1220 && toBlock >= 1220) {
+      out.push({
+        args: {from: ADDRESS, amount: 2_000_000_000_000_000_000n},
+        blockNumber: 1220,
+        index: 0,
+        transactionHash: '0xnewest',
+      });
+    }
+    return out;
+  });
+
+  const match = await scanForIncomingTapPayment(ADDRESS, 1000);
+  expect(match).toEqual(expect.objectContaining({txHash: '0xnewest', blockNumber: 1220}));
+  for (const [, fromBlock, toBlock] of mockQuery.mock.calls) {
+    expect(toBlock - fromBlock + 1).toBeLessThanOrEqual(100);
+  }
 });

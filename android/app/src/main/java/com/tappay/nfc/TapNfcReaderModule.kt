@@ -137,6 +137,19 @@ class TapNfcReaderModule(private val reactContext: ReactApplicationContext) :
     }
   }
 
+  private fun readMaxReadLength(isoDep: IsoDep): Int {
+    val selectCc = byteArrayOf(0x00, 0xA4.toByte(), 0x00, 0x0C, 0x02, 0xE1.toByte(), 0x03)
+    if (!isApduSuccess(isoDep.transceive(selectCc))) {
+      return MAX_SHORT_APDU_LE
+    }
+    val ccResponse = isoDep.transceive(byteArrayOf(0x00, 0xB0.toByte(), 0x00, 0x00, 0x0F))
+    if (!isApduSuccess(ccResponse) || ccResponse.size < 7) {
+      return MAX_SHORT_APDU_LE
+    }
+    val mle = ((ccResponse[3].toInt() and 0xFF) shl 8) or (ccResponse[4].toInt() and 0xFF)
+    return if (mle > 0) minOf(mle, MAX_SHORT_APDU_LE) else MAX_SHORT_APDU_LE
+  }
+
   private fun readType4NdefText(isoDep: IsoDep): Type4ReadOutcome {
     val selectApp =
       byteArrayOf(
@@ -180,6 +193,8 @@ class TapNfcReaderModule(private val reactContext: ReactApplicationContext) :
       }
     }
 
+    val maxChunk = readMaxReadLength(isoDep)
+
     val selectFile = byteArrayOf(0x00, 0xA4.toByte(), 0x00, 0x0C, 0x02, 0xE1.toByte(), 0x04)
     if (!isApduSuccess(isoDep.transceive(selectFile))) {
       return Type4ReadOutcome.Failure(ERR_READ_FAILED, "Could not select NDEF file on HCE card")
@@ -190,27 +205,38 @@ class TapNfcReaderModule(private val reactContext: ReactApplicationContext) :
       return Type4ReadOutcome.Failure(ERR_READ_FAILED, "Could not read NDEF length from HCE card")
     }
 
-    val lenData = lenResponse.copyOf(lenResponse.size - 2)
-    val nlen = ((lenData[0].toInt() and 0xFF) shl 8) or (lenData[1].toInt() and 0xFF)
+    val nlen = ((lenResponse[0].toInt() and 0xFF) shl 8) or (lenResponse[1].toInt() and 0xFF)
     if (nlen <= 0 || nlen > 0x7FFD) {
       return Type4ReadOutcome.Failure(ERR_READ_FAILED, "Invalid NDEF length on HCE card")
     }
 
-    val readLength = nlen + 2
-    val ndefResponse =
-      isoDep.transceive(
-        byteArrayOf(0x00, 0xB0.toByte(), 0x00, 0x00, readLength.toByte()),
-      )
-    if (!isApduSuccess(ndefResponse)) {
-      return Type4ReadOutcome.Failure(ERR_READ_FAILED, "Could not read payment data from HCE card")
+    val ndefMessageBytes = ByteArray(nlen)
+    var offset = 2
+    var copied = 0
+    while (copied < nlen) {
+      val toRead = minOf(maxChunk, nlen - copied)
+      val chunkResponse =
+        isoDep.transceive(
+          byteArrayOf(
+            0x00,
+            0xB0.toByte(),
+            ((offset shr 8) and 0xFF).toByte(),
+            (offset and 0xFF).toByte(),
+            toRead.toByte(),
+          ),
+        )
+      if (!isApduSuccess(chunkResponse)) {
+        return Type4ReadOutcome.Failure(ERR_READ_FAILED, "Could not read payment data from HCE card")
+      }
+      val dataLen = chunkResponse.size - 2
+      if (dataLen <= 0) {
+        return Type4ReadOutcome.Failure(ERR_READ_FAILED, "Truncated NDEF payload from HCE card")
+      }
+      val take = minOf(dataLen, nlen - copied)
+      System.arraycopy(chunkResponse, 0, ndefMessageBytes, copied, take)
+      copied += take
+      offset += take
     }
-
-    val ndefWithPrefix = ndefResponse.copyOf(ndefResponse.size - 2)
-    if (ndefWithPrefix.size < 2 + nlen) {
-      return Type4ReadOutcome.Failure(ERR_READ_FAILED, "Truncated NDEF payload from HCE card")
-    }
-    val ndefMessageBytes = ndefWithPrefix.copyOfRange(2, 2 + nlen)
-
     val message = NdefMessage(ndefMessageBytes)
     if (message.records.isEmpty()) {
       return Type4ReadOutcome.Failure(ERR_READ_FAILED, "Empty NDEF message on HCE card")
@@ -273,6 +299,7 @@ class TapNfcReaderModule(private val reactContext: ReactApplicationContext) :
 
   companion object {
     private const val TAG = "TapNfcReader"
+    private const val MAX_SHORT_APDU_LE = 0xFF
     const val PRESENCE_CHECK_DELAY_MS = 250
     const val EVENT_TAG_READ = "TapNfcTagRead"
     const val EVENT_TAG_ERROR = "TapNfcTagError"
@@ -341,10 +368,18 @@ class TapNfcReaderModule(private val reactContext: ReactApplicationContext) :
           record.type.contentEquals(NdefRecord.RTD_TEXT)
       ) {
         val payload = record.payload
-        if (payload.size <= 3) {
+        if (payload.isEmpty()) {
           return null
         }
-        return String(payload.copyOfRange(3, payload.size), Charsets.UTF_8)
+        val status = payload[0].toInt() and 0xFF
+        val isUtf16 = (status and 0x80) != 0
+        val langLen = status and 0x3F
+        val textStart = 1 + langLen
+        if (textStart >= payload.size) {
+          return null
+        }
+        val charset = if (isUtf16) Charsets.UTF_16 else Charsets.UTF_8
+        return String(payload.copyOfRange(textStart, payload.size), charset)
       }
 
       return String(record.payload, Charsets.UTF_8)

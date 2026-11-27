@@ -11,10 +11,14 @@ import NfcManager, {NfcTech, Ndef, NfcAdapter} from 'react-native-nfc-manager';
 /** NDEF Tag Application AID (NFC Forum Type 4) */
 export const TYPE4_NDEF_APP_AID = [0x00, 0xa4, 0x04, 0x00, 0x07, 0xd2, 0x76, 0x00, 0x00, 0x85, 0x01, 0x01, 0x00];
 
+/** Select Capability Container E103 */
+export const TYPE4_SELECT_CC_FILE = [0x00, 0xa4, 0x00, 0x0c, 0x02, 0xe1, 0x03];
+
 /** Select NDEF data file E104 */
 export const TYPE4_SELECT_NDEF_FILE = [0x00, 0xa4, 0x00, 0x0c, 0x02, 0xe1, 0x04];
 
 const SCAN_TIMEOUT_MS = 12_000;
+const MAX_SHORT_APDU_LE = 0xff;
 
 function apduOk(response: number[]): boolean {
   return (
@@ -84,32 +88,57 @@ export async function readType4HceText(): Promise<string | null> {
     }
   }
 
+  const readMaxChunkSize = async (): Promise<number> => {
+    const selectCc = await NfcManager.isoDepHandler.transceive(TYPE4_SELECT_CC_FILE);
+    if (!apduOk(selectCc)) {
+      return MAX_SHORT_APDU_LE;
+    }
+    const ccResp = await NfcManager.isoDepHandler.transceive(readBinaryApdu(0, 0x0f));
+    if (!apduOk(ccResp) || ccResp.length < 7) {
+      return MAX_SHORT_APDU_LE;
+    }
+    const mle = ((ccResp[3] & 0xff) << 8) | (ccResp[4] & 0xff);
+    return mle > 0 ? Math.min(mle, MAX_SHORT_APDU_LE) : MAX_SHORT_APDU_LE;
+  };
+
+  const maxChunk = await readMaxChunkSize();
+
   const selectFile = await NfcManager.isoDepHandler.transceive(TYPE4_SELECT_NDEF_FILE);
   if (!apduOk(selectFile)) {
     throw new Error('Could not select NDEF file on HCE card.');
   }
 
   const lenResponse = await NfcManager.isoDepHandler.transceive(readBinaryApdu(0, 2));
-  if (!apduOk(lenResponse)) {
+  if (!apduOk(lenResponse) || lenResponse.length < 4) {
     throw new Error('Could not read NDEF length from HCE card.');
   }
 
   const lenData = stripSw(lenResponse);
-  const ndefLength = (lenData[0] << 8) | lenData[1];
+  const ndefLength = ((lenData[0] & 0xff) << 8) | (lenData[1] & 0xff);
   if (ndefLength <= 0 || ndefLength > 0x7ffd) {
     throw new Error('Invalid NDEF length on HCE card.');
   }
 
-  const readLength = ndefLength + 2;
-  const ndefResponse = await NfcManager.isoDepHandler.transceive(
-    readBinaryApdu(0, readLength),
-  );
-  if (!apduOk(ndefResponse)) {
-    throw new Error('Could not read NDEF message from HCE card.');
+  const ndefMessage: number[] = [];
+  let offset = 2;
+  while (ndefMessage.length < ndefLength) {
+    const toRead = Math.min(maxChunk, ndefLength - ndefMessage.length);
+    const chunkResponse = await NfcManager.isoDepHandler.transceive(
+      readBinaryApdu(offset, toRead),
+    );
+    if (!apduOk(chunkResponse)) {
+      throw new Error('Could not read NDEF message from HCE card.');
+    }
+    const chunkData = stripSw(chunkResponse);
+    if (chunkData.length === 0) {
+      throw new Error('Truncated NDEF response from HCE card.');
+    }
+    const take = Math.min(chunkData.length, ndefLength - ndefMessage.length);
+    for (let i = 0; i < take; i++) {
+      ndefMessage.push(chunkData[i]);
+    }
+    offset += take;
   }
-
-  const ndefWithPrefix = stripSw(ndefResponse);
-  const ndefMessage = ndefWithPrefix.slice(2, 2 + ndefLength);
 
   return decodeNdefRecords(ndefMessage);
 }

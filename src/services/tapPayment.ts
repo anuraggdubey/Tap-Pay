@@ -203,6 +203,9 @@ export async function cancelTapSession(): Promise<void> {
   await stopHceSession();
 }
 
+// Monad RPC rejects eth_getLogs queries spanning more than 100 inclusive blocks.
+export const MAX_LOG_BLOCK_RANGE = 100;
+
 export type IncomingPaymentMatch = {
   senderAddress: string;
   amountWei: bigint;
@@ -212,12 +215,6 @@ export type IncomingPaymentMatch = {
   blockNumber: number;
 };
 
-/**
- * Scan both ledgers for a confirmed PaymentLogged event paying `recipientAddress`, in blocks
- * [fromBlock, head]. Returns the newest one whose transaction receipt is confirmed (status === 1),
- * or null. This is the ONLY evidence the receiver trusts: a bare balance increase (an unrelated
- * deposit, a dust transfer) is never treated as a TapPay payment.
- */
 function normalizeIncomingFilter(filter?: IncomingPaymentFilter): {
   expectedSessionIdHash?: string;
   expectedRequest?: ExpectedPaymentRequest;
@@ -237,22 +234,33 @@ function normalizeIncomingFilter(filter?: IncomingPaymentFilter): {
   };
 }
 
-export async function scanForIncomingTapPayment(
+type ScanChunkResult = {
+  match: IncomingPaymentMatch | null;
+  scannedToBlock: number | null;
+  head: number | null;
+};
+
+async function scanIncomingTapPaymentChunk(
   recipientAddress: string,
   fromBlock: number,
   signal?: AbortSignal,
   expectedFilter?: IncomingPaymentFilter,
-): Promise<IncomingPaymentMatch | null> {
+  toBlock?: number,
+): Promise<ScanChunkResult> {
   const {expectedSessionIdHash, expectedRequest} = normalizeIncomingFilter(expectedFilter);
   const tapLedger = MONAD_CONFIG.contracts.tapPayLedger;
   const multiLedger = MONAD_CONFIG.contracts.multiTokenLedger;
 
   try {
     return await withRpcFailover(async provider => {
-      if (signal?.aborted) return null;
-      const head = await provider.getBlockNumber();
-      if (signal?.aborted) return null;
+      if (signal?.aborted) return {match: null, scannedToBlock: null, head: null};
+      const head = toBlock ?? (await provider.getBlockNumber());
+      if (signal?.aborted) return {match: null, scannedToBlock: null, head: null};
       const start = Math.max(0, fromBlock);
+      if (start > head) {
+        return {match: null, scannedToBlock: head, head};
+      }
+      const end = Math.min(start + MAX_LOG_BLOCK_RANGE - 1, head);
 
       const found: {event: ethers.EventLog; tokenAddress?: string}[] = [];
 
@@ -261,9 +269,9 @@ export async function scanForIncomingTapPayment(
         const events = await c.queryFilter(
           c.filters.PaymentLogged(null, recipientAddress),
           start,
-          head,
+          end,
         );
-        if (signal?.aborted) return null;
+        if (signal?.aborted) return {match: null, scannedToBlock: null, head: null};
         for (const e of events) {
           found.push({event: e as ethers.EventLog});
         }
@@ -274,9 +282,9 @@ export async function scanForIncomingTapPayment(
         const events = await c.queryFilter(
           c.filters.PaymentLogged(null, recipientAddress),
           start,
-          head,
+          end,
         );
-        if (signal?.aborted) return null;
+        if (signal?.aborted) return {match: null, scannedToBlock: null, head: null};
         for (const e of events) {
           const evt = e as ethers.EventLog;
           found.push({event: evt, tokenAddress: evt.args?.token as string});
@@ -284,7 +292,7 @@ export async function scanForIncomingTapPayment(
       }
 
       if (!found.length) {
-        return null;
+        return {match: null, scannedToBlock: end, head};
       }
 
       // Newest first by (block, logIndex).
@@ -293,6 +301,8 @@ export async function scanForIncomingTapPayment(
       );
 
       // Walk newest→oldest and return the first with a confirmed (status === 1) receipt.
+      // If any event has a null receipt (RPC receipt lag), do not advance past its block.
+      let earliestPendingBlock: number | null = null;
       for (let i = found.length - 1; i >= 0; i--) {
         const {event, tokenAddress} = found[i];
         const args = event.args;
@@ -319,25 +329,84 @@ export async function scanForIncomingTapPayment(
           }
         }
         const receipt = await provider.getTransactionReceipt(event.transactionHash);
-        if (signal?.aborted) return null;
-        if (!receipt || receipt.status !== 1) {
+        if (signal?.aborted) return {match: null, scannedToBlock: null, head: null};
+        if (!receipt) {
+          if (
+            earliestPendingBlock === null ||
+            event.blockNumber < earliestPendingBlock
+          ) {
+            earliestPendingBlock = event.blockNumber;
+          }
+          continue;
+        }
+        if (receipt.status !== 1) {
           continue;
         }
         return {
-          senderAddress: args.from as string,
-          amountWei,
-          amountDisplay: ethers.formatUnits(amountWei, decimals),
-          tokenSymbol: symbol,
-          txHash: event.transactionHash,
-          blockNumber: event.blockNumber,
+          match: {
+            senderAddress: args.from as string,
+            amountWei,
+            amountDisplay: ethers.formatUnits(amountWei, decimals),
+            tokenSymbol: symbol,
+            txHash: event.transactionHash,
+            blockNumber: event.blockNumber,
+          },
+          scannedToBlock: end,
+          head,
         };
       }
 
-      return null;
+      const safeScannedTo =
+        earliestPendingBlock !== null ? Math.min(end, earliestPendingBlock - 1) : end;
+      return {match: null, scannedToBlock: safeScannedTo, head};
     });
+  } catch {
+    return {match: null, scannedToBlock: null, head: null};
+  }
+}
+
+/**
+ * Scan both ledgers for a confirmed PaymentLogged event paying `recipientAddress`, in blocks
+ * [fromBlock, head] using <= MAX_LOG_BLOCK_RANGE block chunks (newest chunk first). Returns
+ * the newest confirmed match (status === 1), or null.
+ */
+export async function scanForIncomingTapPayment(
+  recipientAddress: string,
+  fromBlock: number,
+  signal?: AbortSignal,
+  expectedFilter?: IncomingPaymentFilter,
+): Promise<IncomingPaymentMatch | null> {
+  if (signal?.aborted) {
+    return null;
+  }
+  let head: number;
+  try {
+    head = await withRpcFailover(provider => provider.getBlockNumber());
   } catch {
     return null;
   }
+  const minBlock = Math.max(0, fromBlock);
+  if (minBlock > head) {
+    return null;
+  }
+
+  for (let chunkEnd = head; chunkEnd >= minBlock; chunkEnd -= MAX_LOG_BLOCK_RANGE) {
+    if (signal?.aborted) {
+      return null;
+    }
+    const chunkStart = Math.max(minBlock, chunkEnd - MAX_LOG_BLOCK_RANGE + 1);
+    const result = await scanIncomingTapPaymentChunk(
+      recipientAddress,
+      chunkStart,
+      signal,
+      expectedFilter,
+      chunkEnd,
+    );
+    if (result.match) {
+      return result.match;
+    }
+  }
+  return null;
 }
 
 /**
@@ -396,10 +465,11 @@ export async function waitForIncomingPayment(
     if (startBlock === null) {
       return {detected: false};
     }
+    let nextFromBlock = startBlock;
     while (!finished && !signal?.aborted && Date.now() < deadline) {
-      const match = await scanForIncomingTapPayment(
+      const {match, scannedToBlock, head} = await scanIncomingTapPaymentChunk(
         address,
-        startBlock,
+        nextFromBlock,
         scanController.signal,
         expectedFilter,
       );
@@ -413,6 +483,9 @@ export async function waitForIncomingPayment(
           tokenSymbol: match.tokenSymbol,
           txHash: match.txHash,
         };
+      }
+      if (scannedToBlock !== null && head !== null && scannedToBlock >= nextFromBlock) {
+        nextFromBlock = scannedToBlock < head ? scannedToBlock + 1 : head;
       }
       await sleep();
     }

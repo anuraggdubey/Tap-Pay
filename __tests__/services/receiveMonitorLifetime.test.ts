@@ -114,6 +114,38 @@ it('returns a confirmed payment and clears the expiry timer', async () => {
   expect(jest.getTimerCount()).toBe(0);
 });
 
+it('never scans from block 0 when the start block cannot be read (#124)', async () => {
+  // Start block lookup fails twice, then works. An old payment exists in history.
+  provider.getBlockNumber
+    .mockRejectedValueOnce(new Error('RPC offline'))
+    .mockRejectedValueOnce(new Error('RPC offline'))
+    .mockResolvedValue(500);
+  mockQuery.mockImplementation((_filter: unknown, fromBlock: number) =>
+    Promise.resolve(fromBlock <= 10
+      ? [{args: {from: ADDRESS, amount: 5n}, blockNumber: 10, index: 0, transactionHash: '0xold'}]
+      : []),
+  );
+  const pending = waitForIncomingPayment(ADDRESS, 5000);
+  await jest.advanceTimersByTimeAsync(5000);
+  expect(await pending).toEqual({detected: false});
+  expect(mockQuery).toHaveBeenCalled();
+  for (const call of mockQuery.mock.calls) {
+    expect(call[1]).toBe(500);
+  }
+  expect(provider.getTransactionReceipt).not.toHaveBeenCalled();
+  expect(jest.getTimerCount()).toBe(0);
+});
+
+it('does not scan at all while the start block stays unreadable', async () => {
+  provider.getBlockNumber.mockRejectedValue(new Error('RPC offline'));
+  const pending = waitForIncomingPayment(ADDRESS, 3000);
+  await jest.advanceTimersByTimeAsync(3000);
+  expect(await pending).toEqual({detected: false});
+  expect(mockQuery).not.toHaveBeenCalled();
+  expect(provider.getBlockNumber.mock.calls.length).toBeGreaterThan(1);
+  expect(jest.getTimerCount()).toBe(0);
+});
+
 it('still expires when RPC requests fail', async () => {
   mockRpc.mockRejectedValue(new Error('RPC offline'));
   const pending = waitForIncomingPayment(ADDRESS, 3000);

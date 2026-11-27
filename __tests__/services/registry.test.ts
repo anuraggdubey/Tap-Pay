@@ -88,4 +88,20 @@ describe('registerUsername error handling', () => {
     const result = await registerUsername('admin');
     expect(result.error).toBe('That username is reserved.');
   });
+
+  it('ignores non-string gateway message values and falls back to error.message', async () => {
+    mockLoadPrivateKey.mockResolvedValue(TEST_KEY);
+    mockInvoke.mockResolvedValue({
+      data: null,
+      error: {
+        message: 'Edge Function returned a non-2xx status code',
+        context: {
+          json: async () => ({code: 'ERR', message: {nested: 'object'}}),
+        },
+      },
+    });
+
+    const result = await registerUsername('alice');
+    expect(result.error).toBe('Edge Function returned a non-2xx status code');
+  });
 });

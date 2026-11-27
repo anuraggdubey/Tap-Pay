@@ -139,6 +139,9 @@ export async function cancelTapSession(): Promise<void> {
   await stopHceSession();
 }
 
+// Monad RPC rejects eth_getLogs queries spanning more than 100 inclusive blocks.
+export const MAX_LOG_BLOCK_RANGE = 100;
+
 export type IncomingPaymentMatch = {
   senderAddress: string;
   amountWei: bigint;
@@ -148,26 +151,30 @@ export type IncomingPaymentMatch = {
   blockNumber: number;
 };
 
-/**
- * Scan both ledgers for a confirmed PaymentLogged event paying `recipientAddress`, in blocks
- * [fromBlock, head]. Returns the newest one whose transaction receipt is confirmed (status === 1),
- * or null. This is the ONLY evidence the receiver trusts: a bare balance increase (an unrelated
- * deposit, a dust transfer) is never treated as a TapPay payment.
- */
-export async function scanForIncomingTapPayment(
+type ScanChunkResult = {
+  match: IncomingPaymentMatch | null;
+  scannedToBlock: number | null;
+  head: number | null;
+};
+
+async function scanIncomingTapPaymentChunk(
   recipientAddress: string,
   fromBlock: number,
   signal?: AbortSignal,
-): Promise<IncomingPaymentMatch | null> {
+): Promise<ScanChunkResult> {
   const tapLedger = MONAD_CONFIG.contracts.tapPayLedger;
   const multiLedger = MONAD_CONFIG.contracts.multiTokenLedger;
 
   try {
     return await withRpcFailover(async provider => {
-      if (signal?.aborted) return null;
+      if (signal?.aborted) return {match: null, scannedToBlock: null, head: null};
       const head = await provider.getBlockNumber();
-      if (signal?.aborted) return null;
+      if (signal?.aborted) return {match: null, scannedToBlock: null, head: null};
       const start = Math.max(0, fromBlock);
+      if (start > head) {
+        return {match: null, scannedToBlock: head, head};
+      }
+      const end = Math.min(start + MAX_LOG_BLOCK_RANGE - 1, head);
 
       const found: {event: ethers.EventLog; tokenAddress?: string}[] = [];
 
@@ -176,9 +183,9 @@ export async function scanForIncomingTapPayment(
         const events = await c.queryFilter(
           c.filters.PaymentLogged(null, recipientAddress),
           start,
-          head,
+          end,
         );
-        if (signal?.aborted) return null;
+        if (signal?.aborted) return {match: null, scannedToBlock: null, head: null};
         for (const e of events) {
           found.push({event: e as ethers.EventLog});
         }
@@ -189,9 +196,9 @@ export async function scanForIncomingTapPayment(
         const events = await c.queryFilter(
           c.filters.PaymentLogged(null, recipientAddress),
           start,
-          head,
+          end,
         );
-        if (signal?.aborted) return null;
+        if (signal?.aborted) return {match: null, scannedToBlock: null, head: null};
         for (const e of events) {
           const evt = e as ethers.EventLog;
           found.push({event: evt, tokenAddress: evt.args?.token as string});
@@ -199,7 +206,7 @@ export async function scanForIncomingTapPayment(
       }
 
       if (!found.length) {
-        return null;
+        return {match: null, scannedToBlock: end, head};
       }
 
       // Newest first by (block, logIndex).
@@ -215,27 +222,45 @@ export async function scanForIncomingTapPayment(
           continue;
         }
         const receipt = await provider.getTransactionReceipt(event.transactionHash);
-        if (signal?.aborted) return null;
+        if (signal?.aborted) return {match: null, scannedToBlock: null, head: null};
         if (!receipt || receipt.status !== 1) {
           continue;
         }
         const {symbol, decimals} = describeToken(tokenAddress);
         const amountWei = args.amount as bigint;
         return {
-          senderAddress: args.from as string,
-          amountWei,
-          amountDisplay: ethers.formatUnits(amountWei, decimals),
-          tokenSymbol: symbol,
-          txHash: event.transactionHash,
-          blockNumber: event.blockNumber,
+          match: {
+            senderAddress: args.from as string,
+            amountWei,
+            amountDisplay: ethers.formatUnits(amountWei, decimals),
+            tokenSymbol: symbol,
+            txHash: event.transactionHash,
+            blockNumber: event.blockNumber,
+          },
+          scannedToBlock: end,
+          head,
         };
       }
 
-      return null;
+      return {match: null, scannedToBlock: end, head};
     });
   } catch {
-    return null;
+    return {match: null, scannedToBlock: null, head: null};
   }
+}
+
+/**
+ * Scan both ledgers for a confirmed PaymentLogged event paying `recipientAddress`, in blocks
+ * [fromBlock, head] using <= MAX_LOG_BLOCK_RANGE block chunks. Returns the newest confirmed one
+ * (status === 1), or null.
+ */
+export async function scanForIncomingTapPayment(
+  recipientAddress: string,
+  fromBlock: number,
+  signal?: AbortSignal,
+): Promise<IncomingPaymentMatch | null> {
+  const result = await scanIncomingTapPaymentChunk(recipientAddress, fromBlock, signal);
+  return result.match;
 }
 
 /**
@@ -293,8 +318,13 @@ export async function waitForIncomingPayment(
     if (startBlock === null) {
       return {detected: false};
     }
+    let nextFromBlock = startBlock;
     while (!finished && !signal?.aborted && Date.now() < deadline) {
-      const match = await scanForIncomingTapPayment(address, startBlock, scanController.signal);
+      const {match, scannedToBlock, head} = await scanIncomingTapPaymentChunk(
+        address,
+        nextFromBlock,
+        scanController.signal,
+      );
       if (finished || signal?.aborted || Date.now() >= deadline) break;
       if (match) {
         return {
@@ -305,6 +335,9 @@ export async function waitForIncomingPayment(
           tokenSymbol: match.tokenSymbol,
           txHash: match.txHash,
         };
+      }
+      if (scannedToBlock !== null && head !== null && scannedToBlock >= nextFromBlock) {
+        nextFromBlock = scannedToBlock < head ? scannedToBlock + 1 : head;
       }
       await sleep();
     }

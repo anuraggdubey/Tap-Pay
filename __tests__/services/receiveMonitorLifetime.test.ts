@@ -153,3 +153,74 @@ it('still expires when RPC requests fail', async () => {
   expect(await pending).toEqual({detected: false});
   expect(jest.getTimerCount()).toBe(0);
 });
+
+it('detects a payment more than 100 blocks after startBlock while keeping every query <= 100 blocks (#116)', async () => {
+  let head = 1000;
+  provider.getBlockNumber.mockImplementation(async () => head);
+  mockQuery.mockImplementation(async (_filter: unknown, fromBlock: number, toBlock: number) => {
+    if (toBlock - fromBlock + 1 > 100) {
+      throw new Error('block range too large');
+    }
+    if (fromBlock <= 1250 && toBlock >= 1250) {
+      return [{
+        args: {from: ADDRESS, amount: 2_000_000_000_000_000_000n},
+        blockNumber: 1250,
+        index: 0,
+        transactionHash: '0xlateblock',
+      }];
+    }
+    return [];
+  });
+
+  const pending = waitForIncomingPayment(ADDRESS, SESSION_TIMEOUT_MS);
+  // Start block read at 1000, first poll at 1000
+  await jest.advanceTimersByTimeAsync(0);
+  // Advance chain head past 100 blocks to 1260 (simulating >30s on Monad)
+  head = 1260;
+  await jest.advanceTimersByTimeAsync(5000);
+
+  const result = await pending;
+  expect(result).toEqual(expect.objectContaining({
+    detected: true,
+    txHash: '0xlateblock',
+    amountDisplay: '2.0',
+  }));
+  expect(mockQuery).toHaveBeenCalled();
+  for (const [, fromBlock, toBlock] of mockQuery.mock.calls) {
+    expect(toBlock - fromBlock + 1).toBeLessThanOrEqual(100);
+    expect(fromBlock).toBeGreaterThanOrEqual(1000);
+  }
+  expect(jest.getTimerCount()).toBe(0);
+});
+
+it('does not advance cursor past a failed RPC scan (#116)', async () => {
+  let head = 1000;
+  let shouldFail = true;
+  provider.getBlockNumber.mockImplementation(async () => head);
+  mockQuery.mockImplementation(async (_filter: unknown, fromBlock: number, toBlock: number) => {
+    if (shouldFail) {
+      throw new Error('transient RPC error');
+    }
+    if (fromBlock <= 1050 && toBlock >= 1050) {
+      return [{
+        args: {from: ADDRESS, amount: 1_000_000_000_000_000_000n},
+        blockNumber: 1050,
+        index: 0,
+        transactionHash: '0xrecovered',
+      }];
+    }
+    return [];
+  });
+
+  const pending = waitForIncomingPayment(ADDRESS, 10_000);
+  await jest.advanceTimersByTimeAsync(0);
+  head = 1150;
+  await jest.advanceTimersByTimeAsync(1000);
+  // Now RPC recovers; cursor must still be at 1000 so block 1050 is not skipped.
+  shouldFail = false;
+  await jest.advanceTimersByTimeAsync(2000);
+
+  const result = await pending;
+  expect(result).toEqual(expect.objectContaining({detected: true, txHash: '0xrecovered'}));
+  expect(jest.getTimerCount()).toBe(0);
+});

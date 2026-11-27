@@ -72,8 +72,9 @@ export {createSessionId, createSessionIdHash} from '../utils/paymentSession';
  */
 export async function readTapRecipient(
   senderAddress: string,
+  onHint?: (hint: string) => void,
 ): Promise<{recipient?: TapRecipient; error?: string}> {
-  const readResult = await readReceiverAddress();
+  const readResult = await readReceiverAddress({onHint});
 
   if (readResult.status !== 'SUCCESS' || !readResult.receiverAddress) {
     await stopContinuousHceScan();

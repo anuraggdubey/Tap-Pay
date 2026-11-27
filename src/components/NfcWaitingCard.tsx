@@ -28,6 +28,7 @@ type Props = {
   counterparty?: string;
   timeLeft?: number;
   gasEstimate?: string;
+  hint?: string | null;
   onClose?: () => void;
   footer?: React.ReactNode;
 };
@@ -163,6 +164,7 @@ export default function NfcWaitingCard({
   counterparty,
   timeLeft,
   gasEstimate,
+  hint,
   onClose,
   footer,
 }: Props) {
@@ -208,7 +210,9 @@ export default function NfcWaitingCard({
   let sub = '';
   if (isSearching) {
     title = isSend ? 'Hold Near Reader' : 'Ready to Receive';
-    sub = 'Hold the top of your iPhone near the other phone.'.replace('iPhone', 'phone');
+    sub =
+      hint ||
+      'Hold the top of your iPhone near the other phone.'.replace('iPhone', 'phone');
   } else if (isBroadcasting) {
     title = isSend ? 'Sending…' : 'Receiving…';
     sub = 'Keep your phones together';

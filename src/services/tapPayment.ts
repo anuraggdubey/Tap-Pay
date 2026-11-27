@@ -161,6 +161,7 @@ async function scanIncomingTapPaymentChunk(
   recipientAddress: string,
   fromBlock: number,
   signal?: AbortSignal,
+  toBlock?: number,
 ): Promise<ScanChunkResult> {
   const tapLedger = MONAD_CONFIG.contracts.tapPayLedger;
   const multiLedger = MONAD_CONFIG.contracts.multiTokenLedger;
@@ -168,7 +169,7 @@ async function scanIncomingTapPaymentChunk(
   try {
     return await withRpcFailover(async provider => {
       if (signal?.aborted) return {match: null, scannedToBlock: null, head: null};
-      const head = await provider.getBlockNumber();
+      const head = toBlock ?? (await provider.getBlockNumber());
       if (signal?.aborted) return {match: null, scannedToBlock: null, head: null};
       const start = Math.max(0, fromBlock);
       if (start > head) {
@@ -215,6 +216,8 @@ async function scanIncomingTapPaymentChunk(
       );
 
       // Walk newest→oldest and return the first with a confirmed (status === 1) receipt.
+      // If any event has a null receipt (RPC receipt lag), do not advance past its block.
+      let earliestPendingBlock: number | null = null;
       for (let i = found.length - 1; i >= 0; i--) {
         const {event, tokenAddress} = found[i];
         const args = event.args;
@@ -223,7 +226,16 @@ async function scanIncomingTapPaymentChunk(
         }
         const receipt = await provider.getTransactionReceipt(event.transactionHash);
         if (signal?.aborted) return {match: null, scannedToBlock: null, head: null};
-        if (!receipt || receipt.status !== 1) {
+        if (!receipt) {
+          if (
+            earliestPendingBlock === null ||
+            event.blockNumber < earliestPendingBlock
+          ) {
+            earliestPendingBlock = event.blockNumber;
+          }
+          continue;
+        }
+        if (receipt.status !== 1) {
           continue;
         }
         const {symbol, decimals} = describeToken(tokenAddress);
@@ -242,7 +254,9 @@ async function scanIncomingTapPaymentChunk(
         };
       }
 
-      return {match: null, scannedToBlock: end, head};
+      const safeScannedTo =
+        earliestPendingBlock !== null ? Math.min(end, earliestPendingBlock - 1) : end;
+      return {match: null, scannedToBlock: safeScannedTo, head};
     });
   } catch {
     return {match: null, scannedToBlock: null, head: null};
@@ -251,16 +265,44 @@ async function scanIncomingTapPaymentChunk(
 
 /**
  * Scan both ledgers for a confirmed PaymentLogged event paying `recipientAddress`, in blocks
- * [fromBlock, head] using <= MAX_LOG_BLOCK_RANGE block chunks. Returns the newest confirmed one
- * (status === 1), or null.
+ * [fromBlock, head] using <= MAX_LOG_BLOCK_RANGE block chunks (newest chunk first). Returns
+ * the newest confirmed match (status === 1), or null.
  */
 export async function scanForIncomingTapPayment(
   recipientAddress: string,
   fromBlock: number,
   signal?: AbortSignal,
 ): Promise<IncomingPaymentMatch | null> {
-  const result = await scanIncomingTapPaymentChunk(recipientAddress, fromBlock, signal);
-  return result.match;
+  if (signal?.aborted) {
+    return null;
+  }
+  let head: number;
+  try {
+    head = await withRpcFailover(provider => provider.getBlockNumber());
+  } catch {
+    return null;
+  }
+  const minBlock = Math.max(0, fromBlock);
+  if (minBlock > head) {
+    return null;
+  }
+
+  for (let chunkEnd = head; chunkEnd >= minBlock; chunkEnd -= MAX_LOG_BLOCK_RANGE) {
+    if (signal?.aborted) {
+      return null;
+    }
+    const chunkStart = Math.max(minBlock, chunkEnd - MAX_LOG_BLOCK_RANGE + 1);
+    const result = await scanIncomingTapPaymentChunk(
+      recipientAddress,
+      chunkStart,
+      signal,
+      chunkEnd,
+    );
+    if (result.match) {
+      return result.match;
+    }
+  }
+  return null;
 }
 
 /**

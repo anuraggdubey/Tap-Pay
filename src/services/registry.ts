@@ -83,6 +83,9 @@ export async function registerUsername(
       if (result.data?.reason === 'taken') {
         return {error: 'Username taken', suggestions: await suggestUsernames(username)};
       }
+      if (result.data?.reason === 'released_recently') {
+        return {error: result.error, suggestions: await suggestUsernames(username)};
+      }
       if (result.data?.reason === 'wallet_taken') {
         return {error: 'This address already has a registered username'};
       }
@@ -146,6 +149,40 @@ export async function resolveUsername(username: string): Promise<string | null> 
   } catch {
     return null;
   }
+}
+
+export type UsernameResolution = {
+  address: string;
+  /** When the handle was registered to this wallet (ISO time), or null if the backend is older. */
+  registeredAt: string | null;
+};
+
+/**
+ * Resolve a username to its wallet address and registration time, so the Pay UI can warn about a
+ * handle that is new or now points to a different wallet (#129).
+ * @returns null if the username is not registered
+ */
+export async function resolveUsernameDetails(username: string): Promise<UsernameResolution | null> {
+  try {
+    const {data, error} = await supabase.rpc('resolve_username_details', {
+      p_username: normalizeUsername(username),
+    });
+    if (!error) {
+      const row = Array.isArray(data) ? data[0] : null;
+      if (!row || typeof row.wallet_address !== 'string') {
+        return null;
+      }
+      return {
+        address: row.wallet_address,
+        registeredAt: typeof row.registered_at === 'string' ? row.registered_at : null,
+      };
+    }
+  } catch (error: any) {
+    console.warn('Username details lookup failed, using the basic lookup:', error?.message || error);
+  }
+  // Backends without migration 011 only offer the address.
+  const address = await resolveUsername(username);
+  return address ? {address, registeredAt: null} : null;
 }
 
 /**

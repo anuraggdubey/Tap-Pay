@@ -19,7 +19,8 @@ import {useWallet} from '../context/WalletContext';
 import {useTheme} from '../context/ThemeContext';
 import type {AppColors} from '../theme';
 import {RootStackParamList} from '../navigation/AppNavigator';
-import {resolveUsername} from '../services/registry';
+import {resolveUsernameDetails} from '../services/registry';
+import {warningForResolvedHandle} from '../services/handleTrust';
 import {validateAmount, validateUsername} from '../utils/validation';
 import {truncateAddress, formatMon} from '../utils/format';
 import {
@@ -72,9 +73,14 @@ export default function UsernamePayScreen({navigation}: Props) {
 
     setSearching(true);
     try {
-      const addr = await resolveUsername(username.trim().toLowerCase());
-      if (addr && addr !== ethers.ZeroAddress) {
-        setResolvedAddress(addr);
+      const handle = username.trim().toLowerCase();
+      const resolution = await resolveUsernameDetails(handle);
+      if (resolution && resolution.address !== ethers.ZeroAddress) {
+        setResolvedAddress(resolution.address);
+        const warning = warningForResolvedHandle(handle, resolution);
+        if (warning) {
+          Alert.alert('Check this recipient', warning);
+        }
       } else {
         Alert.alert('Not Found', `Username @${username} is not registered.`);
       }

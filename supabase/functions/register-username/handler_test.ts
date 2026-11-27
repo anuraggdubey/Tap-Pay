@@ -304,3 +304,18 @@ Deno.test('the per-wallet boundary: the 5th registration is allowed, the 6th is 
   const over = setup([json(1), json(6)]);
   assert((await over.handler(request())).status === 429);
 });
+
+Deno.test('a recently released username is refused for another wallet (cooldown)', async () => {
+  const cooldown = json({code: 'P0001', message: 'username_cooldown', hint: 'reserved'}, 400);
+  const {handler, calls} = setup([json(1), json(1), json(true), json([]), cooldown]);
+  const res = await handler(request());
+  assert(res.status === 409);
+  const out = await res.json();
+  assert(out.reason === 'released_recently' && /released recently/.test(out.error));
+  assert(calls.length === 5 && calls[4].init?.method === 'POST');
+});
+
+Deno.test('other database errors are not reported as a cooldown', async () => {
+  const {handler} = setup([json(1), json(1), json(true), json([]), json({code: 'P0001', message: 'other'}, 400)]);
+  assert((await handler(request())).status === 503);
+});

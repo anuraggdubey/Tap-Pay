@@ -12,7 +12,12 @@ jest.mock('../../src/services/wallet', () => ({
   loadPrivateKey: (...args: unknown[]) => mockLoadPrivateKey(...args),
 }));
 
-import {registerUsername, resolveUsername, reverseResolveAddress} from '../../src/services/registry';
+import {
+  registerUsername,
+  resolveUsername,
+  resolveUsernameDetails,
+  reverseResolveAddress,
+} from '../../src/services/registry';
 import {supabase} from '../../src/config/supabase';
 
 const ADDRESS = '0x1111111111111111111111111111111111111111';
@@ -103,5 +108,46 @@ describe('registerUsername error handling', () => {
 
     const result = await registerUsername('alice');
     expect(result.error).toBe('Edge Function returned a non-2xx status code');
+  });
+});
+
+describe('resolveUsernameDetails (#129)', () => {
+  it('returns the wallet and registration time from resolve_username_details', async () => {
+    mockRpc.mockResolvedValue({data: [{wallet_address: ADDRESS, registered_at: '2026-01-02T03:04:05+00:00'}], error: null});
+    await expect(resolveUsernameDetails('Al1ce')).resolves.toEqual({
+      address: ADDRESS,
+      registeredAt: '2026-01-02T03:04:05+00:00',
+    });
+    expect(mockRpc).toHaveBeenCalledWith('resolve_username_details', {p_username: 'allce'});
+    expect(mockRpc).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns null for an unknown handle without a second lookup', async () => {
+    mockRpc.mockResolvedValue({data: [], error: null});
+    await expect(resolveUsernameDetails('nobody')).resolves.toBeNull();
+    expect(mockRpc).toHaveBeenCalledTimes(1);
+  });
+
+  it('falls back to resolve_username on backends without migration 011', async () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    mockRpc
+      .mockResolvedValueOnce({data: null, error: {code: 'PGRST202', message: 'function not found'}})
+      .mockResolvedValueOnce({data: ADDRESS, error: null});
+    await expect(resolveUsernameDetails('alice')).resolves.toEqual({address: ADDRESS, registeredAt: null});
+    expect(mockRpc).toHaveBeenLastCalledWith('resolve_username', {p_username: 'alice'});
+  });
+});
+
+describe('registerUsername cooldown (#129)', () => {
+  const TEST_KEY = '0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+
+  it('explains a recently released handle and suggests others', async () => {
+    mockLoadPrivateKey.mockResolvedValue(TEST_KEY);
+    const body = {error: 'This username was released recently and cannot be registered yet. Please choose another.', reason: 'released_recently'};
+    mockInvoke.mockResolvedValue({data: null, error: {message: 'non-2xx', context: {json: async () => body}}});
+    mockRpc.mockResolvedValue({data: null, error: null});
+    const result = await registerUsername('alice');
+    expect(result.error).toMatch(/released recently/);
+    expect(Array.isArray(result.suggestions)).toBe(true);
   });
 });

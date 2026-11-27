@@ -159,12 +159,15 @@ export default function SendTapScreen({navigation}: Props) {
     setPhase('broadcasting');
     triggerHaptic.impactMedium();
 
-    const result = await broadcastTapPayment(
-      recipient.receiverAddress,
-      amountWei,
-      effectiveToken,
-      paymentAmount,
-    );
+    const result =
+      effectiveToken === 'MON'
+        ? await broadcastTapPayment(recipient.receiverAddress, amountWei)
+        : await broadcastTapPayment(
+            recipient.receiverAddress,
+            amountWei,
+            effectiveToken,
+            paymentAmount,
+          );
 
     clearCountdown();
     if (isMountedRef.current) {

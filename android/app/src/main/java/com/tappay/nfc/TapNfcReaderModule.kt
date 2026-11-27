@@ -98,17 +98,17 @@ class TapNfcReaderModule(private val reactContext: ReactApplicationContext) :
   }
 
   private fun handleTag(tag: Tag) {
-    try {
-      val isoDep = IsoDep.get(tag) ?: run {
-        emitError("Tag does not support ISO-DEP (required for Tap Pay HCE)")
-        return
-      }
+    val isoDep = IsoDep.get(tag)
+    if (isoDep == null) {
+      emitError("Tag does not support ISO-DEP (required for Tap Pay HCE)")
+      return
+    }
 
+    try {
       isoDep.connect()
       isoDep.timeout = 5000
 
       val text = readType4NdefText(isoDep)
-      isoDep.close()
 
       if (text != null) {
         emitTagRead(text)
@@ -118,7 +118,22 @@ class TapNfcReaderModule(private val reactContext: ReactApplicationContext) :
     } catch (e: Exception) {
       Log.e(TAG, "handleTag failed", e)
       emitError(e.message ?: "NFC read failed")
+    } finally {
+      runCatching { isoDep.close() }
     }
+  }
+
+  private fun readMaxReadLength(isoDep: IsoDep): Int {
+    val selectCc = byteArrayOf(0x00, 0xA4.toByte(), 0x00, 0x0C, 0x02, 0xE1.toByte(), 0x03)
+    if (!isApduSuccess(isoDep.transceive(selectCc))) {
+      return MAX_SHORT_APDU_LE
+    }
+    val ccResponse = isoDep.transceive(byteArrayOf(0x00, 0xB0.toByte(), 0x00, 0x00, 0x0F))
+    if (!isApduSuccess(ccResponse) || ccResponse.size < 7) {
+      return MAX_SHORT_APDU_LE
+    }
+    val mle = ((ccResponse[3].toInt() and 0xFF) shl 8) or (ccResponse[4].toInt() and 0xFF)
+    return if (mle > 0) minOf(mle, MAX_SHORT_APDU_LE) else MAX_SHORT_APDU_LE
   }
 
   private fun readType4NdefText(isoDep: IsoDep): String? {
@@ -161,33 +176,50 @@ class TapNfcReaderModule(private val reactContext: ReactApplicationContext) :
       }
     }
 
+    val maxChunk = readMaxReadLength(isoDep)
+
     val selectFile = byteArrayOf(0x00, 0xA4.toByte(), 0x00, 0x0C, 0x02, 0xE1.toByte(), 0x04)
     if (!isApduSuccess(isoDep.transceive(selectFile))) {
       return null
     }
 
     val lenResponse = isoDep.transceive(byteArrayOf(0x00, 0xB0.toByte(), 0x00, 0x00, 0x02))
-    if (!isApduSuccess(lenResponse)) {
+    if (!isApduSuccess(lenResponse) || lenResponse.size < 4) {
       return null
     }
 
-    val lenData = lenResponse.copyOf(lenResponse.size - 2)
-    val nlen = ((lenData[0].toInt() and 0xFF) shl 8) or (lenData[1].toInt() and 0xFF)
+    val nlen = ((lenResponse[0].toInt() and 0xFF) shl 8) or (lenResponse[1].toInt() and 0xFF)
     if (nlen <= 0 || nlen > 0x7FFD) {
       return null
     }
 
-    val readLength = nlen + 2
-    val ndefResponse =
-      isoDep.transceive(
-        byteArrayOf(0x00, 0xB0.toByte(), 0x00, 0x00, readLength.toByte()),
-      )
-    if (!isApduSuccess(ndefResponse)) {
-      return null
+    val ndefMessageBytes = ByteArray(nlen)
+    var offset = 2
+    var copied = 0
+    while (copied < nlen) {
+      val toRead = minOf(maxChunk, nlen - copied)
+      val chunkResponse =
+        isoDep.transceive(
+          byteArrayOf(
+            0x00,
+            0xB0.toByte(),
+            ((offset shr 8) and 0xFF).toByte(),
+            (offset and 0xFF).toByte(),
+            toRead.toByte(),
+          ),
+        )
+      if (!isApduSuccess(chunkResponse)) {
+        return null
+      }
+      val dataLen = chunkResponse.size - 2
+      if (dataLen <= 0) {
+        return null
+      }
+      val take = minOf(dataLen, nlen - copied)
+      System.arraycopy(chunkResponse, 0, ndefMessageBytes, copied, take)
+      copied += take
+      offset += take
     }
-
-    val ndefWithPrefix = ndefResponse.copyOf(ndefResponse.size - 2)
-    val ndefMessageBytes = ndefWithPrefix.copyOfRange(2, 2 + nlen)
 
     val message = NdefMessage(ndefMessageBytes)
     if (message.records.isEmpty()) {
@@ -248,6 +280,7 @@ class TapNfcReaderModule(private val reactContext: ReactApplicationContext) :
 
   companion object {
     private const val TAG = "TapNfcReader"
+    private const val MAX_SHORT_APDU_LE = 0xFF
     const val EVENT_TAG_READ = "TapNfcTagRead"
     const val EVENT_TAG_ERROR = "TapNfcTagError"
 
@@ -305,10 +338,18 @@ class TapNfcReaderModule(private val reactContext: ReactApplicationContext) :
           record.type.contentEquals(NdefRecord.RTD_TEXT)
       ) {
         val payload = record.payload
-        if (payload.size <= 3) {
+        if (payload.isEmpty()) {
           return null
         }
-        return String(payload.copyOfRange(3, payload.size), Charsets.UTF_8)
+        val status = payload[0].toInt() and 0xFF
+        val isUtf16 = (status and 0x80) != 0
+        val langLen = status and 0x3F
+        val textStart = 1 + langLen
+        if (textStart >= payload.size) {
+          return null
+        }
+        val charset = if (isUtf16) Charsets.UTF_16 else Charsets.UTF_8
+        return String(payload.copyOfRange(textStart, payload.size), charset)
       }
 
       return String(record.payload, Charsets.UTF_8)

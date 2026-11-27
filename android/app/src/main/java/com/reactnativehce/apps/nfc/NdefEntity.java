@@ -10,6 +10,7 @@ import android.nfc.NdefMessage;
 import android.nfc.NdefRecord;
 
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 import com.reactnativehce.utils.ByteArrayOperations;
@@ -65,7 +66,20 @@ public class NdefEntity {
     byte[] payload = record.getPayload();
 
     if (record.getTnf() == NdefRecord.TNF_WELL_KNOWN && Arrays.equals(record.getType(), NdefRecord.RTD_TEXT)) {
-      String content = new String(Arrays.copyOfRange(payload, 3, payload.length));
+      if (payload == null || payload.length == 0) {
+        throw new Exception("Invalid NDEF text record");
+      }
+      int status = payload[0] & 0xFF;
+      boolean isUtf16 = (status & 0x80) != 0;
+      int langLen = status & 0x3F;
+      int textStart = 1 + langLen;
+      if (textStart > payload.length) {
+        throw new Exception("Invalid NDEF text language length");
+      }
+      String content = new String(
+        Arrays.copyOfRange(payload, textStart, payload.length),
+        isUtf16 ? StandardCharsets.UTF_16 : StandardCharsets.UTF_8
+      );
       return new NdefEntity("text", content);
     } else if (record.getTnf() == NdefRecord.TNF_WELL_KNOWN && Arrays.equals(record.getType(), NdefRecord.RTD_URI)) {
       String content = record.toUri().toString();

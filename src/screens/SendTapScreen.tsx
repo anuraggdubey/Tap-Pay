@@ -34,6 +34,7 @@ import {
   TapSenderPhase,
 } from '../services/tapPayment';
 import {recordTransaction} from '../services/history';
+import {SUPPORTED_TOKENS} from '../config/tokens';
 import ConfirmPaymentModal from '../components/ConfirmPaymentModal';
 import InsufficientBalanceModal from '../components/InsufficientBalanceModal';
 import NfcNotAvailableModal from '../components/NfcNotAvailableModal';
@@ -140,21 +141,30 @@ export default function SendTapScreen({navigation}: Props) {
       return;
     }
     const recipient = pendingRecipient;
+    const effectiveToken = (recipient.requestedToken || 'MON').toUpperCase();
+    const tokenInfo = SUPPORTED_TOKENS[effectiveToken];
+    const decimals = tokenInfo?.decimals ?? 18;
+    const rawAmount = recipient.requestedAmount || activeAmount || amount;
     let amountWei: bigint;
     try {
-      amountWei = ethers.parseEther(activeAmount || amount);
+      amountWei = ethers.parseUnits(rawAmount, decimals);
     } catch {
       Alert.alert('Invalid Amount', 'Could not read the payment amount.');
       await handleCancel();
       return;
     }
 
-    const paymentAmount = ethers.formatEther(amountWei);
+    const paymentAmount = ethers.formatUnits(amountWei, decimals);
     setConfirming(true);
     setPhase('broadcasting');
     triggerHaptic.impactMedium();
 
-    const result = await broadcastTapPayment(recipient.receiverAddress, amountWei);
+    const result = await broadcastTapPayment(
+      recipient.receiverAddress,
+      amountWei,
+      effectiveToken,
+      paymentAmount,
+    );
 
     clearCountdown();
     if (isMountedRef.current) {
@@ -187,7 +197,7 @@ export default function SendTapScreen({navigation}: Props) {
       counterparty: recipient.receiverAddress,
       counterpartyUsername: recipient.receiverUsername,
       amount: paymentAmount,
-      tokenSymbol: 'MON',
+      tokenSymbol: effectiveToken,
       status: 'pending',
       txHash: result.txHash,
     });
@@ -201,7 +211,7 @@ export default function SendTapScreen({navigation}: Props) {
       recipient: recipient.receiverAddress,
       direction: 'sent',
       counterpartyUsername: recipient.receiverUsername,
-      tokenSymbol: 'MON',
+      tokenSymbol: effectiveToken,
     });
   };
 
@@ -349,9 +359,13 @@ export default function SendTapScreen({navigation}: Props) {
       ? formatMon(estimatedGasWei).replace(/ MON$/, '')
       : '0.0004';
 
+    const confirmToken = (pendingRecipient?.requestedToken || 'MON').toUpperCase();
+    const confirmDecimals = SUPPORTED_TOKENS[confirmToken]?.decimals ?? 18;
+    const confirmDisplayAmount =
+      pendingRecipient?.requestedAmount || activeAmount || amount || '0';
     let confirmAmountWei = 0n;
     try {
-      confirmAmountWei = ethers.parseEther(activeAmount || amount || '0');
+      confirmAmountWei = ethers.parseUnits(confirmDisplayAmount, confirmDecimals);
     } catch {
       confirmAmountWei = 0n;
     }
@@ -362,7 +376,8 @@ export default function SendTapScreen({navigation}: Props) {
           accent="blue"
           phase={visualPhase}
           direction="send"
-          amount={activeAmount || amount}
+          amount={pendingRecipient?.requestedAmount || activeAmount || amount}
+          tokenSymbol={confirmToken}
           timeLeft={timeLeft}
           gasEstimate={gasDisplay}
           onClose={isBusy ? undefined : handleCancel}
@@ -384,7 +399,8 @@ export default function SendTapScreen({navigation}: Props) {
           amountWei={confirmAmountWei}
           gasCostWei={estimatedGasWei ?? 0n}
           loading={confirming}
-          tokenSymbol="MON"
+          tokenSymbol={confirmToken}
+          displayAmount={confirmDisplayAmount}
           onConfirm={handleConfirmSend}
           onCancel={handleCancel}
         />

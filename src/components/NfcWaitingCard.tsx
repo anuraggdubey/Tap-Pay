@@ -25,6 +25,7 @@ type Props = {
   phase: NfcPhaseVisual;
   direction: 'send' | 'receive';
   amount?: string;
+  tokenSymbol?: string;
   counterparty?: string;
   timeLeft?: number;
   gasEstimate?: string;
@@ -160,6 +161,7 @@ export default function NfcWaitingCard({
   phase,
   direction,
   amount,
+  tokenSymbol = 'MON',
   counterparty,
   timeLeft,
   gasEstimate,
@@ -259,7 +261,7 @@ export default function NfcWaitingCard({
         <View style={s2.amountWrap}>
           <Text style={s2.amountValue} numberOfLines={1} adjustsFontSizeToFit>
             {amount}
-            <Text style={s2.amountUnit}> MON</Text>
+            <Text style={s2.amountUnit}> {tokenSymbol}</Text>
           </Text>
           {timeLeft != null && timeLeft > 0 && <Text style={s2.expiry}>Expires in {timeLeft}s</Text>}
         </View>

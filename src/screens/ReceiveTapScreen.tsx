@@ -22,6 +22,8 @@ import {
 } from '../services/nfcReader';
 import {
   createReceiverBroadcastLease,
+  createTapSessionNonce,
+  hashSessionId,
   waitForIncomingPayment,
 } from '../services/tapPayment';
 import {reverseResolveAddress} from '../services/registry';
@@ -113,9 +115,11 @@ export default function ReceiveTapScreen({navigation}: Props) {
 
       if (address) {
         const expiresAt = Date.now() + SESSION_TIMEOUT_MS;
+        const sessionNonce = createTapSessionNonce();
+        const expectedSessionIdHash = hashSessionId(sessionNonce);
         sessionTimer = setTimeout(() => { expireSession(); }, SESSION_TIMEOUT_MS);
-        // Start HCE broadcasting address
-        const started = await startReceiverBroadcast(address, expiresAt);
+        // Start HCE broadcasting address + per-session nonce
+        const started = await startReceiverBroadcast(address, expiresAt, sessionNonce);
         if (!started) {
            if (cancelled) return;
            Alert.alert('Error', 'Failed to start NFC broadcast.');
@@ -126,12 +130,17 @@ export default function ReceiveTapScreen({navigation}: Props) {
           await stopReceiverBroadcast();
           return;
         }
-        // Detection is driven by a confirmed on-chain ledger event, not by any balance change.
+        // Detection is driven by a confirmed on-chain ledger event bound to this tap session.
         if (controller.signal.aborted) {
           await stopReceiverBroadcast();
           return;
         }
-        const payment = await waitForIncomingPayment(address, Math.max(0, expiresAt - Date.now()), controller.signal);
+        const payment = await waitForIncomingPayment(
+          address,
+          Math.max(0, expiresAt - Date.now()),
+          controller.signal,
+          expectedSessionIdHash,
+        );
 
         if (payment.detected && !cancelled && !controller.signal.aborted) {
           paymentFound = true;

@@ -15,7 +15,10 @@ import {
 } from './nfcReader';
 import {sendPayment, withRpcFailover} from './wallet';
 import {reverseResolveAddress} from './registry';
-import {createSessionIdHash} from '../utils/paymentSession';
+import {
+  createSessionIdHash,
+  hashSessionId,
+} from '../utils/paymentSession';
 import {SUPPORTED_TOKENS} from '../config/tokens';
 
 // TapPayLedger logs native MON payments; MultiTokenLedger logs native + ERC-20 payments.
@@ -59,9 +62,15 @@ export type TapSenderPhase =
 export type TapRecipient = {
   receiverAddress: string;
   receiverUsername?: string;
+  sessionNonce?: string;
 };
 
-export {createSessionId, createSessionIdHash} from '../utils/paymentSession';
+export {
+  createSessionId,
+  createSessionIdHash,
+  createTapSessionNonce,
+  hashSessionId,
+} from '../utils/paymentSession';
 
 /**
  * Step 1 — read the receiver's address over NFC. Does NOT sign or broadcast anything.
@@ -102,7 +111,13 @@ export async function readTapRecipient(
     // Username is optional; the address is what the user confirms.
   }
 
-  return {recipient: {receiverAddress, receiverUsername}};
+  return {
+    recipient: {
+      receiverAddress,
+      receiverUsername,
+      sessionNonce: readResult.sessionNonce,
+    },
+  };
 }
 
 /**
@@ -112,8 +127,9 @@ export async function readTapRecipient(
 export async function broadcastTapPayment(
   receiverAddress: string,
   amountWei: bigint,
+  sessionNonce?: string,
 ): Promise<{txHash: string | null; error?: string}> {
-  const sessionIdHash = createSessionIdHash();
+  const sessionIdHash = sessionNonce ? hashSessionId(sessionNonce) : createSessionIdHash();
 
   const result = await sendPayment(
     receiverAddress,
@@ -158,6 +174,7 @@ export async function scanForIncomingTapPayment(
   recipientAddress: string,
   fromBlock: number,
   signal?: AbortSignal,
+  expectedSessionIdHash?: string,
 ): Promise<IncomingPaymentMatch | null> {
   const tapLedger = MONAD_CONFIG.contracts.tapPayLedger;
   const multiLedger = MONAD_CONFIG.contracts.multiTokenLedger;
@@ -214,6 +231,15 @@ export async function scanForIncomingTapPayment(
         if (!args?.from) {
           continue;
         }
+        if (expectedSessionIdHash) {
+          const eventSessionHash = (args.sessionId ?? args.sessionIdHash) as string | undefined;
+          if (
+            !eventSessionHash ||
+            eventSessionHash.toLowerCase() !== expectedSessionIdHash.toLowerCase()
+          ) {
+            continue;
+          }
+        }
         const receipt = await provider.getTransactionReceipt(event.transactionHash);
         if (signal?.aborted) return null;
         if (!receipt || receipt.status !== 1) {
@@ -247,6 +273,7 @@ export async function waitForIncomingPayment(
   address: string,
   timeoutMs = SESSION_TIMEOUT_MS,
   signal?: AbortSignal,
+  expectedSessionIdHash?: string,
 ): Promise<IncomingPaymentInfo> {
   if (signal?.aborted || timeoutMs <= 0) {
     return {detected: false};
@@ -294,7 +321,12 @@ export async function waitForIncomingPayment(
       return {detected: false};
     }
     while (!finished && !signal?.aborted && Date.now() < deadline) {
-      const match = await scanForIncomingTapPayment(address, startBlock, scanController.signal);
+      const match = await scanForIncomingTapPayment(
+        address,
+        startBlock,
+        scanController.signal,
+        expectedSessionIdHash,
+      );
       if (finished || signal?.aborted || Date.now() >= deadline) break;
       if (match) {
         return {

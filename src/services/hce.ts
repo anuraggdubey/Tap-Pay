@@ -9,7 +9,7 @@ import {SESSION_TIMEOUT_MS} from '../config/monad';
 import {encodeReceiverAddress} from '../utils/apdu';
 
 export type HceReceiverLease = {
-  start(receiverAddress: string, expiresAt?: number): Promise<boolean>;
+  start(receiverAddress: string, expiresAt?: number, sessionNonce?: string): Promise<boolean>;
   stop(): Promise<void>;
 };
 
@@ -51,7 +51,7 @@ export function createHceReceiverLease(): HceReceiverLease {
   const ownsSession = () => _owner === lease && !stopped;
 
   const lease: HceReceiverLease = {
-    async start(receiverAddress, expiresAt) {
+    async start(receiverAddress, expiresAt, sessionNonce) {
       if (!ownsSession() || started) return false;
       started = true;
       const expired = () => expiresAt !== undefined && Date.now() >= expiresAt;
@@ -59,7 +59,7 @@ export function createHceReceiverLease(): HceReceiverLease {
         if (!await preparation || !ownsSession()) return false;
         const tag = new NFCTagType4({
           type: NFCTagType4NDEFContentType.URL,
-          content: encodeReceiverAddress(receiverAddress),
+          content: encodeReceiverAddress(receiverAddress, sessionNonce),
           writable: false,
         });
 

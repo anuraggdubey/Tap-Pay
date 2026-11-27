@@ -323,6 +323,37 @@ describe('wrong or tampered data fails closed', () => {
   });
 });
 
+describe('status is bound to its wallet (#126)', () => {
+  it('reports not linked for a different wallet on the same phone', async () => {
+    const t = setup();
+    await linkPasskey({t: 'phrase', v: t.phrase}, t.address, t.deps);
+    expect((await getPasskeyStatus(t.address)).linked).toBe(true);
+    expect((await getPasskeyStatus(t.address.toLowerCase())).linked).toBe(true);
+    const other = ethers.Wallet.createRandom().address;
+    expect((await getPasskeyStatus(other)).linked).toBe(false);
+  });
+
+  it('records the recovered wallet so it stays linked after recovery', async () => {
+    const t = setup();
+    await linkPasskey({t: 'phrase', v: t.phrase}, t.address, t.deps);
+    t.setWallet(false);
+    await AsyncStorage.clear();
+    await recoverWithPasskey(t.deps);
+    expect((await getPasskeyStatus(t.address)).linked).toBe(true);
+    expect((await getPasskeyStatus(ethers.Wallet.createRandom().address)).linked).toBe(false);
+  });
+
+  it('remove from a different wallet is a no-op and never signs', async () => {
+    const t = setup();
+    await linkPasskey({t: 'phrase', v: t.phrase}, t.address, t.deps);
+    const sign = jest.fn(t.deps.sign);
+    const other = ethers.Wallet.createRandom().address;
+    await expect(removePasskey(other, {...t.deps, sign})).resolves.toEqual({linked: false});
+    expect(sign).not.toHaveBeenCalled();
+    expect(t.server.rows.size).toBe(1);
+  });
+});
+
 describe('remove', () => {
   it('deletes the blob and clears status', async () => {
     const t = setup();

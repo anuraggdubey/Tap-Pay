@@ -42,11 +42,11 @@ export default function SettingsScreen({navigation}: Props) {
 
   useEffect(() => {
     const refresh = () => {
-      getPasskeyStatus().then(st => setPasskeyLinked(st.linked));
+      getPasskeyStatus(address).then(st => setPasskeyLinked(st.linked));
     };
     refresh();
     return navigation.addListener('focus', refresh);
-  }, [navigation]);
+  }, [navigation, address]);
 
   const handleResetWallet = () => {
     triggerHaptic.notificationError();

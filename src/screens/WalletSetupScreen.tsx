@@ -220,7 +220,7 @@ export default function WalletSetupScreen({navigation}: Props) {
     if (!isPasskeyRecoveryConfigured() || !address) {
       return;
     }
-    if ((await getPasskeyStatus()).linked) {
+    if ((await getPasskeyStatus(address)).linked) {
       return;
     }
     let held: string | null = secretPhrase;

@@ -263,12 +263,35 @@ export async function waitForIncomingPayment(
   const expiryTimer = setTimeout(endWait, timeoutMs);
   signal?.addEventListener('abort', endWait);
 
+  const sleep = () =>
+    new Promise<void>(resolve => {
+      wake = resolve;
+      pollTimer = setTimeout(resolve, Math.min(1000, Math.max(0, deadline - Date.now())));
+    });
+
+  // The scan window MUST start at the chain head when the session began. Never fall back to
+  // block 0: that would scan the whole history and report an old payment as this tap (#124).
+  // If the head cannot be read, keep retrying until it can or the session ends.
+  const readStartBlock = async (): Promise<number | null> => {
+    while (!finished && !signal?.aborted && Date.now() < deadline) {
+      try {
+        const head = await withRpcFailover(p => p.getBlockNumber());
+        if (Number.isSafeInteger(head) && head > 0) {
+          return head;
+        }
+      } catch {
+        // All endpoints failed: retry after a short pause.
+      }
+      if (finished || signal?.aborted || Date.now() >= deadline) break;
+      await sleep();
+    }
+    return null;
+  };
+
   const poll = async (): Promise<IncomingPaymentInfo> => {
-    let startBlock = 0;
-    try {
-      startBlock = await withRpcFailover(p => p.getBlockNumber());
-    } catch {
-      startBlock = 0;
+    const startBlock = await readStartBlock();
+    if (startBlock === null) {
+      return {detected: false};
     }
     while (!finished && !signal?.aborted && Date.now() < deadline) {
       const match = await scanForIncomingTapPayment(address, startBlock, scanController.signal);
@@ -283,10 +306,7 @@ export async function waitForIncomingPayment(
           txHash: match.txHash,
         };
       }
-      await new Promise<void>(resolve => {
-        wake = resolve;
-        pollTimer = setTimeout(resolve, Math.min(1000, deadline - Date.now()));
-      });
+      await sleep();
     }
     return {detected: false};
   };

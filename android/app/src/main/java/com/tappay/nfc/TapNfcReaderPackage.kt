@@ -7,7 +7,10 @@ import com.facebook.react.uimanager.ViewManager
 
 class TapNfcReaderPackage : ReactPackage {
   override fun createNativeModules(reactContext: ReactApplicationContext): List<NativeModule> {
-    return listOf(TapNfcReaderModule(reactContext))
+    return listOf(
+      TapNfcReaderModule(reactContext),
+      TapHcePreferenceModule(reactContext),
+    )
   }
 
   override fun createViewManagers(reactContext: ReactApplicationContext): List<ViewManager<*, *>> {

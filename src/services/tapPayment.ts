@@ -14,8 +14,12 @@ import {
   stopContinuousHceScan,
 } from './nfcReader';
 import {sendPayment, withRpcFailover} from './wallet';
+import {sendTokenTransfer} from './tokens/tokenTransfer';
 import {reverseResolveAddress} from './registry';
-import {createSessionIdHash} from '../utils/paymentSession';
+import {
+  createSessionIdHash,
+  hashSessionId,
+} from '../utils/paymentSession';
 import {SUPPORTED_TOKENS} from '../config/tokens';
 
 // TapPayLedger logs native MON payments; MultiTokenLedger logs native + ERC-20 payments.
@@ -59,9 +63,30 @@ export type TapSenderPhase =
 export type TapRecipient = {
   receiverAddress: string;
   receiverUsername?: string;
+  sessionNonce?: string;
+  requestedAmount?: string;
+  requestedToken?: string;
 };
 
-export {createSessionId, createSessionIdHash} from '../utils/paymentSession';
+export type ExpectedPaymentRequest = {
+  amountWei: bigint;
+  tokenSymbol: string;
+};
+
+export type IncomingPaymentFilter =
+  | string
+  | ExpectedPaymentRequest
+  | {
+      sessionIdHash?: string;
+      paymentRequest?: ExpectedPaymentRequest;
+    };
+
+export {
+  createSessionId,
+  createSessionIdHash,
+  createTapSessionNonce,
+  hashSessionId,
+} from '../utils/paymentSession';
 
 /**
  * Step 1 — read the receiver's address over NFC. Does NOT sign or broadcast anything.
@@ -72,8 +97,9 @@ export {createSessionId, createSessionIdHash} from '../utils/paymentSession';
  */
 export async function readTapRecipient(
   senderAddress: string,
+  onHint?: (hint: string) => void,
 ): Promise<{recipient?: TapRecipient; error?: string}> {
-  const readResult = await readReceiverAddress();
+  const readResult = await readReceiverAddress({onHint});
 
   if (readResult.status !== 'SUCCESS' || !readResult.receiverAddress) {
     await stopContinuousHceScan();
@@ -102,7 +128,15 @@ export async function readTapRecipient(
     // Username is optional; the address is what the user confirms.
   }
 
-  return {recipient: {receiverAddress, receiverUsername}};
+  return {
+    recipient: {
+      receiverAddress,
+      receiverUsername,
+      sessionNonce: readResult.sessionNonce,
+      requestedAmount: readResult.requestedAmount,
+      requestedToken: readResult.requestedToken,
+    },
+  };
 }
 
 /**
@@ -112,8 +146,46 @@ export async function readTapRecipient(
 export async function broadcastTapPayment(
   receiverAddress: string,
   amountWei: bigint,
+  tokenSymbolOrSessionNonce?: string,
+  displayAmount?: string,
+  sessionNonceArg?: string,
 ): Promise<{txHash: string | null; error?: string}> {
-  const sessionIdHash = createSessionIdHash();
+  const isTokenSymbol =
+    typeof tokenSymbolOrSessionNonce === 'string' &&
+    Boolean(SUPPORTED_TOKENS[tokenSymbolOrSessionNonce.toUpperCase()]);
+  const tokenSymbol = isTokenSymbol ? tokenSymbolOrSessionNonce : 'MON';
+  const sessionNonce = isTokenSymbol ? sessionNonceArg : tokenSymbolOrSessionNonce;
+
+  const normalizedToken = tokenSymbol.toUpperCase();
+  if (normalizedToken !== 'MON') {
+    const token = SUPPORTED_TOKENS[normalizedToken];
+    if (!token) {
+      return {txHash: null, error: `Unsupported token: ${tokenSymbol}`};
+    }
+    const amountStr = displayAmount ?? ethers.formatUnits(amountWei, token.decimals);
+    const transferParams = sessionNonce
+      ? {
+          to: receiverAddress,
+          amount: amountStr,
+          tokenSymbol: normalizedToken,
+          sessionIdHash: hashSessionId(sessionNonce),
+        }
+      : {
+          to: receiverAddress,
+          amount: amountStr,
+          tokenSymbol: normalizedToken,
+        };
+    const tokenResult = await sendTokenTransfer(transferParams);
+    if (!tokenResult.txHash) {
+      return {
+        txHash: null,
+        error: tokenResult.error || 'Transaction could not be broadcast.',
+      };
+    }
+    return {txHash: tokenResult.txHash};
+  }
+
+  const sessionIdHash = sessionNonce ? hashSessionId(sessionNonce) : createSessionIdHash();
 
   const result = await sendPayment(
     receiverAddress,
@@ -139,6 +211,9 @@ export async function cancelTapSession(): Promise<void> {
   await stopHceSession();
 }
 
+// Monad RPC rejects eth_getLogs queries spanning more than 100 inclusive blocks.
+export const MAX_LOG_BLOCK_RANGE = 100;
+
 export type IncomingPaymentMatch = {
   senderAddress: string;
   amountWei: bigint;
@@ -148,26 +223,52 @@ export type IncomingPaymentMatch = {
   blockNumber: number;
 };
 
-/**
- * Scan both ledgers for a confirmed PaymentLogged event paying `recipientAddress`, in blocks
- * [fromBlock, head]. Returns the newest one whose transaction receipt is confirmed (status === 1),
- * or null. This is the ONLY evidence the receiver trusts: a bare balance increase (an unrelated
- * deposit, a dust transfer) is never treated as a TapPay payment.
- */
-export async function scanForIncomingTapPayment(
+function normalizeIncomingFilter(filter?: IncomingPaymentFilter): {
+  expectedSessionIdHash?: string;
+  expectedRequest?: ExpectedPaymentRequest;
+} {
+  if (!filter) {
+    return {};
+  }
+  if (typeof filter === 'string') {
+    return {expectedSessionIdHash: filter};
+  }
+  if ('amountWei' in filter && 'tokenSymbol' in filter) {
+    return {expectedRequest: filter};
+  }
+  return {
+    expectedSessionIdHash: filter.sessionIdHash,
+    expectedRequest: filter.paymentRequest,
+  };
+}
+
+type ScanChunkResult = {
+  match: IncomingPaymentMatch | null;
+  scannedToBlock: number | null;
+  head: number | null;
+};
+
+async function scanIncomingTapPaymentChunk(
   recipientAddress: string,
   fromBlock: number,
   signal?: AbortSignal,
-): Promise<IncomingPaymentMatch | null> {
+  expectedFilter?: IncomingPaymentFilter,
+  toBlock?: number,
+): Promise<ScanChunkResult> {
+  const {expectedSessionIdHash, expectedRequest} = normalizeIncomingFilter(expectedFilter);
   const tapLedger = MONAD_CONFIG.contracts.tapPayLedger;
   const multiLedger = MONAD_CONFIG.contracts.multiTokenLedger;
 
   try {
     return await withRpcFailover(async provider => {
-      if (signal?.aborted) return null;
-      const head = await provider.getBlockNumber();
-      if (signal?.aborted) return null;
+      if (signal?.aborted) return {match: null, scannedToBlock: null, head: null};
+      const head = toBlock ?? (await provider.getBlockNumber());
+      if (signal?.aborted) return {match: null, scannedToBlock: null, head: null};
       const start = Math.max(0, fromBlock);
+      if (start > head) {
+        return {match: null, scannedToBlock: head, head};
+      }
+      const end = Math.min(start + MAX_LOG_BLOCK_RANGE - 1, head);
 
       const found: {event: ethers.EventLog; tokenAddress?: string}[] = [];
 
@@ -176,9 +277,9 @@ export async function scanForIncomingTapPayment(
         const events = await c.queryFilter(
           c.filters.PaymentLogged(null, recipientAddress),
           start,
-          head,
+          end,
         );
-        if (signal?.aborted) return null;
+        if (signal?.aborted) return {match: null, scannedToBlock: null, head: null};
         for (const e of events) {
           found.push({event: e as ethers.EventLog});
         }
@@ -189,9 +290,9 @@ export async function scanForIncomingTapPayment(
         const events = await c.queryFilter(
           c.filters.PaymentLogged(null, recipientAddress),
           start,
-          head,
+          end,
         );
-        if (signal?.aborted) return null;
+        if (signal?.aborted) return {match: null, scannedToBlock: null, head: null};
         for (const e of events) {
           const evt = e as ethers.EventLog;
           found.push({event: evt, tokenAddress: evt.args?.token as string});
@@ -199,7 +300,7 @@ export async function scanForIncomingTapPayment(
       }
 
       if (!found.length) {
-        return null;
+        return {match: null, scannedToBlock: end, head};
       }
 
       // Newest first by (block, logIndex).
@@ -208,34 +309,112 @@ export async function scanForIncomingTapPayment(
       );
 
       // Walk newest→oldest and return the first with a confirmed (status === 1) receipt.
+      // If any event has a null receipt (RPC receipt lag), do not advance past its block.
+      let earliestPendingBlock: number | null = null;
       for (let i = found.length - 1; i >= 0; i--) {
         const {event, tokenAddress} = found[i];
         const args = event.args;
         if (!args?.from) {
           continue;
         }
-        const receipt = await provider.getTransactionReceipt(event.transactionHash);
-        if (signal?.aborted) return null;
-        if (!receipt || receipt.status !== 1) {
-          continue;
+        if (expectedSessionIdHash) {
+          const eventSessionHash = (args.sessionId ?? args.sessionIdHash) as string | undefined;
+          if (
+            !eventSessionHash ||
+            eventSessionHash.toLowerCase() !== expectedSessionIdHash.toLowerCase()
+          ) {
+            continue;
+          }
         }
         const {symbol, decimals} = describeToken(tokenAddress);
         const amountWei = args.amount as bigint;
+        if (expectedRequest) {
+          if (
+            symbol.toUpperCase() !== expectedRequest.tokenSymbol.toUpperCase() ||
+            amountWei !== expectedRequest.amountWei
+          ) {
+            continue;
+          }
+        }
+        const receipt = await provider.getTransactionReceipt(event.transactionHash);
+        if (signal?.aborted) return {match: null, scannedToBlock: null, head: null};
+        if (!receipt) {
+          if (
+            earliestPendingBlock === null ||
+            event.blockNumber < earliestPendingBlock
+          ) {
+            earliestPendingBlock = event.blockNumber;
+          }
+          continue;
+        }
+        if (receipt.status !== 1) {
+          continue;
+        }
         return {
-          senderAddress: args.from as string,
-          amountWei,
-          amountDisplay: ethers.formatUnits(amountWei, decimals),
-          tokenSymbol: symbol,
-          txHash: event.transactionHash,
-          blockNumber: event.blockNumber,
+          match: {
+            senderAddress: args.from as string,
+            amountWei,
+            amountDisplay: ethers.formatUnits(amountWei, decimals),
+            tokenSymbol: symbol,
+            txHash: event.transactionHash,
+            blockNumber: event.blockNumber,
+          },
+          scannedToBlock: end,
+          head,
         };
       }
 
-      return null;
+      const safeScannedTo =
+        earliestPendingBlock !== null ? Math.min(end, earliestPendingBlock - 1) : end;
+      return {match: null, scannedToBlock: safeScannedTo, head};
     });
+  } catch {
+    return {match: null, scannedToBlock: null, head: null};
+  }
+}
+
+/**
+ * Scan both ledgers for a confirmed PaymentLogged event paying `recipientAddress`, in blocks
+ * [fromBlock, head] using <= MAX_LOG_BLOCK_RANGE block chunks (newest chunk first). Returns
+ * the newest confirmed match (status === 1), or null.
+ */
+export async function scanForIncomingTapPayment(
+  recipientAddress: string,
+  fromBlock: number,
+  signal?: AbortSignal,
+  expectedFilter?: IncomingPaymentFilter,
+): Promise<IncomingPaymentMatch | null> {
+  if (signal?.aborted) {
+    return null;
+  }
+  let head: number;
+  try {
+    head = await withRpcFailover(provider => provider.getBlockNumber());
   } catch {
     return null;
   }
+  const minBlock = Math.max(0, fromBlock);
+  if (minBlock > head) {
+    return null;
+  }
+
+  for (let chunkEnd = head; chunkEnd >= minBlock; chunkEnd -= MAX_LOG_BLOCK_RANGE) {
+    if (signal?.aborted) {
+      return null;
+    }
+    const chunkStart = Math.max(minBlock, chunkEnd - MAX_LOG_BLOCK_RANGE + 1);
+    const result = await scanIncomingTapPaymentChunk(
+      recipientAddress,
+      chunkStart,
+      signal,
+      expectedFilter,
+      chunkEnd,
+    );
+    if (result.match) {
+      return result.match;
+    }
+  }
+  return null;
 }
 
 /**
@@ -247,6 +426,7 @@ export async function waitForIncomingPayment(
   address: string,
   timeoutMs = SESSION_TIMEOUT_MS,
   signal?: AbortSignal,
+  expectedFilter?: IncomingPaymentFilter,
 ): Promise<IncomingPaymentInfo> {
   if (signal?.aborted || timeoutMs <= 0) {
     return {detected: false};
@@ -293,8 +473,14 @@ export async function waitForIncomingPayment(
     if (startBlock === null) {
       return {detected: false};
     }
+    let nextFromBlock = startBlock;
     while (!finished && !signal?.aborted && Date.now() < deadline) {
-      const match = await scanForIncomingTapPayment(address, startBlock, scanController.signal);
+      const {match, scannedToBlock, head} = await scanIncomingTapPaymentChunk(
+        address,
+        nextFromBlock,
+        scanController.signal,
+        expectedFilter,
+      );
       if (finished || signal?.aborted || Date.now() >= deadline) break;
       if (match) {
         return {
@@ -305,6 +491,9 @@ export async function waitForIncomingPayment(
           tokenSymbol: match.tokenSymbol,
           txHash: match.txHash,
         };
+      }
+      if (scannedToBlock !== null && head !== null && scannedToBlock >= nextFromBlock) {
+        nextFromBlock = scannedToBlock < head ? scannedToBlock + 1 : head;
       }
       await sleep();
     }

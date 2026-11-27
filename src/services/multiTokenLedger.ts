@@ -28,13 +28,14 @@ export async function sendMonViaMultiTokenLedger(
   signer: ethers.Wallet,
   to: string,
   amountWei: bigint,
+  sessionIdHashOverride?: string,
 ): Promise<ethers.ContractTransactionResponse> {
   const ledgerAddress = getMultiTokenLedgerAddress();
   if (!ledgerAddress) {
     throw new Error('MultiTokenLedger is not configured');
   }
 
-  const sessionIdHash = createSessionIdHash();
+  const sessionIdHash = sessionIdHashOverride ?? createSessionIdHash();
   const ledger = new ethers.Contract(ledgerAddress, MULTI_TOKEN_LEDGER_ABI, signer);
   return await ledger.payWithLog(to, sessionIdHash, {value: amountWei});
 }
@@ -44,6 +45,7 @@ export async function sendErc20ViaMultiTokenLedger(
   tokenAddress: string,
   to: string,
   amountRaw: bigint,
+  sessionIdHashOverride?: string,
 ): Promise<ethers.ContractTransactionResponse> {
   const ledgerAddress = getMultiTokenLedgerAddress();
   if (!ledgerAddress) {
@@ -85,7 +87,7 @@ export async function sendErc20ViaMultiTokenLedger(
       await approve(amountRaw);
     }
 
-    const sessionIdHash = createSessionIdHash();
+    const sessionIdHash = sessionIdHashOverride ?? createSessionIdHash();
     const ledger = new ethers.Contract(ledgerAddress, MULTI_TOKEN_LEDGER_ABI, signer);
     return await ledger.payERC20WithLog(tokenAddress, to, amountRaw, sessionIdHash);
   } catch (error) {

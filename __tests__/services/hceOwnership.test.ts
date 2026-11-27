@@ -1,3 +1,4 @@
+import {NativeModules, Platform} from 'react-native';
 import {HCESession, NFCTagType4} from 'react-native-hce';
 import {createHceReceiverLease, stopHceSession} from '../../src/services/hce';
 import {SESSION_TIMEOUT_MS} from '../../src/config/monad';
@@ -218,4 +219,27 @@ it('contains stop errors without poisoning B\'s native queue', async () => {
   expect(await next).toBe(true);
   expect(session.enabled).toBe(true);
   expect(content).toBe(`tappay://tap/${B}`);
+});
+
+it('sets and unsets TapHcePreference on Android start and stop (#119)', async () => {
+  const originalOs = Platform.OS;
+  const originalModule = NativeModules.TapHcePreference;
+  const setPreferredService = jest.fn().mockResolvedValue(true);
+  const unsetPreferredService = jest.fn().mockResolvedValue(true);
+  Object.defineProperty(Platform, 'OS', {value: 'android', configurable: true});
+  NativeModules.TapHcePreference = {setPreferredService, unsetPreferredService};
+
+  try {
+    const lease = createHceReceiverLease();
+    const started = lease.start(A);
+    await advance(600);
+    expect(await started).toBe(true);
+    expect(setPreferredService).toHaveBeenCalledTimes(1);
+
+    await lease.stop();
+    expect(unsetPreferredService).toHaveBeenCalledTimes(1);
+  } finally {
+    Object.defineProperty(Platform, 'OS', {value: originalOs, configurable: true});
+    NativeModules.TapHcePreference = originalModule;
+  }
 });

@@ -16,6 +16,7 @@ import {FanoutProvider} from './fanoutProvider';
 import {readStoredCustomRpc, storeCustomRpc, validateRpcUrl} from './rpcSettings';
 import {MONAD_CONFIG, GAS_LIMIT_FALLBACK, TX_POLL_INTERVAL_MS, TX_MAX_WAIT_MS} from '../config/monad';
 import {PaymentLimits, checkPaymentLimits} from '../utils/validation';
+import {getStuckPayments} from './history';
 
 const KEYCHAIN_SERVICE = 'com.tappay.wallet';
 const PHRASE_SERVICE = 'com.tappay.wallet.phrase';
@@ -771,6 +772,11 @@ export interface BalanceCheckResult {
   missingWei: bigint;
   /** Set when the ledger would reject this native amount (below min, above max, or paused). */
   limitError?: string;
+  /**
+   * Earlier payments from this wallet that are still unconfirmed after a while. A new payment
+   * takes the next nonce and would wait behind them, so the user is warned first.
+   */
+  stuckPayments?: number;
 }
 
 /**
@@ -783,6 +789,7 @@ export async function checkSufficientBalance(
   amountWei: bigint,
 ): Promise<BalanceCheckResult> {
   const limitError = amountWei > 0n ? await checkLedgerPaymentLimits(amountWei) : null;
+  const stuckPayments = getStuckPayments().length;
   const balance = await getBalance(fromAddress);
 
   // Estimate gas or use safe fallback
@@ -801,6 +808,7 @@ export async function checkSufficientBalance(
     gasCostWei,
     missingWei,
     ...(limitError ? {limitError} : {}),
+    ...(stuckPayments > 0 ? {stuckPayments} : {}),
   };
 }
 
@@ -912,8 +920,11 @@ export async function sendPayment(
         : {gasPrice: feeData.gasPrice ?? ethers.parseUnits('50', 'gwei')};
 
     // The worst-case fee must fit next to the amount, or the node rejects the transaction.
-    const maxFeePerGas = 'maxFeePerGas' in feeFields ? feeFields.maxFeePerGas : feeFields.gasPrice;
-    if (balance < amountWei + gasLimit * maxFeePerGas) {
+    const worstGasPrice: bigint =
+      feeData.maxFeePerGas && feeData.maxPriorityFeePerGas
+        ? feeData.maxFeePerGas
+        : feeData.gasPrice ?? ethers.parseUnits('50', 'gwei');
+    if (balance < amountWei + gasLimit * worstGasPrice) {
       return {txHash: null, error: 'Insufficient MON balance for payment and network gas fee.'};
     }
 
@@ -1098,6 +1109,154 @@ export async function getReceiptStatus(txHash: string): Promise<ReceiptStatus> {
     return await quorumReceiptStatus(txHash);
   } catch {
     return 'unknown';
+  }
+}
+
+/**
+ * Fetch a pending transaction by hash and check it against the hash: the signed fields are
+ * re-serialized and must hash to `txHash`, so an RPC cannot substitute a different recipient,
+ * amount or nonce. Returns null if no endpoint knows it (or the answer does not match).
+ */
+async function fetchVerifiedTransaction(txHash: string): Promise<ethers.Transaction | null> {
+  const response = await withRpcFailover(p => p.getTransaction(txHash));
+  if (!response) {
+    return null;
+  }
+  try {
+    const rebuilt = ethers.Transaction.from({
+      type: response.type,
+      to: response.to,
+      nonce: response.nonce,
+      gasLimit: response.gasLimit,
+      gasPrice: response.type === 2 ? null : response.gasPrice,
+      maxFeePerGas: response.maxFeePerGas,
+      maxPriorityFeePerGas: response.maxPriorityFeePerGas,
+      data: response.data,
+      value: response.value,
+      chainId: response.chainId,
+      accessList: response.accessList,
+      signature: response.signature,
+    });
+    if (!rebuilt.hash || rebuilt.hash.toLowerCase() !== txHash.toLowerCase()) {
+      console.warn('RPC returned a transaction that does not match its hash');
+      return null;
+    }
+    return rebuilt;
+  } catch (error: any) {
+    console.warn('Could not verify a pending transaction:', error?.message || error);
+    return null;
+  }
+}
+
+/** Sender nonce of a transaction the network still knows, or null. Never throws. */
+export async function getTransactionNonce(txHash: string): Promise<number | null> {
+  try {
+    const tx = await fetchVerifiedTransaction(txHash);
+    return tx ? tx.nonce : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The wallet's mined ('latest') nonce: every nonce below it is used. The lowest answer of up to
+ * two endpoints is taken, so one endpoint reporting a too-high nonce cannot make a pending
+ * payment look dropped. Returns null if no endpoint answers.
+ */
+export async function getLatestNonce(address: string): Promise<number | null> {
+  await rpcReady;
+  const endpoints = rpcEndpoints();
+  const start = _currentRpcIndex % endpoints.length;
+  const answers: number[] = [];
+  for (let i = 0; i < endpoints.length && answers.length < Math.min(2, endpoints.length); i++) {
+    try {
+      answers.push(await readProviderFor(endpoints[(start + i) % endpoints.length]).getTransactionCount(address, 'latest'));
+    } catch {
+      // try the next endpoint
+    }
+  }
+  return answers.length ? Math.min(...answers) : null;
+}
+
+export type ReplaceMode = 'speedup' | 'cancel';
+
+// Nodes only replace a pending transaction when the new fees are at least ~10% higher.
+const REPLACEMENT_FEE_BUMP_PERCENT = 115n;
+const bumpFee = (fee: bigint) => (fee * REPLACEMENT_FEE_BUMP_PERCENT + 99n) / 100n;
+const maxBigInt = (a: bigint, b: bigint) => (a > b ? a : b);
+
+/**
+ * Replace a pending payment that is stuck. Both modes re-sign the SAME nonce at a higher fee, so
+ * at most one of the old and new transactions can ever be mined:
+ *  - speedup: the same payment (recipient, amount, data) with a higher fee;
+ *  - cancel: a 0-value transfer to this wallet. If it is mined, the payment is not.
+ * Requires phone authentication. The original is read from the network and verified against its
+ * hash, so an RPC cannot change what gets signed.
+ */
+export async function replacePendingTransaction(
+  txHash: string,
+  mode: ReplaceMode,
+  authPromptTitle = mode === 'cancel' ? 'Confirm to Cancel Payment' : 'Confirm to Speed Up Payment',
+): Promise<{txHash: string | null; nonce?: number; error?: string}> {
+  let original: ethers.Transaction | null;
+  let mined: number | null;
+  const address = await getWalletAddress();
+  if (!address) {
+    return {txHash: null, error: 'No wallet found on this device.'};
+  }
+  try {
+    original = await fetchVerifiedTransaction(txHash);
+    mined = await getLatestNonce(address);
+  } catch {
+    return {txHash: null, error: 'Could not reach the network. Please try again.'};
+  }
+  if (!original) {
+    return {
+      txHash: null,
+      error: 'This payment is no longer waiting on the network, so it cannot be changed. Activity will show whether it went through.',
+    };
+  }
+  if (!original.from || original.from.toLowerCase() !== address.toLowerCase()) {
+    return {txHash: null, error: 'This payment was not sent from this wallet.'};
+  }
+  if (mined === null) {
+    return {txHash: null, error: 'Could not reach the network. Please try again.'};
+  }
+  if (mined > original.nonce) {
+    return {txHash: null, error: 'This payment has already been processed. Refresh Activity to see the result.'};
+  }
+
+  const key = await loadPrivateKey(authPromptTitle);
+  if (!key) {
+    return {txHash: null, error: 'Authentication cancelled or wallet not found'};
+  }
+
+  try {
+    const feeData = await withRpcFailover(p => p.getFeeData());
+    let feeFields: {maxFeePerGas: bigint; maxPriorityFeePerGas: bigint} | {gasPrice: bigint};
+    if (original.maxFeePerGas !== null && original.maxPriorityFeePerGas !== null) {
+      const priority = maxBigInt(bumpFee(original.maxPriorityFeePerGas), feeData.maxPriorityFeePerGas ?? 0n);
+      const maxFee = maxBigInt(bumpFee(original.maxFeePerGas), feeData.maxFeePerGas ?? 0n);
+      feeFields = {maxFeePerGas: maxBigInt(maxFee, priority), maxPriorityFeePerGas: priority};
+    } else {
+      feeFields = {gasPrice: maxBigInt(bumpFee(original.gasPrice ?? 0n), feeData.gasPrice ?? 0n)};
+    }
+    const body =
+      mode === 'speedup'
+        ? {to: original.to, value: original.value, data: original.data, gasLimit: original.gasLimit}
+        : {to: address, value: 0n, data: '0x', gasLimit: 21_000n};
+
+    const wallet = new ethers.Wallet(key, getProvider());
+    // Same nonce as the original: this replaces it rather than queueing behind it.
+    const sent = await wallet.sendTransaction({
+      ...body,
+      nonce: original.nonce,
+      chainId: MONAD_CONFIG.chainId,
+      ...feeFields,
+    });
+    return {txHash: sent.hash, nonce: original.nonce};
+  } catch (error: any) {
+    return {txHash: null, error: parseContractError(error)};
   }
 }
 

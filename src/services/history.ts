@@ -15,10 +15,47 @@ export interface TransactionRecord {
   amount: string;
   /** Token ticker shown in UI (AUSD, USDC, USDT, MON). Defaults to MON for legacy rows. */
   tokenSymbol?: string;
-  status: 'confirmed' | 'pending' | 'failed';
+  /**
+   * - dropped: never mined; its nonce was used by another transaction or the network forgot it.
+   *   No money moved.
+   * - cancelled: the user replaced it with a 0-value cancellation that was mined. No money moved.
+   */
+  status: TransactionStatus;
+  /** Current hash. After a speed-up or cancel, the replacement's hash (same nonce). */
   txHash: string;
   timestamp: string; // ISO 8601
+  /** Sender nonce of a sent payment, learned while it was pending. */
+  nonce?: number;
+  /** Earlier hashes of this payment that were replaced (speed-up / cancel). Any one may be mined. */
+  replacedHashes?: string[];
+  /** Hash of the 0-value cancellation, if the user cancelled. If it is mined, the payment was not. */
+  cancelHash?: string;
 }
+
+export type TransactionStatus = 'confirmed' | 'pending' | 'failed' | 'dropped' | 'cancelled';
+
+const REAL_TX_HASH = /^0x[0-9a-fA-F]{64}$/;
+
+/** A sent payment pending longer than this is shown as stuck and can be sped up or cancelled. */
+export const STUCK_AFTER_MS = 2 * 60 * 1000;
+
+/** True for a sent payment that has been pending for longer than STUCK_AFTER_MS. */
+export function isStuck(tx: TransactionRecord, now: number = Date.now()): boolean {
+  return (
+    tx.direction === 'sent' &&
+    tx.status === 'pending' &&
+    REAL_TX_HASH.test(tx.txHash) &&
+    now - Date.parse(tx.timestamp) > STUCK_AFTER_MS
+  );
+}
+
+/** Every hash this row may be mined under (current first). */
+export function txHashes(tx: TransactionRecord): string[] {
+  return [tx.txHash, ...(tx.replacedHashes ?? [])];
+}
+
+const sameHash = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
+const rowHasHash = (tx: TransactionRecord, hash: string) => txHashes(tx).some(h => sameHash(h, hash));
 
 /** Resolve display ticker for a history row (legacy rows without tokenSymbol → MON). */
 export function getTxTokenSymbol(tx: Pick<TransactionRecord, 'tokenSymbol'>): string {
@@ -146,17 +183,60 @@ export function recordTransaction(tx: Omit<TransactionRecord, 'id' | 'timestamp'
   return newRecord;
 }
 
-export function updateTransactionStatus(txHash: string, status: 'confirmed' | 'failed') {
+/**
+ * Set the outcome of the row that `txHash` belongs to (its current or a replaced hash). When the
+ * outcome comes from a specific mined hash, that hash becomes the row's reference.
+ */
+export function updateTransactionStatus(txHash: string, status: Exclude<TransactionStatus, 'pending'>) {
   const state = histories.get(activeScope)!;
   mutate(state, rows => rows.map(tx => {
-    if (tx.txHash.toLowerCase() === txHash.toLowerCase()) {
+    if (!rowHasHash(tx, txHash)) {
+      return tx;
+    }
+    if (sameHash(tx.txHash, txHash) || status === 'dropped') {
       return {...tx, status};
     }
-    return tx;
+    // A replaced hash was mined instead of the current one.
+    return {
+      ...tx,
+      status,
+      txHash,
+      replacedHashes: txHashes(tx).filter(h => !sameHash(h, txHash)),
+    };
   }));
 }
 
-const REAL_TX_HASH = /^0x[0-9a-fA-F]{64}$/;
+/** Remember the sender nonce of a pending payment (needed to detect a dropped transaction). */
+export function setTransactionNonce(txHash: string, nonce: number) {
+  const state = histories.get(activeScope)!;
+  mutate(state, rows => rows.map(tx => (rowHasHash(tx, txHash) ? {...tx, nonce} : tx)));
+}
+
+/**
+ * A pending payment was replaced by a new transaction with the same nonce (speed-up or cancel).
+ * The row keeps every hash, because whichever one is mined decides the outcome.
+ */
+export function replaceTransaction(oldHash: string, newHash: string, kind: 'speedup' | 'cancel', nonce: number) {
+  const state = histories.get(activeScope)!;
+  mutate(state, rows => rows.map(tx => {
+    if (!rowHasHash(tx, oldHash)) {
+      return tx;
+    }
+    return {
+      ...tx,
+      txHash: newHash,
+      nonce,
+      replacedHashes: txHashes(tx),
+      ...(kind === 'cancel' ? {cancelHash: newHash} : {}),
+    };
+  }));
+}
+
+/** Sent payments that look stuck (see isStuck). */
+export function getStuckPayments(now: number = Date.now()): TransactionRecord[] {
+  return histories.get(activeScope)!.cache.filter(tx => isStuck(tx, now));
+}
+
 
 /**
  * Rows that are still pending and have a real on-chain hash (placeholder hashes such as

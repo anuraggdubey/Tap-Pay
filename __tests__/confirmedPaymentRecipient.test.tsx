@@ -183,4 +183,36 @@ describe.each([
       lookup === 'missing' ? 'Not Found' : 'Lookup Failed', expect.any(String),
     );
   });
+
+  it.each([
+    ['Cancel', false],
+    ['Pay Anyway', true],
+  ])('warns before paying behind a stuck payment (#130): %s', async (choice, proceeds) => {
+    (checkSufficientBalance as jest.Mock).mockResolvedValue({
+      canAfford: true,
+      amountWei: 1000000000000000000n,
+      gasCostWei: 1n,
+      requiredTotal: 1000000000000000001n,
+      balance: 2000000000000000000n,
+      stuckPayments: 1,
+    });
+    (Alert.alert as jest.Mock).mockImplementation((title: string, _m: string, buttons?: Array<{text: string; onPress?: () => void}>) => {
+      if (title === 'Earlier payment still pending') {
+        buttons?.find(b => b.text === choice)?.onPress?.();
+      }
+    });
+    await search();
+    if (name === 'SendPaymentScreen') {
+      await press('1');
+      await press('Pay');
+    } else {
+      await act(async () => {
+        tree.root.findAllByType(TextInput).find(node => node.props.placeholder === '0.00')?.props.onChangeText('1');
+      });
+      await press('Send to @alice');
+    }
+    expect(Alert.alert).toHaveBeenCalledWith('Earlier payment still pending', expect.stringMatching(/earlier payment/i), expect.any(Array), expect.any(Object));
+    const modals = tree.root.findAllByType(ConfirmPaymentModal).filter(m => m.props.visible);
+    expect(modals).toHaveLength(proceeds ? 1 : 0);
+  });
 });

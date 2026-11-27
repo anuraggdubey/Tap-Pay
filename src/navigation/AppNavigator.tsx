@@ -57,7 +57,7 @@ export type RootStackParamList = {
     expectedAmountWei?: string;
     tokenSymbol?: string;
     /** When opening from History, prefer the stored outcome over live waiting UI */
-    initialStatus?: 'confirmed' | 'pending' | 'failed';
+    initialStatus?: 'confirmed' | 'pending' | 'failed' | 'dropped' | 'cancelled';
     completedAt?: string;
   };
   AccountInfo: undefined;

@@ -12,6 +12,7 @@ import {
   Animated,
   Easing,
   ScrollView,
+  Alert,
 } from 'react-native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RouteProp} from '@react-navigation/native';
@@ -19,10 +20,10 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import {getExplorerTxUrl} from '../config/monad';
 import {truncateAddress} from '../utils/format';
-import {waitForReceipt, getBalance} from '../services/wallet';
+import {waitForReceipt, getBalance, replacePendingTransaction, ReplaceMode} from '../services/wallet';
 import {useWallet} from '../context/WalletContext';
 import {triggerHaptic} from '../utils/haptics';
-import {updateTransactionStatus} from '../services/history';
+import {replaceTransaction, updateTransactionStatus} from '../services/history';
 import {ExternalLinkIcon, ContactlessWave} from '../components/AppIcons';
 import PressableScale from '../components/PressableScale';
 import AmbientBackground from '../components/AmbientBackground';
@@ -55,10 +56,13 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   // 'delayed' = no receipt yet after waiting. It is NOT a failure: the payment may still confirm.
+  // Dropped / cancelled rows from History render their own final state (see notSent below).
   const [status, setStatus] = useState<'pending' | 'delayed' | 'confirmed' | 'failed'>(
-    initialStatus ?? 'pending',
+    initialStatus === 'dropped' || initialStatus === 'cancelled' ? 'pending' : initialStatus ?? 'pending',
   );
   const [attempt, setAttempt] = useState(0);
+  const [replacing, setReplacing] = useState(false);
+  const notSent = initialStatus === 'dropped' || initialStatus === 'cancelled';
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const checkmarkScale = useRef(
     new Animated.Value(initialStatus === 'confirmed' ? 1 : 0),
@@ -116,7 +120,7 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
 
   useEffect(() => {
     // History / already-finalized txs: show the stored outcome, don't re-enter waiting UI.
-    if (initialStatus === 'confirmed' || initialStatus === 'failed') {
+    if (initialStatus === 'confirmed' || initialStatus === 'failed' || notSent) {
       if (initialStatus === 'confirmed' && checkmarkScale) {
         checkmarkScale.setValue(1);
       }
@@ -186,7 +190,61 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
     return () => {
       isMounted = false;
     };
-  }, [txHash, waitForBalance, expectedAmountWei, address, balance, refreshBalance, initialStatus, attempt, checkmarkScale, isRealTxHash, markConfirmed, markFailed]);
+  }, [txHash, waitForBalance, expectedAmountWei, address, balance, refreshBalance, initialStatus, notSent, attempt, checkmarkScale, isRealTxHash, markConfirmed, markFailed]);
+
+  // A sent payment with no receipt yet can be replaced (same nonce, higher fee): sped up, or
+  // cancelled with a 0-value transfer to this wallet. Whichever is mined first wins.
+  const canReplace = !isReceived && isRealTxHash;
+
+  const replace = async (mode: ReplaceMode) => {
+    if (replacing) {
+      return;
+    }
+    setReplacing(true);
+    const result = await replacePendingTransaction(txHash, mode);
+    if (!result.txHash || result.nonce === undefined) {
+      setReplacing(false);
+      triggerHaptic.notificationError();
+      Alert.alert(mode === 'cancel' ? 'Could not cancel' : 'Could not speed up', result.error || 'Please try again.');
+      return;
+    }
+    replaceTransaction(txHash, result.txHash, mode, result.nonce);
+    triggerHaptic.notificationSuccess();
+    if (mode === 'speedup') {
+      navigation.replace('TransactionStatus', {...route.params, txHash: result.txHash, initialStatus: 'pending'});
+      return;
+    }
+    setReplacing(false);
+    Alert.alert(
+      'Cancellation sent',
+      'If the network confirms the cancellation first, this payment is not sent and only a small network fee is used. Activity will show the result.',
+      [{text: 'OK', onPress: () => navigation.popToTop()}],
+    );
+  };
+
+  const confirmSpeedUp = () => {
+    triggerHaptic.selection();
+    Alert.alert(
+      'Speed up this payment?',
+      `The same payment of ${amount} ${tokenSymbol} to ${truncateAddress(recipient, 6, 4)} is sent again with a higher network fee. Only one of them can go through.`,
+      [
+        {text: 'Not now', style: 'cancel'},
+        {text: 'Speed Up', onPress: () => replace('speedup')},
+      ],
+    );
+  };
+
+  const confirmCancel = () => {
+    triggerHaptic.selection();
+    Alert.alert(
+      'Cancel this payment?',
+      'TapPay sends a replacement that cancels it, for a small network fee. If the payment is confirmed first, it cannot be cancelled.',
+      [
+        {text: 'Keep Waiting', style: 'cancel'},
+        {text: 'Cancel Payment', style: 'destructive', onPress: () => replace('cancel')},
+      ],
+    );
+  };
 
   const openExplorer = () => {
     if (isRealTxHash) {
@@ -272,6 +330,34 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
 
   const background = <AmbientBackground />;
 
+  if (notSent) {
+    return (
+      <View style={[styles.container, {paddingTop: insets.top + 40}]}>
+        {background}
+        <View style={styles.centerState}>
+          <Text style={styles.stateTitle}>
+            {initialStatus === 'cancelled' ? 'Payment cancelled' : 'Payment not sent'}
+          </Text>
+          <Text style={styles.stateHint}>
+            {initialStatus === 'cancelled'
+              ? 'The cancellation was confirmed, so this payment was not sent. Only the network fee for the cancellation was charged.'
+              : 'The network never confirmed this payment, so no money left your wallet. You can send it again.'}
+          </Text>
+          <View style={styles.amountChip}>
+            <Text style={styles.amountChipText}>
+              {amount} {displaySymbol}
+            </Text>
+          </View>
+        </View>
+        <View style={[styles.actions, {paddingBottom: insets.bottom + 20}]}>
+          <PressableScale style={styles.primaryBtn} contentStyle={styles.btnInner} onPress={() => navigation.popToTop()}>
+            <Text style={styles.primaryBtnText}>Done</Text>
+          </PressableScale>
+        </View>
+      </View>
+    );
+  }
+
   if (status === 'pending') {
     return (
       <View style={[styles.container, {paddingTop: insets.top + 40}]}>
@@ -313,6 +399,24 @@ export default function TransactionStatusScreen({navigation, route}: Props) {
           </View>
         </View>
         <View style={[styles.actions, {paddingBottom: insets.bottom + 20}]}>
+          {canReplace && (
+            <View style={styles.actionRow}>
+              <PressableScale
+                style={[styles.secondaryBtn, styles.actionRowBtn]}
+                contentStyle={styles.btnInner}
+                onPress={confirmSpeedUp}
+                disabled={replacing}>
+                <Text style={styles.secondaryBtnText}>Speed Up</Text>
+              </PressableScale>
+              <PressableScale
+                style={[styles.secondaryBtn, styles.actionRowBtn]}
+                contentStyle={styles.btnInner}
+                onPress={confirmCancel}
+                disabled={replacing}>
+                <Text style={[styles.secondaryBtnText, {color: colors.danger}]}>Cancel Payment</Text>
+              </PressableScale>
+            </View>
+          )}
           <PressableScale style={styles.secondaryBtn} contentStyle={styles.btnInner} onPress={checkAgain}>
             <Text style={styles.secondaryBtnText}>Check Again</Text>
           </PressableScale>
@@ -476,6 +580,8 @@ function createStyles(colors: AppColors) {
     explorerLink: {flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 18},
     explorerLinkText: {fontSize: 15, fontWeight: '400', color: colors.accent},
     actions: {paddingHorizontal: 20, paddingTop: 8},
+    actionRow: {flexDirection: 'row', gap: 12},
+    actionRowBtn: {flex: 1},
     secondaryBtn: {borderRadius: 26, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginBottom: 12},
     secondaryBtnText: {fontSize: 17, fontWeight: '600', color: colors.text},
     primaryBtn: {borderRadius: 26, overflow: 'hidden', backgroundColor: colors.text},

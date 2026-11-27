@@ -151,6 +151,28 @@ export function createHandler(
         return reply(429, {error: 'Too many attempts. Try again later.'});
       }
 
+      // put: the digest signed by the wallet must match the blob actually sent.
+      if (req.action === 'put' && req.digest !== (await sha256Hex(`${req.blob.ciphertext}.${req.blob.nonce}`))) {
+        return reply(400);
+      }
+
+      // Single-use proofs: a captured put/delete is accepted at most once, so it cannot be resent
+      // inside the freshness window (a replayed put would delete the wallet's newer blob). The
+      // hash covers the signed message only: the message already binds action, credential,
+      // wallet, digest and issuedAt, and leaving the signature out means a re-encoded signature
+      // for the same message is still recognised as a replay.
+      const consume = await rest('rpc/consume_passkey_proof', {
+        method: 'POST',
+        body: JSON.stringify({p_proof_hash: await sha256Hex(message)}),
+      });
+      if (!consume.ok) {
+        log(`passkey-recovery: proof check failed (${consume.status})`);
+        return reply(503);
+      }
+      if ((await consume.json().catch(() => null)) !== true) {
+        return reply(409, {error: 'This request was already used. Please try again.', reason: 'replayed'});
+      }
+
       if (req.action === 'delete') {
         const del = await rest(
           `passkey_recovery_blobs?credential_id=eq.${req.credentialId}&wallet_address=eq.${req.walletAddress}`,
@@ -163,10 +185,6 @@ export function createHandler(
         return reply(200, {ok: true});
       }
 
-      // put: the digest signed by the wallet must match the blob actually sent.
-      if (req.digest !== (await sha256Hex(`${req.blob.ciphertext}.${req.blob.nonce}`))) {
-        return reply(400);
-      }
       // Never overwrite a blob that belongs to a different wallet.
       const existing = await rest(
         `passkey_recovery_blobs?select=wallet_address&credential_id=eq.${req.credentialId}`,

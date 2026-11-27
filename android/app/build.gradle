@@ -23,9 +23,16 @@ def releaseSigningConfigured = ["TAPPAY_KEYSTORE_FILE", "TAPPAY_KEYSTORE_PASSWOR
     !(System.getenv(it) ?: "").trim().isEmpty()
 }
 
+/**
+ * -PtappayUnsignedRelease builds an UNSIGNED release APK (app-release-unsigned.apk). CI uses it so
+ * the release key never reaches a job that runs npm or Gradle code: a separate job signs the APK
+ * with apksigner (see .github/workflows/build.yml and docs/RELEASE_SIGNING.md). Never debug-signed.
+ */
+def unsignedRelease = project.hasProperty("tappayUnsignedRelease")
+
 gradle.taskGraph.whenReady { graph ->
     def wantsRelease = graph.allTasks.any { it.name ==~ /^(assemble|bundle|package|install)Release.*/ }
-    if (wantsRelease && !releaseSigningConfigured) {
+    if (wantsRelease && !releaseSigningConfigured && !unsignedRelease) {
         throw new GradleException(
             "Release builds must be signed with the TapPay release key. Set TAPPAY_KEYSTORE_FILE, " +
             "TAPPAY_KEYSTORE_PASSWORD, TAPPAY_KEY_ALIAS and TAPPAY_KEY_PASSWORD (see docs/RELEASE_SIGNING.md). " +
@@ -74,7 +81,7 @@ android {
             signingConfig signingConfigs.debug
         }
         release {
-            signingConfig signingConfigs.release
+            signingConfig unsignedRelease ? null : signingConfigs.release
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }

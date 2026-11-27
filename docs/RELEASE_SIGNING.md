@@ -26,12 +26,33 @@ cd android && ./gradlew assembleRelease
 
 ## GitHub Actions
 
-Add these repository secrets to produce real release builds in CI:
-`TAPPAY_KEYSTORE_BASE64` (`base64 -w0 tappay-release.jks`), `TAPPAY_KEYSTORE_PASSWORD`,
-`TAPPAY_KEY_ALIAS`, `TAPPAY_KEY_PASSWORD`.
+The release key is only ever available to one job, `sign-release` in
+`.github/workflows/build.yml`. Every other job (tests, the Gradle/Metro build) runs npm and Gradle
+code, so it never receives the key or its passwords.
 
-Without the secrets (pull requests, forks) CI signs with a **throwaway key** so the build is still
-verified. That artifact is named `tappay-ci-apk-NOT-FOR-DISTRIBUTION` and must not be shared.
+| Job | Runs on | Has the release key? | Output |
+|:----|:--------|:---------------------|:-------|
+| `build` | every push and pull request | **No** | `tappay-release-unsigned` (input for signing) and `tappay-ci-apk-NOT-FOR-DISTRIBUTION`, signed with a throwaway key generated in that run. Never share it. |
+| `sign-release` | a `v*` tag, or **Run workflow** on `main` | Yes, from the `release-signing` environment | `tappay-release-apk` |
+
+`sign-release` checks out no code and runs no npm/Gradle: it downloads the unsigned APK built in
+the same workflow run, aligns it with `zipalign` and signs it with `apksigner`. Passwords are
+passed through step-level environment variables (`--ks-pass env:...`), never through
+`$GITHUB_ENV`, and the decoded keystore is deleted when the step ends. Locally,
+`./gradlew assembleRelease -PtappayUnsignedRelease` produces the same unsigned APK.
+
+### One-time setup (maintainer)
+
+1. **Settings → Environments → New environment** `release-signing`:
+   - **Required reviewers**: the maintainer(s). Every signing run then waits for approval.
+   - **Deployment branches and tags**: *Selected* → `main` and tags `v*`.
+2. Add these as **environment secrets** of `release-signing` (not repository secrets, which any
+   workflow job could read): `TAPPAY_KEYSTORE_BASE64` (`base64 -w0 tappay-release.jks`),
+   `TAPPAY_KEYSTORE_PASSWORD`, `TAPPAY_KEY_ALIAS`, `TAPPAY_KEY_PASSWORD`.
+3. Delete any repository-level `TAPPAY_*` secrets.
+
+To release: push a tag such as `v1.2.0` (or run the workflow on `main`), approve the
+`release-signing` deployment, then download `tappay-release-apk`.
 
 ## App links / Digital Asset Links
 

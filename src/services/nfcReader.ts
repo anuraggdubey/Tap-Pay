@@ -27,6 +27,7 @@ export type NfcReadStatus =
 export interface NfcReadResponse {
   status: NfcReadStatus;
   receiverAddress: string | null;
+  sessionNonce?: string;
   requestedAmount?: string;
   requestedToken?: string;
   errorMessage?: string;
@@ -225,6 +226,7 @@ export async function readReceiverAddress(
     return {
       status: 'SUCCESS',
       receiverAddress: payload.receiverAddress,
+      sessionNonce: payload.sessionNonce,
       requestedAmount: payload.amount,
       requestedToken: payload.tokenSymbol,
     };

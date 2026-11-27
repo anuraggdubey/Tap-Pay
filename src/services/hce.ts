@@ -7,7 +7,11 @@
 import {NativeModules, Platform} from 'react-native';
 import {HCESession, NFCTagType4, NFCTagType4NDEFContentType} from 'react-native-hce';
 import {SESSION_TIMEOUT_MS} from '../config/monad';
-import {encodeReceiverAddress, type TapPaymentRequest} from '../utils/apdu';
+import {
+  encodeReceiverAddress,
+  type TapEncodeOptions,
+  type TapPaymentRequest,
+} from '../utils/apdu';
 
 type TapHcePreferenceNative = {
   setPreferredService?: () => Promise<boolean>;
@@ -43,7 +47,7 @@ export type HceReceiverLease = {
   start(
     receiverAddress: string,
     expiresAt?: number,
-    paymentRequest?: TapPaymentRequest,
+    options?: string | TapPaymentRequest | TapEncodeOptions,
   ): Promise<boolean>;
   stop(): Promise<void>;
 };
@@ -86,7 +90,7 @@ export function createHceReceiverLease(): HceReceiverLease {
   const ownsSession = () => _owner === lease && !stopped;
 
   const lease: HceReceiverLease = {
-    async start(receiverAddress, expiresAt, paymentRequest) {
+    async start(receiverAddress, expiresAt, options) {
       if (!ownsSession() || started) return false;
       started = true;
       const expired = () => expiresAt !== undefined && Date.now() >= expiresAt;
@@ -94,7 +98,7 @@ export function createHceReceiverLease(): HceReceiverLease {
         if (!await preparation || !ownsSession()) return false;
         const tag = new NFCTagType4({
           type: NFCTagType4NDEFContentType.URL,
-          content: encodeReceiverAddress(receiverAddress, paymentRequest),
+          content: encodeReceiverAddress(receiverAddress, options),
           writable: false,
         });
 

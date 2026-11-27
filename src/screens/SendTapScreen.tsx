@@ -163,12 +163,19 @@ export default function SendTapScreen({navigation}: Props) {
 
     const result =
       effectiveToken === 'MON'
-        ? await broadcastTapPayment(recipient.receiverAddress, amountWei)
+        ? recipient.sessionNonce
+          ? await broadcastTapPayment(
+              recipient.receiverAddress,
+              amountWei,
+              recipient.sessionNonce,
+            )
+          : await broadcastTapPayment(recipient.receiverAddress, amountWei)
         : await broadcastTapPayment(
             recipient.receiverAddress,
             amountWei,
             effectiveToken,
             paymentAmount,
+            recipient.sessionNonce,
           );
 
     clearCountdown();

@@ -28,6 +28,10 @@ import {
   type ExpectedPaymentRequest,
 } from '../services/tapPayment';
 import {
+  createTapSessionNonce,
+  hashSessionId,
+} from '../utils/paymentSession';
+import {
   validateTapPaymentRequest,
   type TapPaymentRequest,
 } from '../utils/apdu';
@@ -127,6 +131,8 @@ export default function ReceiveTapScreen({navigation}: Props) {
 
       if (address) {
         const expiresAt = Date.now() + SESSION_TIMEOUT_MS;
+        const sessionNonce = createTapSessionNonce();
+        const expectedSessionIdHash = hashSessionId(sessionNonce);
         sessionTimer = setTimeout(() => { expireSession(); }, SESSION_TIMEOUT_MS);
         const paymentRequest: TapPaymentRequest | undefined = activeRequest
           ? {amount: activeRequest.amount, tokenSymbol: activeRequest.tokenSymbol}
@@ -134,8 +140,11 @@ export default function ReceiveTapScreen({navigation}: Props) {
         const expectedRequest: ExpectedPaymentRequest | undefined = activeRequest
           ? {amountWei: activeRequest.amountWei, tokenSymbol: activeRequest.tokenSymbol}
           : undefined;
-        // Start HCE broadcasting address (and optional payment request)
-        const started = await startReceiverBroadcast(address, expiresAt, paymentRequest);
+        // Start HCE broadcasting address + per-session nonce (and optional payment request)
+        const started = await startReceiverBroadcast(address, expiresAt, {
+          sessionNonce,
+          paymentRequest,
+        });
         if (!started) {
            if (cancelled) return;
            Alert.alert('Error', 'Failed to start NFC broadcast.');
@@ -146,16 +155,22 @@ export default function ReceiveTapScreen({navigation}: Props) {
           await stopReceiverBroadcast();
           return;
         }
-        // Detection is driven by a confirmed on-chain ledger event, not by any balance change.
+        // Detection is driven by a confirmed on-chain ledger event bound to this tap session.
         if (controller.signal.aborted) {
           await stopReceiverBroadcast();
           return;
         }
+        const isErc20Request =
+          expectedRequest !== undefined &&
+          expectedRequest.tokenSymbol.toUpperCase() !== 'MON';
         const payment = await waitForIncomingPayment(
           address,
           Math.max(0, expiresAt - Date.now()),
           controller.signal,
-          expectedRequest,
+          {
+            sessionIdHash: isErc20Request ? undefined : expectedSessionIdHash,
+            paymentRequest: expectedRequest,
+          },
         );
 
         if (payment.detected && !cancelled && !controller.signal.aborted) {

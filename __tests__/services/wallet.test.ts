@@ -29,6 +29,7 @@ jest.mock('react-native-keychain', () => {
     getSupportedBiometryType: jest.fn().mockResolvedValue('Fingerprint'),
     AUTHENTICATION_TYPE: {DEVICE_PASSCODE_OR_BIOMETRICS: 'AuthenticationWithBiometricsDevicePasscode'},
     ACCESS_CONTROL: {BIOMETRY_ANY_OR_DEVICE_PASSCODE: 'BIOMETRY_ANY_OR_DEVICE_PASSCODE'},
+    ACCESSIBLE: {WHEN_PASSCODE_SET_THIS_DEVICE_ONLY: 'AccessibleWhenPasscodeSetThisDeviceOnly'},
     SECURITY_LEVEL: {SECURE_HARDWARE: 'SECURE_HARDWARE'},
     STORAGE_TYPE: {AES_GCM: 'AES_GCM'},
   };
@@ -158,9 +159,15 @@ describe('wallet storage', () => {
     expect(await hasRecoveryPhrase()).toBe(true);
     expect(await AsyncStorage.getItem('@tappay_wallet_address')).toBe(w.address);
 
+    expect(kc.setGenericPassword.mock.calls.map((c: any[]) => c[2].service)).toEqual([
+      'com.tappay.wallet',
+      'com.tappay.wallet.phrase',
+    ]);
     for (const call of kc.setGenericPassword.mock.calls) {
       expect(call[2].accessControl).toBe('BIOMETRY_ANY_OR_DEVICE_PASSCODE');
       expect(call[2].securityLevel).toBe('SECURE_HARDWARE');
+      // iOS: never in a backup, never restorable onto another device (#125).
+      expect(call[2].accessible).toBe('AccessibleWhenPasscodeSetThisDeviceOnly');
     }
     // The secret is never written to unprotected storage.
     const stored = JSON.stringify(await AsyncStorage.getAllKeys());
@@ -484,5 +491,75 @@ describe('wallet storage', () => {
     const e = new WalletError('WALLET_EXISTS', 'x');
     expect(e).toBeInstanceOf(Error);
     expect(e.code).toBe('WALLET_EXISTS');
+  });
+});
+
+describe('iOS keychain items are ThisDeviceOnly (#125)', () => {
+  beforeEach(async () => {
+    await reset();
+    jest.replaceProperty(Platform, 'OS', 'ios');
+  });
+  afterEach(() => jest.restoreAllMocks());
+
+  // An install from before #125: items written without an accessible attribute, no migration flag.
+  function legacyInstall() {
+    const w = generateWallet();
+    const legacy = {accessControl: 'BIOMETRY_ANY_OR_DEVICE_PASSCODE'};
+    kc.__store['com.tappay.wallet'] = {username: w.address, password: w.privateKey, opts: legacy};
+    kc.__store['com.tappay.wallet.phrase'] = {username: w.address, password: w.mnemonic, opts: legacy};
+    return w;
+  }
+
+  it('rewrites a legacy key with ThisDeviceOnly after one authenticated read, once', async () => {
+    const w = legacyInstall();
+    await expect(loadPrivateKey()).resolves.toBe(w.privateKey);
+    expect(kc.setGenericPassword).toHaveBeenCalledTimes(1);
+    const [username, secret, opts] = kc.setGenericPassword.mock.calls[0];
+    expect([username, secret, opts.service]).toEqual([w.address, w.privateKey, 'com.tappay.wallet']);
+    expect(opts.accessible).toBe('AccessibleWhenPasscodeSetThisDeviceOnly');
+    expect(opts.accessControl).toBe('BIOMETRY_ANY_OR_DEVICE_PASSCODE');
+
+    await loadPrivateKey();
+    expect(kc.setGenericPassword).toHaveBeenCalledTimes(1); // not rewritten again
+  });
+
+  it('rewrites a legacy recovery phrase after it is read', async () => {
+    const w = legacyInstall();
+    await expect(loadRecoveryPhrase()).resolves.toBe(w.mnemonic);
+    const opts = kc.setGenericPassword.mock.calls[0][2];
+    expect(opts.service).toBe('com.tappay.wallet.phrase');
+    expect(opts.accessible).toBe('AccessibleWhenPasscodeSetThisDeviceOnly');
+    expect(kc.__store['com.tappay.wallet.phrase'].password).toBe(w.mnemonic);
+  });
+
+  it('never loses the secret when the rewrite fails: it is written back as before', async () => {
+    const w = legacyInstall();
+    kc.setGenericPassword.mockImplementationOnce(async (_u: string, _p: string, opts: any) => {
+      delete kc.__store[opts.service]; // native code deletes first, then the add fails
+      throw new Error('errSecParam');
+    });
+    await expect(loadPrivateKey()).resolves.toBe(w.privateKey);
+    expect(kc.__store['com.tappay.wallet'].password).toBe(w.privateKey);
+    expect(kc.setGenericPassword.mock.calls[1][2].accessible).toBeUndefined();
+    // Not flagged: the next read tries the migration again.
+    await loadPrivateKey();
+    expect(kc.setGenericPassword).toHaveBeenCalledTimes(3);
+    expect(kc.__store['com.tappay.wallet'].opts.accessible).toBe('AccessibleWhenPasscodeSetThisDeviceOnly');
+  });
+
+  it('a wallet created now is never rewritten on read', async () => {
+    const w = generateWallet();
+    await storeWallet({privateKey: w.privateKey, mnemonic: w.mnemonic});
+    kc.setGenericPassword.mockClear();
+    await loadPrivateKey();
+    await loadRecoveryPhrase();
+    expect(kc.setGenericPassword).not.toHaveBeenCalled();
+  });
+
+  it('does not migrate on Android', async () => {
+    jest.replaceProperty(Platform, 'OS', 'android');
+    legacyInstall();
+    await loadPrivateKey();
+    expect(kc.setGenericPassword).not.toHaveBeenCalled();
   });
 });

@@ -254,6 +254,66 @@ async function assertDeviceAuthReady(): Promise<void> {
 let _storeInFlight = false;
 
 /**
+ * Keychain options for the wallet key and recovery phrase.
+ * `accessible` matters on iOS only: WHEN_PASSCODE_SET_THIS_DEVICE_ONLY keeps both secrets out of
+ * device backups (they can never be restored onto another iPhone) and deletes them if the user
+ * removes the device passcode. Without it react-native-keychain defaults to AFTER_FIRST_UNLOCK,
+ * which is backed up. Android ignores it and uses secure hardware instead.
+ */
+function walletSecureOptions() {
+  return {
+    accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_ANY_OR_DEVICE_PASSCODE,
+    accessible: Keychain.ACCESSIBLE.WHEN_PASSCODE_SET_THIS_DEVICE_ONLY,
+    securityLevel: Keychain.SECURITY_LEVEL.SECURE_HARDWARE,
+    storage: Keychain.STORAGE_TYPE.AES_GCM,
+  } as const;
+}
+
+// AsyncStorage flag (no secret) set once a keychain item uses walletSecureOptions() (#125).
+const migratedFlagKey = (service: string) => `@tappay_keychain_this_device_only:${service}`;
+
+/**
+ * iOS installs created before #125 stored the key and phrase without a ThisDeviceOnly attribute.
+ * After an authenticated read (the only time the secret is available), rewrite the item with
+ * the current options. The native write deletes the old item before adding the new one, so if
+ * the add fails the secret is written back with the old options: it is never left missing.
+ */
+async function migrateItemAccessibility(service: string, username: string, secret: string): Promise<void> {
+  if (Platform.OS !== 'ios') {
+    return;
+  }
+  const flag = migratedFlagKey(service);
+  try {
+    if ((await AsyncStorage.getItem(flag)) === '1') {
+      return;
+    }
+  } catch (error: any) {
+    console.warn('Keychain migration check failed:', error?.message || error);
+    return;
+  }
+  // The options these items were created with before #125 (no `accessible` attribute).
+  const {accessControl, securityLevel, storage} = walletSecureOptions();
+  const legacyOptions = {accessControl, securityLevel, storage};
+  try {
+    await Keychain.setGenericPassword(username, secret, {service, ...walletSecureOptions()});
+  } catch (error: any) {
+    console.warn('Keychain migration failed, keeping the previous protection:', error?.message || error);
+    try {
+      await Keychain.setGenericPassword(username, secret, {service, ...legacyOptions});
+    } catch (restoreError: any) {
+      console.warn('Keychain restore after failed migration failed:', restoreError?.message || restoreError);
+    }
+    return;
+  }
+  try {
+    await AsyncStorage.setItem(flag, '1');
+  } catch (error: any) {
+    // Harmless: the next read rewrites the item again with the same options.
+    console.warn('Keychain migration flag not saved:', error?.message || error);
+  }
+}
+
+/**
  * Save a new wallet to the Android Keystore. Strict rules, no fallbacks:
  *  - One wallet per device: refuses if a wallet already exists (delete it first).
  *  - The phone must have a screen lock / biometrics enrolled.
@@ -299,11 +359,7 @@ export async function storeWallet(secret: {
 
     await assertDeviceAuthReady();
 
-    const secureOptions = {
-      accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_ANY_OR_DEVICE_PASSCODE,
-      securityLevel: Keychain.SECURITY_LEVEL.SECURE_HARDWARE,
-      storage: Keychain.STORAGE_TYPE.AES_GCM,
-    } as const;
+    const secureOptions = walletSecureOptions();
 
     try {
       const savedKey = await Keychain.setGenericPassword(wallet.address, secret.privateKey, {
@@ -339,6 +395,15 @@ export async function storeWallet(secret: {
       );
     }
 
+    // Both items were just written with walletSecureOptions(): nothing to migrate later.
+    try {
+      for (const service of [KEYCHAIN_SERVICE, PHRASE_SERVICE]) {
+        await AsyncStorage.setItem(migratedFlagKey(service), '1');
+      }
+    } catch (error: any) {
+      console.warn('Keychain migration flag not saved:', error?.message || error);
+    }
+
     return wallet.address;
   } finally {
     _storeInFlight = false;
@@ -370,6 +435,7 @@ export async function loadPrivateKey(
       authenticationPrompt: authPrompt(promptTitle),
     });
     if (credentials && credentials.password) {
+      await migrateItemAccessibility(KEYCHAIN_SERVICE, credentials.username, credentials.password);
       return credentials.password;
     }
     return null;
@@ -392,6 +458,7 @@ export async function loadRecoveryPhrase(
       authenticationPrompt: authPrompt(promptTitle),
     });
     if (credentials && credentials.password) {
+      await migrateItemAccessibility(PHRASE_SERVICE, credentials.username, credentials.password);
       return credentials.password;
     }
     return null;

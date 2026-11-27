@@ -11,6 +11,8 @@ import {
   stopNativeReaderMode,
   subscribeNativeTagRead,
   isNativeTapReaderAvailable,
+  formatNfcErrorHint,
+  type TapNfcErrorEvent,
 } from './tapNfcNative';
 import {decodeReceiverPayload} from '../utils/apdu';
 
@@ -26,7 +28,14 @@ export interface NfcReadResponse {
   status: NfcReadStatus;
   receiverAddress: string | null;
   sessionNonce?: string;
+  requestedAmount?: string;
+  requestedToken?: string;
   errorMessage?: string;
+}
+
+export interface ReadReceiverOptions {
+  onHint?: (hint: string, event: TapNfcErrorEvent) => void;
+  timeoutMs?: number;
 }
 
 const SCAN_TIMEOUT_MS = 15_000;
@@ -35,6 +44,8 @@ let _continuousUnsubscribe: (() => void) | null = null;
 let _nativeReaderRunning = false;
 let _scanResolver: ((text: string) => void) | null = null;
 let _scanTimer: ReturnType<typeof setTimeout> | null = null;
+let _lastScanError: TapNfcErrorEvent | null = null;
+let _scanHintHandler: ((hint: string, event: TapNfcErrorEvent) => void) | null = null;
 
 export {isNativeTapReaderAvailable} from './tapNfcNative';
 
@@ -44,6 +55,7 @@ function clearScanWaiter() {
     _scanTimer = null;
   }
   _scanResolver = null;
+  _scanHintHandler = null;
 }
 
 function isUserCancelled(error: any): boolean {
@@ -112,6 +124,7 @@ export async function startContinuousHceScan(): Promise<boolean> {
   // Always stop first to get a clean state
   await stopContinuousHceScan();
 
+  _lastScanError = null;
   _continuousUnsubscribe = subscribeNativeTagRead(
     text => {
       if (_scanResolver) {
@@ -120,8 +133,12 @@ export async function startContinuousHceScan(): Promise<boolean> {
         resolve(text);
       }
     },
-    () => {
-      // Non-fatal scan errors — keep listening
+    event => {
+      // Recoverable scan error — record and surface hint while keeping reader listening.
+      _lastScanError = event;
+      if (_scanHintHandler) {
+        _scanHintHandler(formatNfcErrorHint(event), event);
+      }
     },
   );
 
@@ -149,7 +166,10 @@ export async function stopContinuousHceScan(): Promise<void> {
 /**
  * Wait for next HCE tag read (uses native reader if available)
  */
-async function waitForHceNdefText(timeoutMs = SCAN_TIMEOUT_MS): Promise<string> {
+async function waitForHceNdefText(
+  timeoutMs = SCAN_TIMEOUT_MS,
+  onHint?: (hint: string, event: TapNfcErrorEvent) => void,
+): Promise<string> {
   if (isNativeTapReaderAvailable()) {
     // Always (re)start reader mode to ensure clean state
     const started = await startContinuousHceScan();
@@ -159,9 +179,17 @@ async function waitForHceNdefText(timeoutMs = SCAN_TIMEOUT_MS): Promise<string> 
 
     return await new Promise<string>((resolve, reject) => {
       _scanResolver = resolve;
+      _scanHintHandler = onHint ?? null;
       _scanTimer = setTimeout(() => {
+        const lastErr = _lastScanError;
         clearScanWaiter();
-        reject(new Error('NFC scan timeout'));
+        const err = new Error(
+          lastErr ? `NFC scan timeout: ${formatNfcErrorHint(lastErr)}` : 'NFC scan timeout',
+        ) as Error & {lastNfcError?: TapNfcErrorEvent};
+        if (lastErr) {
+          err.lastNfcError = lastErr;
+        }
+        reject(err);
       }, timeoutMs);
     });
   }
@@ -177,9 +205,14 @@ async function waitForHceNdefText(timeoutMs = SCAN_TIMEOUT_MS): Promise<string> 
 /**
  * Read the receiver's address from their HCE card
  */
-export async function readReceiverAddress(): Promise<NfcReadResponse> {
+export async function readReceiverAddress(
+  options?: ReadReceiverOptions,
+): Promise<NfcReadResponse> {
   try {
-    const text = await waitForHceNdefText();
+    const text = await waitForHceNdefText(
+      options?.timeoutMs ?? SCAN_TIMEOUT_MS,
+      options?.onHint,
+    );
     
     const payload = decodeReceiverPayload(text);
     if (!payload) {
@@ -194,16 +227,21 @@ export async function readReceiverAddress(): Promise<NfcReadResponse> {
       status: 'SUCCESS',
       receiverAddress: payload.receiverAddress,
       sessionNonce: payload.sessionNonce,
+      requestedAmount: payload.amount,
+      requestedToken: payload.tokenSymbol,
     };
   } catch (error: any) {
     if (isUserCancelled(error)) {
       return {status: 'CANCELLED', receiverAddress: null};
     }
     if (isTimeout(error)) {
+      const lastErr: TapNfcErrorEvent | undefined = error?.lastNfcError;
       return {
         status: 'TIMEOUT',
         receiverAddress: null,
-        errorMessage: 'No NFC signal. Hold phones back-to-back at the top for 3 seconds.',
+        errorMessage: lastErr
+          ? formatNfcErrorHint(lastErr)
+          : 'No NFC signal. Hold phones back-to-back at the top for 3 seconds.',
       };
     }
     if (isDisconnect(error)) {

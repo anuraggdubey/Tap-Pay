@@ -7,6 +7,8 @@ import React, {useState, useEffect, useRef, useMemo} from 'react';
 import {
   View,
   Text,
+  TextInput,
+  TouchableOpacity,
   StyleSheet,
   Alert,
 } from 'react-native';
@@ -23,11 +25,17 @@ import {
 import {
   createReceiverBroadcastLease,
   waitForIncomingPayment,
+  type ExpectedPaymentRequest,
 } from '../services/tapPayment';
 import {
   createTapSessionNonce,
   hashSessionId,
 } from '../utils/paymentSession';
+import {
+  validateTapPaymentRequest,
+  type TapPaymentRequest,
+} from '../utils/apdu';
+import {SUPPORTED_TOKENS} from '../config/tokens';
 import {reverseResolveAddress} from '../services/registry';
 import {recordTransaction} from '../services/history';
 import NfcNotAvailableModal from '../components/NfcNotAvailableModal';
@@ -49,6 +57,12 @@ export default function ReceiveTapScreen({navigation}: Props) {
   const [nfcModalVisible, setNfcModalVisible] = useState(false);
   const [sessionState, setSessionState] = useState<'searching' | 'expired' | 'received'>('searching');
   const [sessionAttempt, setSessionAttempt] = useState(0);
+  const [requestEditorOpen, setRequestEditorOpen] = useState(false);
+  const [requestAmountInput, setRequestAmountInput] = useState('');
+  const [requestTokenInput, setRequestTokenInput] = useState<string>('MON');
+  const [activeRequest, setActiveRequest] = useState<
+    (TapPaymentRequest & {amountWei: bigint}) | null
+  >(null);
 
   const isMountedRef = useRef(true);
   // Use refs for values that change but shouldn't restart the HCE session
@@ -120,8 +134,17 @@ export default function ReceiveTapScreen({navigation}: Props) {
         const sessionNonce = createTapSessionNonce();
         const expectedSessionIdHash = hashSessionId(sessionNonce);
         sessionTimer = setTimeout(() => { expireSession(); }, SESSION_TIMEOUT_MS);
-        // Start HCE broadcasting address + per-session nonce
-        const started = await startReceiverBroadcast(address, expiresAt, sessionNonce);
+        const paymentRequest: TapPaymentRequest | undefined = activeRequest
+          ? {amount: activeRequest.amount, tokenSymbol: activeRequest.tokenSymbol}
+          : undefined;
+        const expectedRequest: ExpectedPaymentRequest | undefined = activeRequest
+          ? {amountWei: activeRequest.amountWei, tokenSymbol: activeRequest.tokenSymbol}
+          : undefined;
+        // Start HCE broadcasting address + per-session nonce (and optional payment request)
+        const started = await startReceiverBroadcast(address, expiresAt, {
+          sessionNonce,
+          paymentRequest,
+        });
         if (!started) {
            if (cancelled) return;
            Alert.alert('Error', 'Failed to start NFC broadcast.');
@@ -137,11 +160,17 @@ export default function ReceiveTapScreen({navigation}: Props) {
           await stopReceiverBroadcast();
           return;
         }
+        const isErc20Request =
+          expectedRequest !== undefined &&
+          expectedRequest.tokenSymbol.toUpperCase() !== 'MON';
         const payment = await waitForIncomingPayment(
           address,
           Math.max(0, expiresAt - Date.now()),
           controller.signal,
-          expectedSessionIdHash,
+          {
+            sessionIdHash: isErc20Request ? undefined : expectedSessionIdHash,
+            paymentRequest: expectedRequest,
+          },
         );
 
         if (payment.detected && !cancelled && !controller.signal.aborted) {
@@ -204,8 +233,28 @@ export default function ReceiveTapScreen({navigation}: Props) {
       stopSession();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [address, sessionAttempt]);
+  }, [address, sessionAttempt, activeRequest]);
 
+  const handleApplyRequest = () => {
+    const trimmed = requestAmountInput.trim();
+    if (!trimmed) {
+      setActiveRequest(null);
+      setRequestEditorOpen(false);
+      return;
+    }
+    const validated = validateTapPaymentRequest(trimmed, requestTokenInput);
+    if (!validated) {
+      Alert.alert(
+        'Invalid Request',
+        `Enter a valid positive ${requestTokenInput} amount.`,
+      );
+      return;
+    }
+    setActiveRequest(validated);
+    setRequestEditorOpen(false);
+  };
+
+  const tokenSymbols = Object.keys(SUPPORTED_TOKENS);
 
   return (
     <View style={styles.root}>
@@ -213,6 +262,8 @@ export default function ReceiveTapScreen({navigation}: Props) {
         accent="blue"
         phase={sessionState}
         direction="receive"
+        amount={activeRequest?.amount}
+        tokenSymbol={activeRequest?.tokenSymbol}
         onClose={() => navigation.goBack()}
         footer={
           <>
@@ -223,6 +274,59 @@ export default function ReceiveTapScreen({navigation}: Props) {
                 onPress={() => setSessionAttempt(attempt => attempt + 1)}>
                 <Text style={styles.restart}>Restart receive session</Text>
               </PressableScale>
+            )}
+            {sessionState !== 'received' && (
+              requestEditorOpen ? (
+                <View style={styles.requestCard}>
+                  <View style={styles.tokenRow}>
+                    {tokenSymbols.map(sym => {
+                      const selected = sym === requestTokenInput;
+                      return (
+                        <TouchableOpacity
+                          key={sym}
+                          style={[styles.tokenChip, selected && styles.tokenChipSelected]}
+                          onPress={() => setRequestTokenInput(sym)}
+                          activeOpacity={0.7}>
+                          <Text
+                            style={[
+                              styles.tokenChipText,
+                              selected && styles.tokenChipTextSelected,
+                            ]}>
+                            {sym}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                  <View style={styles.requestInputRow}>
+                    <TextInput
+                      style={styles.requestInput}
+                      value={requestAmountInput}
+                      onChangeText={setRequestAmountInput}
+                      placeholder={`Amount (${requestTokenInput})`}
+                      placeholderTextColor={colors.textMuted}
+                      keyboardType="decimal-pad"
+                    />
+                    <TouchableOpacity
+                      style={styles.applyBtn}
+                      onPress={handleApplyRequest}
+                      activeOpacity={0.8}>
+                      <Text style={styles.applyBtnText}>Set</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.requestToggle}
+                  onPress={() => setRequestEditorOpen(true)}
+                  activeOpacity={0.7}>
+                  <Text style={styles.requestToggleText}>
+                    {activeRequest
+                      ? `Requesting ${activeRequest.amount} ${activeRequest.tokenSymbol} · Edit`
+                      : 'Request specific amount'}
+                  </Text>
+                </TouchableOpacity>
+              )
             )}
             {!!address ? (
               <Text style={styles.walletHint}>
@@ -265,6 +369,79 @@ function createStyles(colors: AppColors) {
     fontWeight: '700',
     textAlign: 'center',
     padding: 16,
+  },
+  requestToggle: {
+    alignSelf: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  requestToggleText: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  requestCard: {
+    width: '100%',
+    padding: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.16)',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    gap: 10,
+  },
+  tokenRow: {
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'center',
+  },
+  tokenChip: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  tokenChipSelected: {
+    backgroundColor: colors.accent,
+  },
+  tokenChipText: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  tokenChipTextSelected: {
+    color: '#FFFFFF',
+  },
+  requestInputRow: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+  },
+  requestInput: {
+    flex: 1,
+    height: 40,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    color: colors.text,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  applyBtn: {
+    height: 40,
+    paddingHorizontal: 18,
+    borderRadius: 10,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  applyBtnText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
   },
   });
 }

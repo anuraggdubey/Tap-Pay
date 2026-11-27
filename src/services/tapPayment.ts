@@ -14,6 +14,7 @@ import {
   stopContinuousHceScan,
 } from './nfcReader';
 import {sendPayment, withRpcFailover} from './wallet';
+import {sendTokenTransfer} from './tokens/tokenTransfer';
 import {reverseResolveAddress} from './registry';
 import {
   createSessionIdHash,
@@ -63,7 +64,22 @@ export type TapRecipient = {
   receiverAddress: string;
   receiverUsername?: string;
   sessionNonce?: string;
+  requestedAmount?: string;
+  requestedToken?: string;
 };
+
+export type ExpectedPaymentRequest = {
+  amountWei: bigint;
+  tokenSymbol: string;
+};
+
+export type IncomingPaymentFilter =
+  | string
+  | ExpectedPaymentRequest
+  | {
+      sessionIdHash?: string;
+      paymentRequest?: ExpectedPaymentRequest;
+    };
 
 export {
   createSessionId,
@@ -81,8 +97,9 @@ export {
  */
 export async function readTapRecipient(
   senderAddress: string,
+  onHint?: (hint: string) => void,
 ): Promise<{recipient?: TapRecipient; error?: string}> {
-  const readResult = await readReceiverAddress();
+  const readResult = await readReceiverAddress({onHint});
 
   if (readResult.status !== 'SUCCESS' || !readResult.receiverAddress) {
     await stopContinuousHceScan();
@@ -116,6 +133,8 @@ export async function readTapRecipient(
       receiverAddress,
       receiverUsername,
       sessionNonce: readResult.sessionNonce,
+      requestedAmount: readResult.requestedAmount,
+      requestedToken: readResult.requestedToken,
     },
   };
 }
@@ -127,8 +146,37 @@ export async function readTapRecipient(
 export async function broadcastTapPayment(
   receiverAddress: string,
   amountWei: bigint,
-  sessionNonce?: string,
+  tokenSymbolOrSessionNonce?: string,
+  displayAmount?: string,
+  sessionNonceArg?: string,
 ): Promise<{txHash: string | null; error?: string}> {
+  const isTokenSymbol =
+    typeof tokenSymbolOrSessionNonce === 'string' &&
+    Boolean(SUPPORTED_TOKENS[tokenSymbolOrSessionNonce.toUpperCase()]);
+  const tokenSymbol = isTokenSymbol ? tokenSymbolOrSessionNonce : 'MON';
+  const sessionNonce = isTokenSymbol ? sessionNonceArg : tokenSymbolOrSessionNonce;
+
+  const normalizedToken = tokenSymbol.toUpperCase();
+  if (normalizedToken !== 'MON') {
+    const token = SUPPORTED_TOKENS[normalizedToken];
+    if (!token) {
+      return {txHash: null, error: `Unsupported token: ${tokenSymbol}`};
+    }
+    const amountStr = displayAmount ?? ethers.formatUnits(amountWei, token.decimals);
+    const tokenResult = await sendTokenTransfer({
+      to: receiverAddress,
+      amount: amountStr,
+      tokenSymbol: normalizedToken,
+    });
+    if (!tokenResult.txHash) {
+      return {
+        txHash: null,
+        error: tokenResult.error || 'Transaction could not be broadcast.',
+      };
+    }
+    return {txHash: tokenResult.txHash};
+  }
+
   const sessionIdHash = sessionNonce ? hashSessionId(sessionNonce) : createSessionIdHash();
 
   const result = await sendPayment(
@@ -170,12 +218,32 @@ export type IncomingPaymentMatch = {
  * or null. This is the ONLY evidence the receiver trusts: a bare balance increase (an unrelated
  * deposit, a dust transfer) is never treated as a TapPay payment.
  */
+function normalizeIncomingFilter(filter?: IncomingPaymentFilter): {
+  expectedSessionIdHash?: string;
+  expectedRequest?: ExpectedPaymentRequest;
+} {
+  if (!filter) {
+    return {};
+  }
+  if (typeof filter === 'string') {
+    return {expectedSessionIdHash: filter};
+  }
+  if ('amountWei' in filter && 'tokenSymbol' in filter) {
+    return {expectedRequest: filter};
+  }
+  return {
+    expectedSessionIdHash: filter.sessionIdHash,
+    expectedRequest: filter.paymentRequest,
+  };
+}
+
 export async function scanForIncomingTapPayment(
   recipientAddress: string,
   fromBlock: number,
   signal?: AbortSignal,
-  expectedSessionIdHash?: string,
+  expectedFilter?: IncomingPaymentFilter,
 ): Promise<IncomingPaymentMatch | null> {
+  const {expectedSessionIdHash, expectedRequest} = normalizeIncomingFilter(expectedFilter);
   const tapLedger = MONAD_CONFIG.contracts.tapPayLedger;
   const multiLedger = MONAD_CONFIG.contracts.multiTokenLedger;
 
@@ -240,13 +308,21 @@ export async function scanForIncomingTapPayment(
             continue;
           }
         }
+        const {symbol, decimals} = describeToken(tokenAddress);
+        const amountWei = args.amount as bigint;
+        if (expectedRequest) {
+          if (
+            symbol.toUpperCase() !== expectedRequest.tokenSymbol.toUpperCase() ||
+            amountWei !== expectedRequest.amountWei
+          ) {
+            continue;
+          }
+        }
         const receipt = await provider.getTransactionReceipt(event.transactionHash);
         if (signal?.aborted) return null;
         if (!receipt || receipt.status !== 1) {
           continue;
         }
-        const {symbol, decimals} = describeToken(tokenAddress);
-        const amountWei = args.amount as bigint;
         return {
           senderAddress: args.from as string,
           amountWei,
@@ -273,7 +349,7 @@ export async function waitForIncomingPayment(
   address: string,
   timeoutMs = SESSION_TIMEOUT_MS,
   signal?: AbortSignal,
-  expectedSessionIdHash?: string,
+  expectedFilter?: IncomingPaymentFilter,
 ): Promise<IncomingPaymentInfo> {
   if (signal?.aborted || timeoutMs <= 0) {
     return {detected: false};
@@ -325,7 +401,7 @@ export async function waitForIncomingPayment(
         address,
         startBlock,
         scanController.signal,
-        expectedSessionIdHash,
+        expectedFilter,
       );
       if (finished || signal?.aborted || Date.now() >= deadline) break;
       if (match) {

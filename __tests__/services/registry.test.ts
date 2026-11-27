@@ -1,10 +1,18 @@
 const mockRpc = jest.fn();
+const mockInvoke = jest.fn();
 jest.mock('../../src/config/supabase', () => ({
-  supabase: {rpc: (...args: unknown[]) => mockRpc(...args), from: jest.fn(), functions: {invoke: jest.fn()}},
+  supabase: {
+    rpc: (...args: unknown[]) => mockRpc(...args),
+    from: jest.fn(),
+    functions: {invoke: (...args: unknown[]) => mockInvoke(...args)},
+  },
 }));
-jest.mock('../../src/services/wallet', () => ({loadPrivateKey: jest.fn()}));
+const mockLoadPrivateKey = jest.fn();
+jest.mock('../../src/services/wallet', () => ({
+  loadPrivateKey: (...args: unknown[]) => mockLoadPrivateKey(...args),
+}));
 
-import {resolveUsername, reverseResolveAddress} from '../../src/services/registry';
+import {registerUsername, resolveUsername, reverseResolveAddress} from '../../src/services/registry';
 import {supabase} from '../../src/config/supabase';
 
 const ADDRESS = '0x1111111111111111111111111111111111111111';
@@ -43,5 +51,57 @@ describe('username lookups use exact-match RPCs', () => {
     await resolveUsername('alice');
     await reverseResolveAddress(ADDRESS);
     expect(supabase.from).not.toHaveBeenCalled();
+  });
+});
+
+describe('registerUsername error handling', () => {
+  const TEST_KEY = '0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+
+  it('surfaces gateway JSON message when body.error is absent', async () => {
+    mockLoadPrivateKey.mockResolvedValue(TEST_KEY);
+    mockInvoke.mockResolvedValue({
+      data: null,
+      error: {
+        message: 'Edge Function returned a non-2xx status code',
+        context: {
+          json: async () => ({code: 'NOT_FOUND', message: 'Requested function was not found'}),
+        },
+      },
+    });
+
+    const result = await registerUsername('alice');
+    expect(result.error).toBe('Requested function was not found');
+  });
+
+  it('prefers body.error over body.message when both are present', async () => {
+    mockLoadPrivateKey.mockResolvedValue(TEST_KEY);
+    mockInvoke.mockResolvedValue({
+      data: null,
+      error: {
+        message: 'Edge Function returned a non-2xx status code',
+        context: {
+          json: async () => ({error: 'That username is reserved.', message: 'Bad Request'}),
+        },
+      },
+    });
+
+    const result = await registerUsername('admin');
+    expect(result.error).toBe('That username is reserved.');
+  });
+
+  it('ignores non-string gateway message values and falls back to error.message', async () => {
+    mockLoadPrivateKey.mockResolvedValue(TEST_KEY);
+    mockInvoke.mockResolvedValue({
+      data: null,
+      error: {
+        message: 'Edge Function returned a non-2xx status code',
+        context: {
+          json: async () => ({code: 'ERR', message: {nested: 'object'}}),
+        },
+      },
+    });
+
+    const result = await registerUsername('alice');
+    expect(result.error).toBe('Edge Function returned a non-2xx status code');
   });
 });

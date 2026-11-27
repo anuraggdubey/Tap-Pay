@@ -4,12 +4,51 @@
  * Receiver acts as Card (HCE) broadcasting their address.
  */
 
+import {NativeModules, Platform} from 'react-native';
 import {HCESession, NFCTagType4, NFCTagType4NDEFContentType} from 'react-native-hce';
 import {SESSION_TIMEOUT_MS} from '../config/monad';
-import {encodeReceiverAddress} from '../utils/apdu';
+import {
+  encodeReceiverAddress,
+  type TapEncodeOptions,
+  type TapPaymentRequest,
+} from '../utils/apdu';
+
+type TapHcePreferenceNative = {
+  setPreferredService?: () => Promise<boolean>;
+  unsetPreferredService?: () => Promise<boolean>;
+  isDefaultServiceForAid?: () => Promise<boolean>;
+  categoryAllowsForegroundPreference?: () => Promise<boolean>;
+};
+
+function getHcePreferenceModule(): TapHcePreferenceNative | undefined {
+  if (Platform.OS !== 'android') {
+    return undefined;
+  }
+  return NativeModules?.TapHcePreference as TapHcePreferenceNative | undefined;
+}
+
+async function setPreferredHceService(): Promise<void> {
+  try {
+    await getHcePreferenceModule()?.setPreferredService?.();
+  } catch {
+    // Non-fatal: HCE still works when no conflicting NDEF app is installed.
+  }
+}
+
+async function unsetPreferredHceService(): Promise<void> {
+  try {
+    await getHcePreferenceModule()?.unsetPreferredService?.();
+  } catch {
+    // Ignore cleanup failures.
+  }
+}
 
 export type HceReceiverLease = {
-  start(receiverAddress: string, expiresAt?: number, sessionNonce?: string): Promise<boolean>;
+  start(
+    receiverAddress: string,
+    expiresAt?: number,
+    options?: string | TapPaymentRequest | TapEncodeOptions,
+  ): Promise<boolean>;
   stop(): Promise<void>;
 };
 
@@ -51,7 +90,7 @@ export function createHceReceiverLease(): HceReceiverLease {
   const ownsSession = () => _owner === lease && !stopped;
 
   const lease: HceReceiverLease = {
-    async start(receiverAddress, expiresAt, sessionNonce) {
+    async start(receiverAddress, expiresAt, options) {
       if (!ownsSession() || started) return false;
       started = true;
       const expired = () => expiresAt !== undefined && Date.now() >= expiresAt;
@@ -59,7 +98,7 @@ export function createHceReceiverLease(): HceReceiverLease {
         if (!await preparation || !ownsSession()) return false;
         const tag = new NFCTagType4({
           type: NFCTagType4NDEFContentType.URL,
-          content: encodeReceiverAddress(receiverAddress, sessionNonce),
+          content: encodeReceiverAddress(receiverAddress, options),
           writable: false,
         });
 
@@ -77,6 +116,8 @@ export function createHceReceiverLease(): HceReceiverLease {
         const enabled = await serialize(async () => {
           if (!ownsSession() || expired()) return false;
           await session.setEnabled(true);
+          if (!ownsSession()) return false;
+          await setPreferredHceService();
           return ownsSession();
         });
         if (!enabled) {
@@ -106,8 +147,11 @@ export function createHceReceiverLease(): HceReceiverLease {
       if (_owner !== lease) return Promise.resolve();
       clearExpiry();
       stopPromise = serialize(async () => {
-        if (_owner === lease && _activeSession) {
-          await _activeSession.setEnabled(false);
+        if (_owner === lease) {
+          await unsetPreferredHceService();
+          if (_activeSession) {
+            await _activeSession.setEnabled(false);
+          }
         }
       }).catch(error => { console.error('Failed to stop HCE session:', error); });
       return stopPromise;

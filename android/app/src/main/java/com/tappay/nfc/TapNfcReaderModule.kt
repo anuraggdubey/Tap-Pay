@@ -6,6 +6,7 @@ import android.nfc.NdefRecord
 import android.nfc.NfcAdapter
 import android.nfc.Tag
 import android.nfc.tech.IsoDep
+import android.os.Bundle
 import android.util.Log
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
@@ -60,7 +61,8 @@ class TapNfcReaderModule(private val reactContext: ReactApplicationContext) :
         executor.execute { handleTag(tag) }
       }
 
-      adapter.enableReaderMode(activity, readerCallback, flags, null)
+      val extras = buildReaderModeExtras()
+      adapter.enableReaderMode(activity, readerCallback, flags, extras)
       readerActive.set(true)
       promise.resolve(true)
     } catch (e: Exception) {
@@ -248,8 +250,15 @@ class TapNfcReaderModule(private val reactContext: ReactApplicationContext) :
 
   companion object {
     private const val TAG = "TapNfcReader"
+    const val PRESENCE_CHECK_DELAY_MS = 250
     const val EVENT_TAG_READ = "TapNfcTagRead"
     const val EVENT_TAG_ERROR = "TapNfcTagError"
+
+    internal fun buildReaderModeExtras(delayMs: Int = PRESENCE_CHECK_DELAY_MS): Bundle {
+      return Bundle().apply {
+        putInt(NfcAdapter.EXTRA_READER_PRESENCE_CHECK_DELAY, delayMs)
+      }
+    }
 
     private val URI_PREFIXES = arrayOf(
       "",

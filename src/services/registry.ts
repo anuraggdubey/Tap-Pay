@@ -57,7 +57,7 @@ async function invokeUsernameAction(
     } catch {
       body = undefined;
     }
-    return {error: body?.error || error.message || 'Request failed', data: body};
+    return {error: body?.error || body?.message || error.message || 'Request failed', data: body};
   }
   return {data};
 }

@@ -243,7 +243,11 @@ export default function SendPaymentScreen({navigation}: Props) {
       const amountWeiForGas = isNative ? ethers.parseEther(amount) : 0n;
       
       const check = await checkSufficientBalance(address, resolvedAddress, amountWeiForGas);
-      
+      if (check.limitError) {
+        Alert.alert('Invalid Amount', check.limitError);
+        return;
+      }
+
       // If native MON, fail if insufficient MON
       if (!check.canAfford && isNative) {
         setBalanceCheckData(check);

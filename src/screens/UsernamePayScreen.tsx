@@ -126,6 +126,10 @@ export default function UsernamePayScreen({navigation}: Props) {
 
       // Pre-check balance before opening confirmation
       const check = await checkSufficientBalance(address, resolvedAddress, amountWei);
+      if (check.limitError) {
+        Alert.alert('Invalid Amount', check.limitError);
+        return;
+      }
       if (!check.canAfford) {
         setBalanceCheckData(check);
         setInsufficientModalVisible(true);

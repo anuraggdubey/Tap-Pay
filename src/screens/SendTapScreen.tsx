@@ -296,6 +296,10 @@ export default function SendTapScreen({navigation}: Props) {
     try {
       const amountWei = ethers.parseEther(amount);
       const check = await checkSufficientBalance(address, DUMMY_RECIPIENT, amountWei);
+      if (check.limitError) {
+        Alert.alert('Invalid Amount', check.limitError);
+        return;
+      }
       if (!check.canAfford) {
         setBalanceCheckData(check);
         setBalanceModalVisible(true);

@@ -64,6 +64,10 @@ describe('wallet context reset', () => {
       await act(async () => {
         await state.saveUsername('alice');
         await state.markBackupVerified();
+        await AsyncStorage.setItem(
+          '@tappay_passkey_recovery',
+          JSON.stringify({credentialId: 'cred-0000000000000000', updatedAt: 'x', walletAddress: address.toLowerCase()}),
+        );
       });
       expect(state!.address).toBe(address);
       (AsyncStorage.removeItem as jest.Mock).mockClear();
@@ -87,10 +91,13 @@ describe('wallet context reset', () => {
       if (outcome === 'authorized') {
         expect(await AsyncStorage.getItem('@tappay_username')).toBeNull();
         expect(await AsyncStorage.getItem('@tappay_backup_verified')).toBeNull();
+        // #126: the passkey link belonged to the deleted wallet.
+        expect(await AsyncStorage.getItem('@tappay_passkey_recovery')).toBeNull();
       } else {
         expect(AsyncStorage.removeItem).not.toHaveBeenCalled();
         expect(await AsyncStorage.getItem('@tappay_username')).toBe('alice');
         expect(await AsyncStorage.getItem('@tappay_backup_verified')).toBe('1');
+        expect(await AsyncStorage.getItem('@tappay_passkey_recovery')).not.toBeNull();
       }
     },
   );

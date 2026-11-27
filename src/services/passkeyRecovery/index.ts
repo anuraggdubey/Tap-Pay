@@ -61,22 +61,35 @@ export function addressOfSecret(secret: RecoverySecret): string | null {
   }
 }
 
-export async function getPasskeyStatus(): Promise<PasskeyStatus> {
+/**
+ * Local passkey link status. When `walletAddress` is given, a status recorded for a different
+ * wallet is reported as not linked: the server blob belongs to that other wallet, so this
+ * wallet is NOT recoverable with the passkey (#126).
+ */
+export async function getPasskeyStatus(walletAddress?: string | null): Promise<PasskeyStatus> {
   try {
     const raw = await AsyncStorage.getItem(STATUS_KEY);
     if (!raw) {
       return {linked: false};
     }
     const parsed = JSON.parse(raw);
-    return typeof parsed?.credentialId === 'string'
-      ? {linked: true, credentialId: parsed.credentialId, updatedAt: parsed.updatedAt}
-      : {linked: false};
+    if (typeof parsed?.credentialId !== 'string') {
+      return {linked: false};
+    }
+    if (
+      walletAddress &&
+      typeof parsed.walletAddress === 'string' &&
+      parsed.walletAddress.toLowerCase() !== walletAddress.toLowerCase()
+    ) {
+      return {linked: false};
+    }
+    return {linked: true, credentialId: parsed.credentialId, updatedAt: parsed.updatedAt};
   } catch {
     return {linked: false};
   }
 }
 
-async function setStatus(status: {credentialId: string; updatedAt: string} | null) {
+async function setStatus(status: {credentialId: string; updatedAt: string; walletAddress: string} | null) {
   if (!status) {
     await AsyncStorage.removeItem(STATUS_KEY);
     return;
@@ -133,7 +146,7 @@ export async function linkPasskey(
       signature,
       blob,
     });
-    await setStatus({credentialId, updatedAt: issuedAt});
+    await setStatus({credentialId, updatedAt: issuedAt, walletAddress: walletAddress.toLowerCase()});
     return {linked: true, credentialId, updatedAt: issuedAt};
   } finally {
     prfOutput.fill(0);
@@ -170,7 +183,11 @@ export async function recoverWithPasskey(
     if (!address || address.toLowerCase() !== stored.walletAddress.toLowerCase()) {
       throw new PasskeyRecoveryError('DECRYPT_FAILED', 'Could not unlock the recovery data.');
     }
-    await setStatus({credentialId, updatedAt: stored.updatedAt ?? deps.now().toISOString()});
+    await setStatus({
+      credentialId,
+      updatedAt: stored.updatedAt ?? deps.now().toISOString(),
+      walletAddress: stored.walletAddress.toLowerCase(),
+    });
     return {secret, address, credentialId};
   } finally {
     prfOutput.fill(0);
@@ -182,7 +199,7 @@ export async function removePasskey(
   walletAddress: string,
   deps: Deps = defaultDeps(),
 ): Promise<PasskeyStatus> {
-  const status = await getPasskeyStatus();
+  const status = await getPasskeyStatus(walletAddress);
   if (!status.linked || !status.credentialId) {
     return {linked: false};
   }

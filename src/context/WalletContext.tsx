@@ -29,6 +29,7 @@ import {reverseResolve} from '../services/registry';
 import {getTokenBalance} from '../services/tokens/tokenBalance';
 import {setHistoryWallet} from '../services/walletHistory';
 import {discardLegacyHistory} from '../services/secureHistoryStore';
+import {clearPasskeyStatus} from '../services/passkeyRecovery';
 
 const USERNAME_STORAGE_KEY = '@tappay_username';
 const BACKUP_VERIFIED_KEY = '@tappay_backup_verified';
@@ -146,7 +147,8 @@ export function WalletProvider({children}: {children: ReactNode}) {
           // Network error — balance stays 0
         }
       } else {
-        await discardLegacyHistory();
+        // No wallet on this phone: no passkey can be linked to it (#126).
+        await Promise.allSettled([discardLegacyHistory(), clearPasskeyStatus()]);
       }
     } catch (error) {
       console.error('Wallet init error:', error);
@@ -232,6 +234,8 @@ export function WalletProvider({children}: {children: ReactNode}) {
   const createWallet = useCallback(async () => {
     const wallet = generateWallet();
     await discardOrphanedHistory();
+    // A brand-new wallet has no passkey backup yet, whatever an earlier wallet had (#126).
+    await clearPasskeyStatus();
     const newAddress = await storeWallet({
       privateKey: wallet.privateKey,
       mnemonic: wallet.mnemonic,
@@ -320,6 +324,8 @@ export function WalletProvider({children}: {children: ReactNode}) {
           discardLegacyHistory(),
           AsyncStorage.removeItem(USERNAME_STORAGE_KEY),
           AsyncStorage.removeItem(BACKUP_VERIFIED_KEY),
+          // The passkey blob belongs to the deleted wallet; never show it as linked again (#126).
+          clearPasskeyStatus(),
         ]);
         return true;
       }

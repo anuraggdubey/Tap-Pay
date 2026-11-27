@@ -47,8 +47,8 @@ export default function PasskeyRecoveryScreen(_props: Props) {
   const available = isPasskeyRecoveryConfigured();
 
   const refresh = useCallback(async () => {
-    setStatus(await getPasskeyStatus());
-  }, []);
+    setStatus(await getPasskeyStatus(address));
+  }, [address]);
 
   useEffect(() => {
     refresh();

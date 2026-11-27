@@ -84,6 +84,27 @@ class TapNfcReaderModuleTest {
   }
 
   @Test
+  fun decodesTextRecordWithVariousLanguageCodeLengths() {
+    val noLang = textRecord("", "hello", utf16 = false)
+    assertEquals("hello", TapNfcReaderModule.decodeNdefRecord(noLang))
+
+    val longLang = textRecord("en-US", recipient, utf16 = false)
+    assertEquals(recipient, TapNfcReaderModule.decodeNdefRecord(longLang))
+  }
+
+  @Test
+  fun decodesUtf16TextRecord() {
+    val record = textRecord("en", recipient, utf16 = true)
+    assertEquals(recipient, TapNfcReaderModule.decodeNdefRecord(record))
+  }
+
+  @Test
+  fun rejectsTextRecordWithLanguageLengthExceedingPayload() {
+    val record = NdefRecord(NdefRecord.TNF_WELL_KNOWN, NdefRecord.RTD_TEXT, byteArrayOf(), byteArrayOf(10, 101, 110))
+    assertNull(TapNfcReaderModule.decodeNdefRecord(record))
+  }
+
+  @Test
   fun buildsReaderModeExtrasWithPresenceCheckDelay() {
     val extras = TapNfcReaderModule.buildReaderModeExtras()
     assertEquals(
@@ -92,6 +113,17 @@ class TapNfcReaderModuleTest {
     )
   }
 
+  private fun textRecord(lang: String, text: String, utf16: Boolean): NdefRecord {
+    val langBytes = lang.toByteArray(Charsets.US_ASCII)
+    val status = ((if (utf16) 0x80 else 0x00) or (langBytes.size and 0x3F)).toByte()
+    val textBytes = text.toByteArray(if (utf16) Charsets.UTF_16 else Charsets.UTF_8)
+    return NdefRecord(
+      NdefRecord.TNF_WELL_KNOWN,
+      NdefRecord.RTD_TEXT,
+      byteArrayOf(),
+      byteArrayOf(status) + langBytes + textBytes,
+    )
+  }
   private fun uriRecord(code: Int, suffix: String): NdefRecord {
     return NdefRecord(
       NdefRecord.TNF_WELL_KNOWN,

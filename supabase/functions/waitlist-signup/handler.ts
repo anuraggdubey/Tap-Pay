@@ -1,5 +1,6 @@
 import {hashIp, validateSignup} from './validation.ts';
 import {EmailConfig, sendConfirmationEmail} from './email.ts';
+import {trustedClientIp} from '../_shared/client_ip.ts';
 
 export type Config = {
   origins: string[];
@@ -95,9 +96,8 @@ export function createHandler(config: Config | null, fetcher: typeof fetch = fet
       return reply(400);
     }
 
-    const ip = request.headers.get('cf-connecting-ip')?.trim() ??
-      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
-    if (!ip || ip.length > 45 || !/^[0-9a-fA-F:.]+$/.test(ip)) {
+    const ip = trustedClientIp(request);
+    if (!ip) {
       log('waitlist: missing trusted client IP');
       return reply(503);
     }

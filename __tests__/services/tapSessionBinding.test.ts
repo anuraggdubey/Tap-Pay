@@ -10,6 +10,7 @@ const mockQueryFilter = jest.fn();
 const mockGetBlockNumber = jest.fn();
 const mockGetTransactionReceipt = jest.fn();
 const mockSendPayment = jest.fn();
+const mockCorroborate = jest.fn(async (..._args: any[]) => 'confirmed');
 
 jest.mock('../../src/services/wallet', () => ({
   withRpcFailover: jest.fn(async (fn: any) =>
@@ -19,6 +20,8 @@ jest.mock('../../src/services/wallet', () => ({
     }),
   ),
   sendPayment: (...args: any[]) => mockSendPayment(...args),
+  getActiveRpcUrl: () => 'https://rpc-a.example',
+  corroborateLog: (...args: any[]) => mockCorroborate(...args),
 }));
 
 jest.mock('ethers', () => {
@@ -128,5 +131,46 @@ describe('Tap session nonce binding (#117)', () => {
     expect(match).not.toBeNull();
     expect(match?.txHash).toBe('0xmatching');
     expect(match?.amountWei).toBe(ethers.parseEther('2'));
+  });
+});
+
+describe('receiver needs a second endpoint to agree (#123)', () => {
+  const event = {
+    blockNumber: 100,
+    index: 3,
+    address: '0x03907aE845E016f5F1605BAE4e6392C3491e03f1',
+    topics: ['0xaa', '0xbb'],
+    data: '0x01',
+    transactionHash: '0xforged',
+    args: {from: SENDER, amount: ethers.parseEther('5'), sessionId: hashSessionId('11112222333344445555666677778888')},
+  };
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGetBlockNumber.mockResolvedValue(100);
+    mockGetTransactionReceipt.mockResolvedValue({status: 1});
+  });
+
+  async function scanWith(corroboration: string) {
+    mockCorroborate.mockResolvedValueOnce(corroboration);
+    mockQueryFilter.mockResolvedValueOnce([event]).mockResolvedValueOnce([]);
+    return scanForIncomingTapPayment(RECEIVER, 100);
+  }
+
+  it('a log only endpoint A reports (B and C have no receipt) is not detected', async () => {
+    await expect(scanWith('pending')).resolves.toBeNull();
+  });
+
+  it('a log another endpoint contradicts is not detected', async () => {
+    await expect(scanWith('mismatch')).resolves.toBeNull();
+  });
+
+  it('a corroborated log is detected, checked against the exact log and its finder', async () => {
+    const match = await scanWith('confirmed');
+    expect(match?.txHash).toBe('0xforged');
+    expect(mockCorroborate).toHaveBeenCalledWith(
+      '0xforged',
+      {address: event.address, topics: event.topics, data: event.data, index: 3},
+      'https://rpc-a.example',
+    );
   });
 });

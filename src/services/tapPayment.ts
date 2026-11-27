@@ -13,7 +13,7 @@ import {
   cancelNfcRead,
   stopContinuousHceScan,
 } from './nfcReader';
-import {sendPayment, withRpcFailover} from './wallet';
+import {corroborateLog, getActiveRpcUrl, sendPayment, withRpcFailover} from './wallet';
 import {sendTokenTransfer} from './tokens/tokenTransfer';
 import {reverseResolveAddress} from './registry';
 import {
@@ -261,6 +261,8 @@ async function scanIncomingTapPaymentChunk(
 
   try {
     return await withRpcFailover(async provider => {
+      // The endpoint behind `provider`: a match it reports is checked against another one.
+      const foundOn = getActiveRpcUrl();
       if (signal?.aborted) return {match: null, scannedToBlock: null, head: null};
       const head = toBlock ?? (await provider.getBlockNumber());
       if (signal?.aborted) return {match: null, scannedToBlock: null, head: null};
@@ -348,6 +350,23 @@ async function scanIncomingTapPaymentChunk(
           continue;
         }
         if (receipt.status !== 1) {
+          continue;
+        }
+        // One endpoint's word is not enough to show the merchant a payment (#123).
+        const corroboration = await corroborateLog(
+          event.transactionHash,
+          {address: event.address, topics: event.topics, data: event.data, index: event.index},
+          foundOn,
+        );
+        if (signal?.aborted) return {match: null, scannedToBlock: null, head: null};
+        if (corroboration === 'pending') {
+          // Not visible on a second endpoint yet: rescan this block on the next poll.
+          if (earliestPendingBlock === null || event.blockNumber < earliestPendingBlock) {
+            earliestPendingBlock = event.blockNumber;
+          }
+          continue;
+        }
+        if (corroboration === 'mismatch') {
           continue;
         }
         return {

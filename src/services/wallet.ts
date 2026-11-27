@@ -995,6 +995,55 @@ async function quorumReceiptStatus(txHash: string): Promise<ReceiptStatus> {
   return agreed.every(status => status === agreed[0]) ? agreed[0] : 'pending';
 }
 
+export type LogRef = {address: string; topics: readonly string[]; data: string; index: number};
+export type Corroboration = 'confirmed' | 'mismatch' | 'pending';
+
+/**
+ * Check a payment log that one endpoint reported against a different endpoint (#123), so one
+ * compromised or faulty RPC cannot make the receiver see a payment that never happened. The
+ * other endpoint must return a receipt with status 1 for `txHash` that contains the same log
+ * (address, topics, data) at the same log index.
+ *  - confirmed: corroborated (or the user runs their own RPC, which is trusted alone, the same
+ *    rule as for sent payments);
+ *  - mismatch: another endpoint has the receipt but it failed or lacks this log: not a payment;
+ *  - pending: no other endpoint has the receipt yet (or none could be reached): check again later.
+ */
+export async function corroborateLog(txHash: string, log: LogRef, foundOn: string): Promise<Corroboration> {
+  await rpcReady;
+  const endpoints = rpcEndpoints();
+  if (endpoints.length < 2) {
+    return 'confirmed';
+  }
+  const lower = (v: string) => v.toLowerCase();
+  for (const url of endpoints) {
+    if (url === foundOn) {
+      continue;
+    }
+    let receipt: ethers.TransactionReceipt | null;
+    try {
+      receipt = await readProviderFor(url).getTransactionReceipt(txHash);
+    } catch {
+      continue;
+    }
+    if (!receipt) {
+      continue;
+    }
+    if (receipt.status !== 1) {
+      return 'mismatch';
+    }
+    const same = receipt.logs.some(
+      l =>
+        l.index === log.index &&
+        lower(l.address) === lower(log.address) &&
+        lower(l.data) === lower(log.data) &&
+        l.topics.length === log.topics.length &&
+        l.topics.every((topic, i) => lower(topic) === lower(log.topics[i])),
+    );
+    return same ? 'confirmed' : 'mismatch';
+  }
+  return 'pending';
+}
+
 /**
  * Outcome of waiting for a receipt. A receipt is the only authoritative signal:
  *  - `confirmed`: a receipt with status 1.

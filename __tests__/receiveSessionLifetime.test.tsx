@@ -20,7 +20,11 @@ const mockHistory = jest.fn();
 const mockReverse = jest.fn();
 jest.mock('../src/context/WalletContext', () => ({useWallet: () => mockWallet}));
 jest.mock('../src/context/ThemeContext', () => ({useTheme: () => jest.requireActual('../src/theme')}));
-jest.mock('../src/services/wallet', () => ({withRpcFailover: (callback: (p: unknown) => unknown) => callback(mockProvider)}));
+jest.mock('../src/services/wallet', () => ({
+  withRpcFailover: (callback: (p: unknown) => unknown) => callback(mockProvider),
+  getActiveRpcUrl: () => 'https://rpc-a.example',
+  corroborateLog: async () => 'confirmed',
+}));
 jest.mock('../src/services/nfcReader', () => ({
   initNfc: () => mockInit(), isNfcSupported: () => mockSupported(), isNfcEnabled: () => mockEnabled(), openNfcSettings: jest.fn(),
 }));
@@ -128,7 +132,8 @@ it('stops broadcasting before processing a detected payment', async () => {
   });
   await mount();
   expect(session.enabled).toBe(false);
-  expect(mockHistory).toHaveBeenCalledWith(expect.objectContaining({txHash: '0xpayment'}));
+  // Saved pending: only a quorum receipt (status screen / reconcile) marks it confirmed (#123).
+  expect(mockHistory).toHaveBeenCalledWith(expect.objectContaining({txHash: '0xpayment', status: 'pending'}));
   expect(navigation.replace).toHaveBeenCalledWith('TransactionStatus', expect.objectContaining({txHash: '0xpayment'}));
   expect(hasText('Session expired')).toBe(false);
   await advance(SESSION_TIMEOUT_MS);

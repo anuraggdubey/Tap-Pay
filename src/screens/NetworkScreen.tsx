@@ -8,12 +8,7 @@ import {ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, View}
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import {MONAD_CONFIG} from '../config/monad';
-import {
-  SUPPORTED_CHAINS,
-  getActiveChain,
-  setActiveChainId,
-  type ChainConfig,
-} from '../config/chains';
+import {SUPPORTED_CHAINS} from '../config/chains';
 import {useTheme} from '../context/ThemeContext';
 import {Group, Row} from '../components/IosList';
 import AmbientBackground from '../components/AmbientBackground';
@@ -38,19 +33,9 @@ export default function NetworkScreen(_props: Props) {
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const [selectedChain, setSelectedChain] = useState<ChainConfig>(() => getActiveChain());
   const custom = getCustomRpcUrl();
   const active = getActiveRpcUrl();
   const defaults = getDefaultRpcEndpoints();
-
-  const selectChain = async (chain: ChainConfig) => {
-    if (chain.chainId === selectedChain.chainId) {
-      return;
-    }
-    const next = await setActiveChainId(chain.chainId);
-    setSelectedChain(next);
-    triggerHaptic.selection();
-  };
 
   const apply = async (value: string | null) => {
     if (busy) {
@@ -112,33 +97,32 @@ export default function NetworkScreen(_props: Props) {
         </View>
 
         <Group title="Chain">
-          <Row title="Network" value={selectedChain.chainName} />
-          <Row title="Chain ID" value={String(selectedChain.chainId)} />
+          <Row title="Network" value={MONAD_CONFIG.chainName} />
+          <Row title="Chain ID" value={String(MONAD_CONFIG.chainId)} />
           <Row
             title="Currency"
-            value={`${selectedChain.nativeCurrency.name} (${selectedChain.nativeCurrency.symbol})`}
+            value={`${MONAD_CONFIG.nativeCurrency.name} (${MONAD_CONFIG.nativeCurrency.symbol})`}
           />
-          <Row title="Decimals" value={String(selectedChain.nativeCurrency.decimals)} />
+          <Row title="Decimals" value={String(MONAD_CONFIG.nativeCurrency.decimals)} />
         </Group>
 
         <Group
           title="Supported EVM Networks"
-          footer="Your wallet address works across all EVM mainnets. NFC Tap-to-Pay ledger contracts are currently live on Monad Mainnet.">
+          footer="Payments and NFC Tap-to-Pay currently run on Monad Mainnet. Ethereum and Base are registered as EVM mainnets for upcoming multichain payment routing.">
           {SUPPORTED_CHAINS.map(chain => {
-            const isSelected = chain.chainId === selectedChain.chainId;
+            const isActive = chain.tapPayLedgerSupported;
             return (
               <Row
                 key={chain.key}
                 title={chain.chainName}
                 subtitle={
-                  chain.tapPayLedgerSupported
+                  isActive
                     ? `Chain ${chain.chainId} · NFC Tap-to-Pay Live`
-                    : `Chain ${chain.chainId} · EVM Ready`
+                    : `Chain ${chain.chainId} · Coming Soon`
                 }
-                value={isSelected ? 'Selected' : undefined}
+                value={isActive ? 'Active' : 'Read-only'}
                 chevron={false}
-                onPress={() => selectChain(chain)}
-                right={<Dot color={isSelected ? colors.success : colors.textSubtle} />}
+                right={<Dot color={isActive ? colors.success : colors.textSubtle} />}
               />
             );
           })}

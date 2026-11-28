@@ -12,7 +12,7 @@ import {
   Animated,
   Easing,
 } from 'react-native';
-import {formatMon, truncateAddress} from '../utils/format';
+import {formatMon} from '../utils/format';
 import {MONAD_CONFIG} from '../config/monad';
 import PressableScale from './PressableScale';
 import {useTheme} from '../context/ThemeContext';
@@ -121,7 +121,9 @@ export default function ConfirmPaymentModal({
                 {recipientUsername && (
                   <Text style={styles.username}>@{recipientUsername}</Text>
                 )}
-                <Text style={styles.address}>{truncateAddress(recipient)}</Text>
+                <Text style={styles.address} selectable>
+                  {recipient}
+                </Text>
               </View>
             </View>
 
@@ -201,9 +203,9 @@ function createStyles(colors: AppColors, _glass: AppGlass, isDark: boolean) {
   divider: {height: StyleSheet.hairlineWidth, backgroundColor: colors.separator},
   label: {fontSize: 15, color: colors.textMuted},
   value: {fontSize: 15, color: colors.text, fontWeight: '500'},
-  recipientContainer: {alignItems: 'flex-end'},
+  recipientContainer: {flex: 1, marginLeft: 12, alignItems: 'flex-end'},
   username: {fontSize: 15, fontWeight: '600', color: colors.text},
-  address: {fontSize: 12, color: colors.textMuted, fontFamily: 'monospace'},
+  address: {fontSize: 11, color: colors.textMuted, fontFamily: 'monospace', textAlign: 'right'},
   totalLabel: {fontSize: 15, fontWeight: '600', color: colors.text},
   totalValue: {fontSize: 15, fontWeight: '700', color: colors.text},
   confirmButton: {backgroundColor: colors.text, borderRadius: 28, marginBottom: 6, overflow: 'hidden'},

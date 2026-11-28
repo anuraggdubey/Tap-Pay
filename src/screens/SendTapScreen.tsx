@@ -33,7 +33,7 @@ import {
   TapRecipient,
   TapSenderPhase,
 } from '../services/tapPayment';
-import {recordTransaction} from '../services/history';
+import {recordTransaction, updateTransactionUsername} from '../services/history';
 import {reverseResolveAddress} from '../services/registry';
 import {SUPPORTED_TOKENS} from '../config/tokens';
 import ConfirmPaymentModal from '../components/ConfirmPaymentModal';
@@ -82,6 +82,10 @@ export default function SendTapScreen({navigation}: Props) {
 
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isMountedRef = useRef(true);
+  const resolvedUsernamesRef = useRef<Record<string, string>>({});
+  const pendingUsernameTxsRef = useRef<
+    Array<{walletAddress: string; txHash: string; recipientLower: string}>
+  >([]);
 
   useEffect(() => {
     navigation.setOptions({headerShown: false});
@@ -139,17 +143,35 @@ export default function SendTapScreen({navigation}: Props) {
   };
 
   const hydrateRecipientUsername = (recipient: TapRecipient) => {
+    const recipientLower = recipient.receiverAddress.toLowerCase();
     if (recipient.receiverUsername) {
+      resolvedUsernamesRef.current[recipientLower] = recipient.receiverUsername;
       return;
     }
     reverseResolveAddress(recipient.receiverAddress)
       .then(username => {
-        if (!username || !isMountedRef.current) {
+        if (!username) {
+          return;
+        }
+        resolvedUsernamesRef.current[recipientLower] = username;
+        if (typeof updateTransactionUsername === 'function') {
+          const remaining: Array<{walletAddress: string; txHash: string; recipientLower: string}> =
+            [];
+          for (const entry of pendingUsernameTxsRef.current) {
+            if (entry.recipientLower === recipientLower) {
+              updateTransactionUsername(entry.walletAddress, entry.txHash, username);
+            } else {
+              remaining.push(entry);
+            }
+          }
+          pendingUsernameTxsRef.current = remaining;
+        }
+        if (!isMountedRef.current) {
           return;
         }
         setPendingRecipient(prev =>
           prev &&
-          prev.receiverAddress.toLowerCase() === recipient.receiverAddress.toLowerCase()
+          prev.receiverAddress.toLowerCase() === recipientLower
             ? {...prev, receiverUsername: username}
             : prev,
         );
@@ -225,16 +247,28 @@ export default function SendTapScreen({navigation}: Props) {
       return;
     }
 
+    const recipientLower = recipient.receiverAddress.toLowerCase();
+    const resolvedUsername =
+      recipient.receiverUsername || resolvedUsernamesRef.current[recipientLower];
+
     recordTransaction({
       walletAddress: address,
       direction: 'sent',
       counterparty: recipient.receiverAddress,
-      counterpartyUsername: recipient.receiverUsername,
+      counterpartyUsername: resolvedUsername,
       amount: paymentAmount,
       tokenSymbol: effectiveToken,
       status: 'pending',
       txHash: result.txHash,
     });
+
+    if (!resolvedUsername) {
+      pendingUsernameTxsRef.current.push({
+        walletAddress: address,
+        txHash: result.txHash,
+        recipientLower,
+      });
+    }
 
     if (!isMountedRef.current) {
       return;
@@ -244,7 +278,7 @@ export default function SendTapScreen({navigation}: Props) {
       amount: paymentAmount,
       recipient: recipient.receiverAddress,
       direction: 'sent',
-      counterpartyUsername: recipient.receiverUsername,
+      counterpartyUsername: resolvedUsername,
       tokenSymbol: effectiveToken,
     });
   };

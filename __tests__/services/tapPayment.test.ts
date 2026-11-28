@@ -77,6 +77,14 @@ describe('readTapRecipient', () => {
     expect(result.recipient?.receiverAddress).toBeTruthy();
     expect(result.recipient?.receiverUsername).toBeUndefined();
   });
+
+  it('skips blocking username lookup when skipUsernameLookup is true (#137)', async () => {
+    mockReadReceiverAddress.mockResolvedValue({status: 'SUCCESS', receiverAddress: RECEIVER_LOWER});
+    const result = await readTapRecipient(SENDER, undefined, {skipUsernameLookup: true});
+    expect(result.recipient?.receiverAddress).toBe('0xabCDEF1234567890ABcDEF1234567890aBCDeF12');
+    expect(result.recipient?.receiverUsername).toBeUndefined();
+    expect(mockReverseResolve).not.toHaveBeenCalled();
+  });
 });
 
 describe('broadcastTapPayment', () => {

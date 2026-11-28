@@ -193,8 +193,6 @@ class TapNfcReaderModule(private val reactContext: ReactApplicationContext) :
       }
     }
 
-    val maxChunk = readMaxReadLength(isoDep)
-
     val selectFile = byteArrayOf(0x00, 0xA4.toByte(), 0x00, 0x0C, 0x02, 0xE1.toByte(), 0x04)
     if (!isApduSuccess(isoDep.transceive(selectFile))) {
       return Type4ReadOutcome.Failure(ERR_READ_FAILED, "Could not select NDEF file on HCE card")
@@ -213,6 +211,37 @@ class TapNfcReaderModule(private val reactContext: ReactApplicationContext) :
     val ndefMessageBytes = ByteArray(nlen)
     var offset = 2
     var copied = 0
+
+    // Fast path (#136): skip SELECT CC + READ BINARY CC (2 RF round-trips) when the payload
+    // fits in a single short READ BINARY. Fall back to CC/MLe chunking if the card requires it.
+    var maxChunk = MAX_SHORT_APDU_LE
+    if (nlen <= MAX_SHORT_APDU_LE) {
+      val fastResponse =
+        isoDep.transceive(
+          byteArrayOf(
+            0x00,
+            0xB0.toByte(),
+            0x00,
+            0x02,
+            nlen.toByte(),
+          ),
+        )
+      if (isApduSuccess(fastResponse) && fastResponse.size > 2) {
+        val dataLen = fastResponse.size - 2
+        val take = minOf(dataLen, nlen)
+        System.arraycopy(fastResponse, 0, ndefMessageBytes, 0, take)
+        copied = take
+        offset = 2 + take
+      }
+    }
+
+    if (copied < nlen) {
+      maxChunk = readMaxReadLength(isoDep)
+      if (!isApduSuccess(isoDep.transceive(selectFile))) {
+        return Type4ReadOutcome.Failure(ERR_READ_FAILED, "Could not re-select NDEF file on HCE card")
+      }
+    }
+
     while (copied < nlen) {
       val toRead = minOf(maxChunk, nlen - copied)
       val chunkResponse =

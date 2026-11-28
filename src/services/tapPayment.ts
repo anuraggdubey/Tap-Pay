@@ -98,6 +98,7 @@ export {
 export async function readTapRecipient(
   senderAddress: string,
   onHint?: (hint: string) => void,
+  options?: {skipUsernameLookup?: boolean},
 ): Promise<{recipient?: TapRecipient; error?: string}> {
   const readResult = await readReceiverAddress({onHint});
 
@@ -122,10 +123,12 @@ export async function readTapRecipient(
   }
 
   let receiverUsername: string | undefined;
-  try {
-    receiverUsername = (await reverseResolveAddress(receiverAddress)) || undefined;
-  } catch {
-    // Username is optional; the address is what the user confirms.
+  if (!options?.skipUsernameLookup) {
+    try {
+      receiverUsername = (await reverseResolveAddress(receiverAddress)) || undefined;
+    } catch {
+      // Username is optional; the address is what the user confirms.
+    }
   }
 
   return {
@@ -417,6 +420,16 @@ export async function scanForIncomingTapPayment(
   return null;
 }
 
+/** Snapshot the current block head so ReceiveTapScreen can run it in parallel with HCE startup (#136). */
+export async function snapshotCurrentBlockNumber(): Promise<number | null> {
+  try {
+    const head = await withRpcFailover(p => p.getBlockNumber());
+    return Number.isSafeInteger(head) && head > 0 ? head : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Wait for a confirmed incoming TapPay payment to `address`. Detection is driven entirely by a
  * confirmed ledger PaymentLogged event emitted at or after the block where we started listening —
@@ -427,6 +440,7 @@ export async function waitForIncomingPayment(
   timeoutMs = SESSION_TIMEOUT_MS,
   signal?: AbortSignal,
   expectedFilter?: IncomingPaymentFilter,
+  initialStartBlockPromise?: Promise<number | null>,
 ): Promise<IncomingPaymentInfo> {
   if (signal?.aborted || timeoutMs <= 0) {
     return {detected: false};
@@ -453,6 +467,16 @@ export async function waitForIncomingPayment(
   // block 0: that would scan the whole history and report an old payment as this tap (#124).
   // If the head cannot be read, keep retrying until it can or the session ends.
   const readStartBlock = async (): Promise<number | null> => {
+    if (initialStartBlockPromise) {
+      try {
+        const prefetched = await initialStartBlockPromise;
+        if (prefetched !== null && Number.isSafeInteger(prefetched) && prefetched > 0) {
+          return prefetched;
+        }
+      } catch {
+        // Fall through to standard retry loop.
+      }
+    }
     while (!finished && !signal?.aborted && Date.now() < deadline) {
       try {
         const head = await withRpcFailover(p => p.getBlockNumber());

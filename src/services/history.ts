@@ -156,6 +156,25 @@ export function updateTransactionStatus(txHash: string, status: 'confirmed' | 'f
   }));
 }
 
+export function updateTransactionUsername(
+  walletAddress: string,
+  txHash: string,
+  counterpartyUsername: string,
+) {
+  const state = histories.get(walletAddress.toLowerCase()) ?? histories.get(activeScope);
+  if (!state) {
+    return;
+  }
+  mutate(state, rows =>
+    rows.map(tx => {
+      if (tx.txHash.toLowerCase() === txHash.toLowerCase() && !tx.counterpartyUsername) {
+        return {...tx, counterpartyUsername};
+      }
+      return tx;
+    }),
+  );
+}
+
 const REAL_TX_HASH = /^0x[0-9a-fA-F]{64}$/;
 
 /**

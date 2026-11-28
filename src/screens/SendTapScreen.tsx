@@ -33,7 +33,8 @@ import {
   TapRecipient,
   TapSenderPhase,
 } from '../services/tapPayment';
-import {recordTransaction} from '../services/history';
+import {recordTransaction, updateTransactionUsername} from '../services/history';
+import {reverseResolveAddress} from '../services/registry';
 import {SUPPORTED_TOKENS} from '../config/tokens';
 import ConfirmPaymentModal from '../components/ConfirmPaymentModal';
 import InsufficientBalanceModal from '../components/InsufficientBalanceModal';
@@ -81,6 +82,10 @@ export default function SendTapScreen({navigation}: Props) {
 
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isMountedRef = useRef(true);
+  const resolvedUsernamesRef = useRef<Record<string, string>>({});
+  const pendingUsernameTxsRef = useRef<
+    Array<{walletAddress: string; txHash: string; recipientLower: string}>
+  >([]);
 
   useEffect(() => {
     navigation.setOptions({headerShown: false});
@@ -135,6 +140,45 @@ export default function SendTapScreen({navigation}: Props) {
     setScanHint(null);
     setPhase('idle');
     setActiveAmount('');
+  };
+
+  const hydrateRecipientUsername = (recipient: TapRecipient) => {
+    const recipientLower = recipient.receiverAddress.toLowerCase();
+    if (recipient.receiverUsername) {
+      resolvedUsernamesRef.current[recipientLower] = recipient.receiverUsername;
+      return;
+    }
+    reverseResolveAddress(recipient.receiverAddress)
+      .then(username => {
+        if (!username) {
+          return;
+        }
+        resolvedUsernamesRef.current[recipientLower] = username;
+        if (typeof updateTransactionUsername === 'function') {
+          const remaining: Array<{walletAddress: string; txHash: string; recipientLower: string}> =
+            [];
+          for (const entry of pendingUsernameTxsRef.current) {
+            if (entry.recipientLower === recipientLower) {
+              updateTransactionUsername(entry.walletAddress, entry.txHash, username);
+            } else {
+              remaining.push(entry);
+            }
+          }
+          pendingUsernameTxsRef.current = remaining;
+        }
+        if (!isMountedRef.current) {
+          return;
+        }
+        setPendingRecipient(prev =>
+          prev &&
+          prev.receiverAddress.toLowerCase() === recipientLower
+            ? {...prev, receiverUsername: username}
+            : prev,
+        );
+      })
+      .catch(() => {
+        // Username is optional; the checksummed address is what the user confirms.
+      });
   };
 
   // Step 2: user confirmed the on-screen recipient — now sign and broadcast.
@@ -203,16 +247,28 @@ export default function SendTapScreen({navigation}: Props) {
       return;
     }
 
+    const recipientLower = recipient.receiverAddress.toLowerCase();
+    const resolvedUsername =
+      recipient.receiverUsername || resolvedUsernamesRef.current[recipientLower];
+
     recordTransaction({
       walletAddress: address,
       direction: 'sent',
       counterparty: recipient.receiverAddress,
-      counterpartyUsername: recipient.receiverUsername,
+      counterpartyUsername: resolvedUsername,
       amount: paymentAmount,
       tokenSymbol: effectiveToken,
       status: 'pending',
       txHash: result.txHash,
     });
+
+    if (!resolvedUsername) {
+      pendingUsernameTxsRef.current.push({
+        walletAddress: address,
+        txHash: result.txHash,
+        recipientLower,
+      });
+    }
 
     if (!isMountedRef.current) {
       return;
@@ -222,7 +278,7 @@ export default function SendTapScreen({navigation}: Props) {
       amount: paymentAmount,
       recipient: recipient.receiverAddress,
       direction: 'sent',
-      counterpartyUsername: recipient.receiverUsername,
+      counterpartyUsername: resolvedUsername,
       tokenSymbol: effectiveToken,
     });
   };
@@ -322,11 +378,15 @@ export default function SendTapScreen({navigation}: Props) {
       }, 1000);
 
       // Step 1: read the recipient. This does NOT sign or broadcast anything.
-      readTapRecipient(address, hint => {
-        if (isMountedRef.current) {
-          setScanHint(hint);
-        }
-      }).then(result => {
+      readTapRecipient(
+        address,
+        hint => {
+          if (isMountedRef.current) {
+            setScanHint(hint);
+          }
+        },
+        {skipUsernameLookup: true},
+      ).then(result => {
         if (!isMountedRef.current) {
           return;
         }
@@ -342,12 +402,13 @@ export default function SendTapScreen({navigation}: Props) {
           return;
         }
 
-        // Step 2: show the recipient and wait for explicit confirmation before signing.
+        // Step 2: show the recipient immediately and resolve @username async (#137).
         triggerHaptic.notificationSuccess();
         setScanHint(null);
         setPendingRecipient(result.recipient);
         setPhase('confirming');
         setConfirmVisible(true);
+        hydrateRecipientUsername(result.recipient);
       });
     } catch (err: any) {
       triggerHaptic.notificationError();
@@ -400,11 +461,15 @@ export default function SendTapScreen({navigation}: Props) {
       });
     }, 1000);
 
-    readTapRecipient(address, hint => {
-      if (isMountedRef.current) {
-        setScanHint(hint);
-      }
-    }).then(result => {
+    readTapRecipient(
+      address,
+      hint => {
+        if (isMountedRef.current) {
+          setScanHint(hint);
+        }
+      },
+      {skipUsernameLookup: true},
+    ).then(result => {
       if (!isMountedRef.current) {
         return;
       }
@@ -436,6 +501,7 @@ export default function SendTapScreen({navigation}: Props) {
       setPendingRecipient(result.recipient);
       setPhase('confirming');
       setConfirmVisible(true);
+      hydrateRecipientUsername(result.recipient);
     });
   };
 

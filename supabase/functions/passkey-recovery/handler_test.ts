@@ -48,7 +48,7 @@ const deleteBody = (overrides: Record<string, unknown> = {}) => ({
 const getBody = (overrides: Record<string, unknown> = {}) => ({action: 'get', credentialId: CRED, ...overrides});
 
 function request(b: unknown, origin?: string, extra: Record<string, string> = {}) {
-  const headers: Record<string, string> = {'content-type': 'application/json', ...extra};
+  const headers: Record<string, string> = {'content-type': 'application/json', 'x-forwarded-for': '203.0.113.9', ...extra};
   if (origin) {
     headers.origin = origin;
   }
@@ -61,8 +61,12 @@ function request(b: unknown, origin?: string, extra: Record<string, string> = {}
 const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), {status});
 
 type Call = {url: string; init?: RequestInit};
-/** Routes REST calls; `rows` is the existing blob lookup result, `hits` the rate limiter count. */
-function stub(options: {hits?: number; rows?: unknown[]; failAt?: string; replayed?: boolean} = {}) {
+/**
+ * Routes REST calls; `rows` is the existing blob lookup result, `hits` the rate limiter count,
+ * `usedProofs` the consumed proof hashes (share one Set between handlers to model the database).
+ */
+function stub(options: {hits?: number; rows?: unknown[]; failAt?: string; usedProofs?: Set<string>} = {}) {
+  const usedProofs = options.usedProofs ?? new Set<string>();
   const calls: Call[] = [];
   const fetcher = ((url: string | URL | Request, init?: RequestInit) => {
     const u = String(url);
@@ -74,7 +78,10 @@ function stub(options: {hits?: number; rows?: unknown[]; failAt?: string; replay
       return Promise.resolve(json(options.hits ?? 1));
     }
     if (u.includes('rpc/consume_passkey_proof')) {
-      return Promise.resolve(json(options.replayed ? false : true));
+      const hash = JSON.parse(String(init?.body)).p_proof_hash;
+      const first = !usedProofs.has(hash);
+      usedProofs.add(hash);
+      return Promise.resolve(json(first));
     }
     if (init?.method === 'GET') {
       return Promise.resolve(json(options.rows ?? []));
@@ -190,43 +197,83 @@ Deno.test('upstream failures return a generic 503 and never leak details', async
   assert(!text.includes('rate limiter'));
 });
 
-Deno.test('replayed put or delete proof is rejected with 409 (#131)', async () => {
-  const sPut = stub({replayed: true});
-  const resPut = await createHandler(config, verifyAs(WALLET), sPut.fetcher, quiet)(request(await putBody()));
-  assert(resPut.status === 409);
-  assert(!sPut.calls.some(c => c.url.includes('passkey_recovery_blobs')));
-
-  const sDel = stub({replayed: true});
-  const resDel = await createHandler(config, verifyAs(WALLET), sDel.fetcher, quiet)(request(deleteBody()));
-  assert(resDel.status === 409);
-  assert(!sDel.calls.some(c => c.init?.method === 'DELETE'));
+Deno.test('get buckets use the trusted client address, never a spoofed one', async () => {
+  const bucket = async (forwarded: string) => {
+    const s = stub({rows: []});
+    await createHandler(config, verifyAs(null), s.fetcher, quiet)(request(getBody(), undefined, {'x-forwarded-for': forwarded}));
+    return JSON.parse(String(s.calls[0].init?.body)).p_bucket as string;
+  };
+  assert(await bucket('10.0.0.1, 203.0.113.9') === await bucket('10.0.0.2, 203.0.113.9'));
+  assert(await bucket('10.0.0.1, 203.0.113.9') !== await bucket('10.0.0.1, 203.0.113.10'));
 });
 
-Deno.test('equivalent signature encodings for the same proof produce the same proof hash (#131)', async () => {
-  const s1 = stub();
-  await createHandler(config, verifyAs(WALLET), s1.fetcher, quiet)(
-    request(await putBody({signature: '0x' + '1'.repeat(128) + '1b'})),
-  );
-  const s2 = stub();
-  await createHandler(config, verifyAs(WALLET), s2.fetcher, quiet)(
-    request(await putBody({signature: '0x' + '1'.repeat(128) + '00'})),
-  );
-  const c1 = s1.calls.find(c => c.url.includes('rpc/consume_passkey_proof'));
-  const c2 = s2.calls.find(c => c.url.includes('rpc/consume_passkey_proof'));
-  assert(c1 && c2);
-  assert(JSON.parse(String(c1.init?.body)).p_proof_hash === JSON.parse(String(c2.init?.body)).p_proof_hash);
+Deno.test('get without a trusted client address fails closed (no shared bucket)', async () => {
+  const s = stub({rows: []});
+  const req = request(getBody());
+  req.headers.delete('x-forwarded-for');
+  assert((await createHandler(config, verifyAs(null), s.fetcher, quiet)(req)).status === 503);
+  assert(s.calls.length === 0);
 });
 
-Deno.test('rate limiter uses the right-most X-Forwarded-For hop, ignoring spoofed left-most IPs (#132)', async () => {
-  const s1 = stub({rows: []});
-  await createHandler(config, verifyAs(null), s1.fetcher, quiet)(
-    request(getBody(), undefined, {'x-forwarded-for': '1.2.3.4, 203.0.113.9'}),
+Deno.test('the same signed put cannot be used twice', async () => {
+  const usedProofs = new Set<string>();
+  const body = await putBody();
+  const first = stub({rows: [], usedProofs});
+  assert((await createHandler(config, verifyAs(WALLET), first.fetcher, quiet)(request(body))).status === 200);
+
+  const replay = stub({rows: [], usedProofs});
+  const res = await createHandler(config, verifyAs(WALLET), replay.fetcher, quiet)(request(body));
+  assert(res.status === 409 && (await res.json()).reason === 'replayed');
+  // The replay never reaches the blob table: no delete of the current blob, no write.
+  assert(!replay.calls.some(c => c.url.includes('passkey_recovery_blobs')));
+});
+
+Deno.test('a replayed old put cannot delete the newer passkey blob', async () => {
+  // Passkey A is linked, then replaced by passkey B. Resending A's captured request must fail.
+  const usedProofs = new Set<string>();
+  const credB = 'B'.repeat(22);
+  const putA = await putBody({issuedAt: new Date(Date.now() - 60_000).toISOString()});
+  const putB = await putBody({credentialId: credB});
+  for (const body of [putA, putB]) {
+    const s = stub({rows: [], usedProofs});
+    assert((await createHandler(config, verifyAs(WALLET), s.fetcher, quiet)(request(body))).status === 200);
+  }
+  const attacker = stub({rows: [], usedProofs});
+  const res = await createHandler(config, verifyAs(WALLET), attacker.fetcher, quiet)(request(putA));
+  assert(res.status === 409);
+  assert(!attacker.calls.some(c => c.init?.method === 'DELETE'));
+});
+
+Deno.test('the same signed delete cannot be used twice', async () => {
+  const usedProofs = new Set<string>();
+  const body = deleteBody();
+  const first = stub({usedProofs});
+  assert((await createHandler(config, verifyAs(WALLET), first.fetcher, quiet)(request(body))).status === 200);
+  const replay = stub({usedProofs});
+  assert((await createHandler(config, verifyAs(WALLET), replay.fetcher, quiet)(request(body))).status === 409);
+  assert(!replay.calls.some(c => c.init?.method === 'DELETE'));
+});
+
+Deno.test('a different encoding of the same signature is still a replay', async () => {
+  const usedProofs = new Set<string>();
+  const first = stub({usedProofs});
+  await createHandler(config, verifyAs(WALLET), first.fetcher, quiet)(request(deleteBody()));
+  const replay = stub({usedProofs});
+  const res = await createHandler(config, verifyAs(WALLET), replay.fetcher, quiet)(
+    request(deleteBody({signature: '0x' + '2'.repeat(130)})),
   );
-  const s2 = stub({rows: []});
-  await createHandler(config, verifyAs(null), s2.fetcher, quiet)(
-    request(getBody(), undefined, {'x-forwarded-for': '9.9.9.9, 203.0.113.9'}),
-  );
-  const b1 = JSON.parse(String(s1.calls[0].init?.body)).p_bucket;
-  const b2 = JSON.parse(String(s2.calls[0].init?.body)).p_bucket;
-  assert(b1 === b2);
+  assert(res.status === 409);
+});
+
+Deno.test('proofs are consumed only after the signature is verified', async () => {
+  const s = stub();
+  assert((await createHandler(config, verifyAs(OTHER), s.fetcher, quiet)(request(await putBody()))).status === 401);
+  assert(!s.calls.some(c => c.url.includes('rpc/consume_passkey_proof')));
+});
+
+Deno.test('fails closed when the replay check is unavailable', async () => {
+  const s = stub({failAt: 'rpc/consume_passkey_proof'});
+  const res = await createHandler(config, verifyAs(WALLET), s.fetcher, quiet)(request(deleteBody()));
+  assert(res.status === 503);
+  assert(!s.calls.some(c => c.init?.method === 'DELETE'));
 });

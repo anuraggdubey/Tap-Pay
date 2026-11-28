@@ -1,7 +1,8 @@
--- Single-use passkey recovery ownership proofs (#131: fixes replay within the 5-minute window).
--- The passkey-recovery Edge Function hashes each verified proof (message + signature) and
--- records it here; a proof that was already consumed is rejected. Only the service role can use
--- this. Idempotent: safe to run more than once.
+-- Single-use passkey recovery proofs (fixes replay within the 5-minute freshness window).
+-- The passkey-recovery Edge Function hashes each verified put/delete proof message and records it
+-- here; a proof that was already consumed is rejected, so a captured request cannot be resent to
+-- delete or replace the wallet's current passkey blob. Only the service role can use this.
+-- Same pattern as 006_username_proof_single_use.sql. Idempotent: safe to run more than once.
 
 create table if not exists public.passkey_proofs_used (
   proof_hash text primary key check (proof_hash ~ '^[0-9a-f]{64}$'),

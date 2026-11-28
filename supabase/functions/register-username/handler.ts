@@ -1,6 +1,7 @@
 import {buildUsernameAuthMessage, normalizeUsername} from './message.ts';
 import {validateUsernameRequest} from './validation.ts';
 import {isReservedUsername} from './reserved.ts';
+import {trustedClientIp} from '../_shared/client_ip.ts';
 
 export type Config = {
   origins: string[];
@@ -16,29 +17,8 @@ const GENERIC = {error: 'Unable to complete the request. Please try again.'};
 const WINDOW_SECONDS = 3600;
 const REGISTER_LIMIT = 10; // registrations per client address per hour
 const RELEASE_LIMIT = 20; // releases per client address per hour
-
-function clientAddress(request: Request): string {
-  const cfIp = request.headers.get('cf-connecting-ip')?.trim();
-  if (cfIp) {
-    return cfIp;
-  }
-  const realIp = request.headers.get('x-real-ip')?.trim();
-  if (realIp) {
-    return realIp;
-  }
-  const forwarded = request.headers.get('x-forwarded-for');
-  if (forwarded) {
-    // Use the right-most entry added by the trusted edge proxy, never the spoofable left-most value (#132).
-    const hops = forwarded
-      .split(',')
-      .map(part => part.trim())
-      .filter(Boolean);
-    if (hops.length > 0) {
-      return hops[hops.length - 1];
-    }
-  }
-  return 'unknown';
-}
+const WALLET_REGISTER_LIMIT = 5; // registrations per wallet per hour
+const WALLET_RELEASE_LIMIT = 5; // releases per wallet per hour
 
 async function sha256Hex(text: string): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
@@ -95,6 +75,13 @@ export function createHandler(
       return reply(400);
     }
 
+    // No trusted client address: fail closed instead of sharing one bucket among all such callers.
+    const ip = trustedClientIp(request);
+    if (!ip) {
+      log('register-username: missing trusted client IP');
+      return reply(503);
+    }
+
     if (req.action === 'register' && isReservedUsername(normalizeUsername(req.username))) {
       return reply(400, {error: 'That username is reserved. Please choose another.', reason: 'reserved'});
     }
@@ -130,23 +117,27 @@ export function createHandler(
       });
 
     try {
-      // Rate limit verified requests per client address. Wallets are free to generate, so a valid
-      // signature alone does not stop mass squatting. Fails closed if the limiter is down.
+      // Rate limit verified requests per client address and per wallet. Wallets are free to
+      // generate, so a valid signature alone does not stop mass squatting; the per-wallet bucket
+      // means a faked client address alone is not enough either. Fails closed if the limiter is down.
       const isRegister = req.action === 'register';
-      const limiter = await rest('rpc/consume_username_rate_limit', {
-        method: 'POST',
-        body: JSON.stringify({
-          p_bucket: await sha256Hex(`${req.action}:${clientAddress(request)}`),
-          p_window_seconds: WINDOW_SECONDS,
-        }),
-      });
-      if (!limiter.ok) {
-        log(`register-username: rate limiter failed (${limiter.status})`);
-        return reply(503);
-      }
-      const hits = Number(await limiter.json().catch(() => NaN));
-      if (!Number.isFinite(hits) || hits > (isRegister ? REGISTER_LIMIT : RELEASE_LIMIT)) {
-        return reply(429, {error: 'Too many attempts. Please try again later.', reason: 'rate_limited'});
+      const buckets: [string, number][] = [
+        [`${req.action}:${ip}`, isRegister ? REGISTER_LIMIT : RELEASE_LIMIT],
+        [`${req.action}:wallet:${req.walletAddress}`, isRegister ? WALLET_REGISTER_LIMIT : WALLET_RELEASE_LIMIT],
+      ];
+      for (const [source, limit] of buckets) {
+        const limiter = await rest('rpc/consume_username_rate_limit', {
+          method: 'POST',
+          body: JSON.stringify({p_bucket: await sha256Hex(source), p_window_seconds: WINDOW_SECONDS}),
+        });
+        if (!limiter.ok) {
+          log(`register-username: rate limiter failed (${limiter.status})`);
+          return reply(503);
+        }
+        const hits = Number(await limiter.json().catch(() => NaN));
+        if (!Number.isFinite(hits) || hits > limit) {
+          return reply(429, {error: 'Too many attempts. Please try again later.', reason: 'rate_limited'});
+        }
       }
 
       // Single-use proofs: a captured {message, signature} pair is accepted at most once, so it
@@ -207,6 +198,13 @@ export function createHandler(
         return reply(200, {ok: true, walletAddress: req.walletAddress});
       }
       const body = await insert.json().catch(() => ({}));
+      // Migration 011: a handle released less than 60 days ago is reserved for its previous wallet.
+      if (body.code === 'P0001' && body.message === 'username_cooldown') {
+        return reply(409, {
+          error: 'This username was released recently and cannot be registered yet. Please choose another.',
+          reason: 'released_recently',
+        });
+      }
       if (insert.status === 409 || body.code === '23505') {
         const reason = String(body.message || '').includes('wallet') ? 'wallet_taken' : 'taken';
         return reply(409, {error: 'Already registered.', reason});

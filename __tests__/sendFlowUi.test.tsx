@@ -18,7 +18,7 @@ jest.mock('react-native-safe-area-context', () => ({
 }));
 jest.mock('@react-native-clipboard/clipboard', () => ({__esModule: true, default: {setString: jest.fn()}}));
 const mockResolve = jest.fn();
-jest.mock('../src/services/registry', () => ({resolveUsername: (...a: unknown[]) => mockResolve(...a)}));
+jest.mock('../src/services/registry', () => ({resolveUsernameDetails: (...a: unknown[]) => mockResolve(...a)}));
 jest.mock('../src/context/WalletContext', () => ({
   useWallet: () => ({address: '0x1111111111111111111111111111111111111111', balance: 5n * 10n ** 18n, refreshBalance: jest.fn()}),
 }));
@@ -28,7 +28,7 @@ jest.mock('../src/services/wallet', () => ({
   estimateGasCost: jest.fn().mockResolvedValue(null),
 }));
 jest.mock('../src/services/crossBorder/transferService', () => ({executeCrossBorderTransfer: jest.fn()}));
-jest.mock('../src/services/history', () => ({recordTransaction: jest.fn()}));
+jest.mock('../src/services/history', () => ({recordTransaction: jest.fn(), getTransactionHistory: jest.fn(() => [])}));
 
 import Clipboard from '@react-native-clipboard/clipboard';
 import SendPaymentScreen from '../src/screens/SendPaymentScreen';
@@ -73,7 +73,7 @@ describe('Send Payment screen', () => {
   });
 
   it('moves to amount entry once a username resolves, showing the handle and keypad', async () => {
-    mockResolve.mockResolvedValue('0x2222222222222222222222222222222222222222');
+    mockResolve.mockResolvedValue({address: '0x2222222222222222222222222222222222222222', registeredAt: null});
     await act(async () => {
       tree = ReactTestRenderer.create(<SendPaymentScreen navigation={navigation as never} />);
     });

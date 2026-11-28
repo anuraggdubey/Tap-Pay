@@ -19,6 +19,7 @@ import {useWallet} from '../context/WalletContext';
 import {useTheme} from '../context/ThemeContext';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import {validateAmount} from '../utils/validation';
+import {confirmPayBehindStuck} from '../utils/confirmAlert';
 import {formatMon, truncateAddress} from '../utils/format';
 import {
   checkSufficientBalance,
@@ -352,6 +353,13 @@ export default function SendTapScreen({navigation}: Props) {
     try {
       const amountWei = ethers.parseEther(amount);
       const check = await checkSufficientBalance(address, DUMMY_RECIPIENT, amountWei);
+      if (check.limitError) {
+        Alert.alert('Invalid Amount', check.limitError);
+        return;
+      }
+      if (check.stuckPayments && !(await confirmPayBehindStuck(check.stuckPayments))) {
+        return;
+      }
       if (!check.canAfford) {
         setBalanceCheckData(check);
         setBalanceModalVisible(true);

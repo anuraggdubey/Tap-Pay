@@ -209,7 +209,9 @@ export default function ReceiveTapScreen({navigation}: Props) {
             counterpartyUsername: senderUsername,
             amount: amountStr,
             tokenSymbol,
-            status: 'confirmed',
+            // Pending until a quorum receipt confirms it: the status screen (waitForReceipt) or
+            // reconcilePendingTransactions moves it to confirmed (#123).
+            status: payment.txHash ? 'pending' : 'confirmed',
             txHash: payment.txHash || 'tap-payment',
           });
 

@@ -8,6 +8,7 @@
     "android": "react-native run-android",
     "ios": "react-native run-ios",
     "lint": "eslint .",
+    "check:secrets": "node scripts/check-committed-secrets.js",
     "start": "react-native start",
     "test": "jest --forceExit",
     "compile:contracts": "npx hardhat compile",

@@ -123,6 +123,7 @@ Pay  ->  search @username  ->  choose token  ->  enter amount  ->  confirm
 
 - **Non-custodial.** TapPay never sees or stores your private key.
 - **Secure hardware.** The key is held in the Android Keystore and unlocked by your fingerprint, face or screen lock for each payment.
+- **Keys never leave the device.** On iOS the key and recovery phrase are stored in the Keychain as "this device only, passcode set": they are not included in iCloud or computer backups, are never restored onto another iPhone, and are deleted if the device passcode is removed. On a new phone, restore your wallet with the recovery phrase (or a linked passkey).
 - **One wallet per device.** Creating or restoring a wallet is refused while one exists.
 - **Recovery phrase protection.** The phrase is revealed only after phone authentication, cannot be copied, hides itself after 30 seconds and is cleared when the app goes to the background.
 - **Confirm before you pay.** The amount, recipient and fee are shown before anything is signed.
@@ -259,7 +260,11 @@ git clone https://github.com/anuraggdubey/Tap-Pay.git
 cd Tap-Pay
 npm install
 
-# Terminal 1: Metro bundler
+# Supabase config is build-time only, never committed: set TAPPAY_SUPABASE_URL and
+# TAPPAY_SUPABASE_ANON_KEY in .env (or your shell). Release builds fail without them.
+cp .env.example .env
+
+# Terminal 1: Metro bundler (add -- --reset-cache after changing .env)
 npm start
 
 # Terminal 2: build and install
@@ -269,8 +274,9 @@ npx react-native run-android
 ### Test
 
 ```bash
-npm test          # app unit tests
-npm run lint      # ESLint
+npm test               # app unit tests
+npm run lint           # ESLint
+npm run check:secrets  # fails if a Supabase key or JWT is committed (also runs in CI)
 ```
 
 ### Contracts

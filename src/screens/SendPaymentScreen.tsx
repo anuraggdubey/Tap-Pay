@@ -23,8 +23,10 @@ import {ethers} from 'ethers';
 import {useWallet} from '../context/WalletContext';
 import {useTheme} from '../context/ThemeContext';
 import {RootStackParamList} from '../navigation/AppNavigator';
-import {resolveUsername} from '../services/registry';
+import {resolveUsernameDetails} from '../services/registry';
+import {warningForResolvedHandle} from '../services/handleTrust';
 import {validateAmount, validateUsername, validateAddress} from '../utils/validation';
+import {confirmPayBehindStuck} from '../utils/confirmAlert';
 import {truncateAddress, formatMon} from '../utils/format';
 import {
   checkSufficientBalance,
@@ -126,18 +128,24 @@ export default function SendPaymentScreen({navigation}: Props) {
     triggerHaptic.impactMedium();
     setSearching(true);
     try {
-      const resolved = await resolveUsername(trimmed);
+      const resolution = await resolveUsernameDetails(trimmed);
       setSearching(false);
 
-      if (!resolved) {
+      if (!resolution) {
         triggerHaptic.notificationError();
         Alert.alert('Not Found', `@${trimmed} is not registered on Monad.`);
         return;
       }
-      triggerHaptic.notificationSuccess();
-      setResolvedAddress(resolved);
+      setResolvedAddress(resolution.address);
       setResolvedUsername(trimmed);
       setAmount('');
+      const warning = warningForResolvedHandle(trimmed, resolution);
+      if (warning) {
+        triggerHaptic.notificationError();
+        Alert.alert('Check this recipient', warning);
+      } else {
+        triggerHaptic.notificationSuccess();
+      }
     } catch (err: any) {
       setSearching(false);
       triggerHaptic.notificationError();
@@ -243,7 +251,14 @@ export default function SendPaymentScreen({navigation}: Props) {
       const amountWeiForGas = isNative ? ethers.parseEther(amount) : 0n;
       
       const check = await checkSufficientBalance(address, resolvedAddress, amountWeiForGas);
-      
+      if (check.limitError) {
+        Alert.alert('Invalid Amount', check.limitError);
+        return;
+      }
+      if (check.stuckPayments && !(await confirmPayBehindStuck(check.stuckPayments))) {
+        return;
+      }
+
       // If native MON, fail if insufficient MON
       if (!check.canAfford && isNative) {
         setBalanceCheckData(check);

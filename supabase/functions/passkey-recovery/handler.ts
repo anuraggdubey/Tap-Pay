@@ -1,5 +1,6 @@
 import {buildPasskeyProofMessage} from './message.ts';
 import {validatePasskeyRequest} from './validation.ts';
+import {trustedClientIp} from '../_shared/client_ip.ts';
 
 export type Config = {
   origins: string[];
@@ -18,29 +19,6 @@ const WRITE_LIMIT = 20; // writes per wallet per window
 async function sha256Hex(text: string): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
   return Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
-}
-
-function clientId(request: Request): string {
-  const cfIp = request.headers.get('cf-connecting-ip')?.trim();
-  if (cfIp) {
-    return cfIp;
-  }
-  const realIp = request.headers.get('x-real-ip')?.trim();
-  if (realIp) {
-    return realIp;
-  }
-  const forwarded = request.headers.get('x-forwarded-for');
-  if (forwarded) {
-    // Use the right-most entry added by the trusted edge proxy, never the spoofable left-most value (#132).
-    const hops = forwarded
-      .split(',')
-      .map(part => part.trim())
-      .filter(Boolean);
-    if (hops.length > 0) {
-      return hops[hops.length - 1];
-    }
-  }
-  return 'unknown';
 }
 
 export function createHandler(
@@ -118,24 +96,16 @@ export function createHandler(
       return !Number.isFinite(hits) || hits > limit;
     };
 
-    // Returns true when the canonical proof message is fresh and has now been consumed;
-    // hashes ONLY the canonical message (never the signature) so malleable/alias signature
-    // encodings (e.g. v=27/28 vs 0/1) cannot replay the same proof (#131).
-    const consumeProof = async (message: string): Promise<boolean> => {
-      const proofHash = await sha256Hex(message);
-      const res = await rest('rpc/consume_passkey_proof', {
-        method: 'POST',
-        body: JSON.stringify({p_proof_hash: proofHash}),
-      });
-      if (!res.ok) {
-        throw new Error('proof store unavailable');
-      }
-      return (await res.json()) === true;
-    };
-
     try {
       if (req.action === 'get') {
-        if (await limited(`get:${clientId(request)}`, READ_LIMIT)) {
+        // Blob reads are protected only by this per-client limit, so a caller without a trusted
+        // address is refused rather than sharing one bucket with every other such caller.
+        const ip = trustedClientIp(request);
+        if (!ip) {
+          log('passkey-recovery: missing trusted client IP');
+          return reply(503);
+        }
+        if (await limited(`get:${ip}`, READ_LIMIT)) {
           return reply(429, {error: 'Too many attempts. Try again later.'});
         }
         const res = await rest(
@@ -181,15 +151,26 @@ export function createHandler(
         return reply(429, {error: 'Too many attempts. Try again later.'});
       }
 
-      if (req.action === 'put') {
-        // put: the digest signed by the wallet must match the blob actually sent.
-        if (req.digest !== (await sha256Hex(`${req.blob.ciphertext}.${req.blob.nonce}`))) {
-          return reply(400);
-        }
+      // put: the digest signed by the wallet must match the blob actually sent.
+      if (req.action === 'put' && req.digest !== (await sha256Hex(`${req.blob.ciphertext}.${req.blob.nonce}`))) {
+        return reply(400);
       }
 
-      if (!(await consumeProof(message))) {
-        return reply(409, {error: 'This proof has already been used. Please sign again.'});
+      // Single-use proofs: a captured put/delete is accepted at most once, so it cannot be resent
+      // inside the freshness window (a replayed put would delete the wallet's newer blob). The
+      // hash covers the signed message only: the message already binds action, credential,
+      // wallet, digest and issuedAt, and leaving the signature out means a re-encoded signature
+      // for the same message is still recognised as a replay.
+      const consume = await rest('rpc/consume_passkey_proof', {
+        method: 'POST',
+        body: JSON.stringify({p_proof_hash: await sha256Hex(message)}),
+      });
+      if (!consume.ok) {
+        log(`passkey-recovery: proof check failed (${consume.status})`);
+        return reply(503);
+      }
+      if ((await consume.json().catch(() => null)) !== true) {
+        return reply(409, {error: 'This request was already used. Please try again.', reason: 'replayed'});
       }
 
       if (req.action === 'delete') {

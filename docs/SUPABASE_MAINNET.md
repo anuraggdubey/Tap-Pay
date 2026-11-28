@@ -15,6 +15,8 @@ TapPay uses **one** username table for **Monad Mainnet (chain ID 143)**. Wallet 
 | `supabase/migrations/007_username_rate_limit.sql` | Yes | Idempotent; rate limiter used by `register-username`. Apply before deploying the function |
 | `supabase/migrations/008_usernames_exact_lookup_only.sql` | Yes, **with the matching app release** | Revokes public `SELECT` on `usernames`; the app resolves handles through `resolve_username` / `reverse_resolve_address`. Older app builds read the table directly and will stop resolving handles |
 | `supabase/migrations/009_waitlist_double_opt_in.sql` | Yes | Idempotent; adds waitlist confirmation columns, the `waitlist_subscribers` view (confirmed only) and the issue/confirm functions. **Existing signups are not subscribers until they confirm** |
+| `supabase/migrations/010_passkey_proof_single_use.sql` | Yes | Idempotent; makes passkey recovery put/delete proofs single-use. Apply **before** deploying the updated `passkey-recovery` function (it fails closed with 503 until the function exists) |
+| `supabase/migrations/011_username_release_cooldown.sql` | Yes | Idempotent; records released handles and refuses to give a handle released less than **60 days** ago to another wallet (the previous wallet can take it back). Adds `resolve_username_details` (wallet + registration time) used by the app to warn about new or changed handles; `resolve_username` is unchanged for older builds. Redeploy `register-username` so it reports the cooldown clearly |
 | `supabase functions deploy waitlist-signup waitlist-confirm` | After migration 009 | Set `EMAIL_API_KEY`, `WAITLIST_FROM_EMAIL` and `WAITLIST_CONFIRM_URL` (https page, e.g. `https://<site>/confirm`) on `waitlist-signup` to send confirmation emails (optional `EMAIL_API_URL`, default Resend). Without them signups are stored unconfirmed and no email is sent. `waitlist-confirm` needs `ALLOWED_ORIGINS` and `WAITLIST_IP_SALT` |
 | `supabase functions deploy register-username` | After migration 004 | Verifies the wallet signature for register/release; set `ALLOWED_ORIGINS` and the service role is provided by Supabase |
 | `npm run deploy:mainnet` / `scripts/deploy-mainnet.js` | **No** unless redeploying contracts | Would deploy **new** contracts, not Supabase |
@@ -122,11 +124,28 @@ alter table public.usernames validate constraint usernames_normalized_consistenc
    then rebuild (`npm --prefix web ci && npm --prefix web run build`). No committed
    fallback is used. Other pages tolerate missing Supabase configuration.
    `WaitlistPage` remains unrouted intentionally; deployment does not enable it.
-5. Rotate the previously committed Supabase anon key using the project's supported
-   key-rotation procedure. Coordinate all consumers **before** revoking the old
-   key: web, external integrations, and the RN app (which still embeds its key).
-   RN key/config changes are deliberately not part of this patch. Public anon keys
-   are not secrets; RLS and privileges remain the security boundary.
+5. Rotate the previously committed Supabase anon key (see
+   [Rotating the committed anon key](#rotating-the-committed-anon-key-issue-27) below).
+   Public anon keys are not secrets; RLS and privileges remain the security boundary.
+
+### Rotating the committed anon key (issue #27)
+
+The RN app no longer embeds the Supabase URL or anon key: they are build-time config
+(`TAPPAY_SUPABASE_URL`, `TAPPAY_SUPABASE_ANON_KEY` in `.env` or the build
+environment, see `.env.example`). Release builds fail without them, and
+`npm run check:secrets` (run in CI) fails if a key or JWT is committed again. The old
+key is still in git history and in builds shipped before this change, so rotate it, in
+this order:
+
+1. In the Supabase dashboard (**Project Settings → API Keys**), create the new
+   publishable key (or new anon key) **without** revoking the old one yet.
+2. Set the new key everywhere it is used: the app build environment (`.env`, the
+   GitHub Actions variables `TAPPAY_SUPABASE_URL` / `TAPPAY_SUPABASE_ANON_KEY`), the
+   website (`VITE_SUPABASE_ANON_KEY` in Vercel) and any other integration.
+3. Ship an app release and redeploy the website built with the new key. Wait until
+   users have moved off older app builds (they embed the old key).
+4. Only then revoke / disable the old key in the dashboard. Requests with it start
+   failing immediately.
 
 The default limit is **5 validated requests per IP per fixed 10-minute window**,
 including invalid CAPTCHA attempts and duplicates. `WAITLIST_RATE_LIMIT` accepts

@@ -1,11 +1,39 @@
 /**
  * Validation utilities for amounts and usernames
  */
+import {ethers} from 'ethers';
+
+/** TapPayLedger payment rules (`maxPayment` 0 means no upper limit). */
+export type PaymentLimits = {minPayment: bigint; maxPayment: bigint; paused: boolean};
 
 /**
- * Validate a MON amount string input
+ * The ledger rule a native payment of `amountWei` breaks, or null when it passes (or when the
+ * limits are unknown). The ledger reverts such payments, so they must never be signed.
  */
-export function validateAmount(amount: string): {valid: boolean; error?: string} {
+export function checkPaymentLimits(amountWei: bigint, limits: PaymentLimits | null): string | null {
+  if (!limits) {
+    return null;
+  }
+  if (limits.paused) {
+    return 'Payments are temporarily paused. Please try again later.';
+  }
+  if (amountWei < limits.minPayment) {
+    return `The minimum payment is ${ethers.formatEther(limits.minPayment)} MON.`;
+  }
+  if (limits.maxPayment !== 0n && amountWei > limits.maxPayment) {
+    return `The maximum payment is ${ethers.formatEther(limits.maxPayment)} MON.`;
+  }
+  return null;
+}
+
+/**
+ * Validate a MON amount string input. With `limits`, the amount must also satisfy the ledger's
+ * minimum / maximum payment and the ledger must not be paused.
+ */
+export function validateAmount(
+  amount: string,
+  limits: PaymentLimits | null = null,
+): {valid: boolean; error?: string} {
   if (!amount || amount.trim() === '') {
     return {valid: false, error: 'Amount is required'};
   }
@@ -26,6 +54,11 @@ export function validateAmount(amount: string): {valid: boolean; error?: string}
   const parts = amount.split('.');
   if (parts[1] && parts[1].length > 18) {
     return {valid: false, error: 'Too many decimal places (max 18)'};
+  }
+
+  const limitError = checkPaymentLimits(ethers.parseEther(amount), limits);
+  if (limitError) {
+    return {valid: false, error: limitError};
   }
 
   return {valid: true};

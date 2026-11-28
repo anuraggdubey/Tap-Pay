@@ -4,7 +4,7 @@ import {Alert, Text, TextInput, TouchableOpacity} from 'react-native';
 import SendPaymentScreen from '../src/screens/SendPaymentScreen';
 import UsernamePayScreen from '../src/screens/UsernamePayScreen';
 import ConfirmPaymentModal from '../src/components/ConfirmPaymentModal';
-import {resolveUsername} from '../src/services/registry';
+import {resolveUsernameDetails} from '../src/services/registry';
 import {sendTokenTransfer} from '../src/services/tokens/tokenTransfer';
 import {checkSufficientBalance} from '../src/services/wallet';
 import {recordTransaction} from '../src/services/history';
@@ -20,14 +20,14 @@ jest.mock('../src/context/WalletContext', () => ({
 jest.mock('../src/context/ThemeContext', () => ({
   useTheme: () => ({colors: jest.requireActual('../src/theme').lightColors}),
 }));
-jest.mock('../src/services/registry', () => ({resolveUsername: jest.fn()}));
+jest.mock('../src/services/registry', () => ({resolveUsernameDetails: jest.fn()}));
 jest.mock('../src/services/tokens/tokenTransfer', () => ({sendTokenTransfer: jest.fn()}));
 jest.mock('../src/services/tokens/tokenBalance', () => ({}));
 jest.mock('../src/services/wallet', () => ({
   checkSufficientBalance: jest.fn(),
   estimateGasCost: jest.fn(),
 }));
-jest.mock('../src/services/history', () => ({recordTransaction: jest.fn()}));
+jest.mock('../src/services/history', () => ({recordTransaction: jest.fn(), getTransactionHistory: jest.fn(() => [])}));
 jest.mock('../src/components/ConfirmPaymentModal', () => 'ConfirmPaymentModal');
 jest.mock('../src/components/InsufficientBalanceModal', () => 'InsufficientBalanceModal');
 jest.mock('../src/utils/haptics', () => ({
@@ -41,6 +41,7 @@ jest.mock('../src/utils/haptics', () => ({
 
 const ORIGINAL = '0x1111111111111111111111111111111111111111';
 const REASSIGNED = '0x2222222222222222222222222222222222222222';
+const found = (address: string) => ({address, registeredAt: null});
 const transferResult = {success: true, txHash: '0xabc', amount: '1', tokenSymbol: 'AUSD'};
 
 describe.each([
@@ -54,7 +55,7 @@ describe.each([
     jest.clearAllMocks();
     jest.useFakeTimers();
     jest.spyOn(Alert, 'alert').mockImplementation(() => {});
-    (resolveUsername as jest.Mock).mockResolvedValue(ORIGINAL);
+    (resolveUsernameDetails as jest.Mock).mockResolvedValue(found(ORIGINAL));
     (sendTokenTransfer as jest.Mock).mockResolvedValue(transferResult);
     (checkSufficientBalance as jest.Mock).mockResolvedValue({
       canAfford: true,
@@ -117,17 +118,17 @@ describe.each([
     async binding => {
       const modal = await openConfirmation();
       if (binding === 'unavailable') {
-        (resolveUsername as jest.Mock).mockRejectedValue(new Error('Registry offline'));
+        (resolveUsernameDetails as jest.Mock).mockRejectedValue(new Error('Registry offline'));
       } else {
-        (resolveUsername as jest.Mock).mockResolvedValue(
-          binding === 'reassigned' ? REASSIGNED : binding === 'released' ? null : ORIGINAL,
+        (resolveUsernameDetails as jest.Mock).mockResolvedValue(
+          binding === 'reassigned' ? found(REASSIGNED) : binding === 'released' ? null : found(ORIGINAL),
         );
       }
 
       await act(async () => modal.props.onConfirm());
 
-      expect(resolveUsername).toHaveBeenCalledTimes(1);
-      expect(resolveUsername).toHaveBeenCalledWith('alice');
+      expect(resolveUsernameDetails).toHaveBeenCalledTimes(1);
+      expect(resolveUsernameDetails).toHaveBeenCalledWith('alice');
       expect(sendTokenTransfer).toHaveBeenCalledTimes(1);
       expect(sendTokenTransfer).toHaveBeenCalledWith({
         to: modal.props.recipient,
@@ -152,17 +153,28 @@ describe.each([
     });
     await act(async () => modal.props.onConfirm());
     expect(sendTokenTransfer).toHaveBeenCalledWith({to: ORIGINAL, amount: '1', tokenSymbol: 'AUSD'});
-    expect(resolveUsername).toHaveBeenCalledTimes(1);
+    expect(resolveUsernameDetails).toHaveBeenCalledTimes(1);
     expect(recordTransaction).not.toHaveBeenCalled();
     expect(navigation.navigate).not.toHaveBeenCalled();
     expect(Alert.alert).toHaveBeenCalledWith('Payment Failed', 'Rejected');
   });
 
+  it('warns before paying a handle that was registered recently (#129)', async () => {
+    (resolveUsernameDetails as jest.Mock).mockResolvedValue({address: ORIGINAL, registeredAt: new Date().toISOString()});
+    await search();
+    expect(Alert.alert).toHaveBeenCalledWith('Check this recipient', expect.stringMatching(/@alice was registered today/));
+  });
+
+  it('does not warn for an established handle', async () => {
+    await search();
+    expect(Alert.alert).not.toHaveBeenCalledWith('Check this recipient', expect.anything());
+  });
+
   it.each(['missing', 'failed'])('does not offer confirmation after a %s lookup', async lookup => {
     if (lookup === 'missing') {
-      (resolveUsername as jest.Mock).mockResolvedValue(null);
+      (resolveUsernameDetails as jest.Mock).mockResolvedValue(null);
     } else {
-      (resolveUsername as jest.Mock).mockRejectedValue(new Error('Registry offline'));
+      (resolveUsernameDetails as jest.Mock).mockRejectedValue(new Error('Registry offline'));
     }
     await search();
     expect(tree.root.findAllByType(ConfirmPaymentModal)).toHaveLength(0);
@@ -170,5 +182,37 @@ describe.each([
     expect(Alert.alert).toHaveBeenCalledWith(
       lookup === 'missing' ? 'Not Found' : 'Lookup Failed', expect.any(String),
     );
+  });
+
+  it.each([
+    ['Cancel', false],
+    ['Pay Anyway', true],
+  ])('warns before paying behind a stuck payment (#130): %s', async (choice, proceeds) => {
+    (checkSufficientBalance as jest.Mock).mockResolvedValue({
+      canAfford: true,
+      amountWei: 1000000000000000000n,
+      gasCostWei: 1n,
+      requiredTotal: 1000000000000000001n,
+      balance: 2000000000000000000n,
+      stuckPayments: 1,
+    });
+    (Alert.alert as jest.Mock).mockImplementation((title: string, _m: string, buttons?: Array<{text: string; onPress?: () => void}>) => {
+      if (title === 'Earlier payment still pending') {
+        buttons?.find(b => b.text === choice)?.onPress?.();
+      }
+    });
+    await search();
+    if (name === 'SendPaymentScreen') {
+      await press('1');
+      await press('Pay');
+    } else {
+      await act(async () => {
+        tree.root.findAllByType(TextInput).find(node => node.props.placeholder === '0.00')?.props.onChangeText('1');
+      });
+      await press('Send to @alice');
+    }
+    expect(Alert.alert).toHaveBeenCalledWith('Earlier payment still pending', expect.stringMatching(/earlier payment/i), expect.any(Array), expect.any(Object));
+    const modals = tree.root.findAllByType(ConfirmPaymentModal).filter(m => m.props.visible);
+    expect(modals).toHaveLength(proceeds ? 1 : 0);
   });
 });

@@ -22,7 +22,10 @@ import {
   Alert,
   ActivityIndicator,
   ScrollView,
+  Image,
+  useWindowDimensions,
 } from 'react-native';
+import Svg, {Defs, LinearGradient, Rect, Stop} from 'react-native-svg';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 
@@ -40,7 +43,6 @@ import {
   verifyRecoveryAnswers,
 } from '../utils/recovery';
 import {triggerHaptic} from '../utils/haptics';
-import WelcomeHero from '../components/WelcomeHero';
 import {isPasskeyRecoveryConfigured} from '../config/passkey';
 import {
   getPasskeyStatus,
@@ -48,8 +50,20 @@ import {
   passkeyErrorMessage,
   recoverWithPasskey,
 } from '../services/passkeyRecovery';
-import AmbientBackground from '../components/AmbientBackground';
 import PressableScale from '../components/PressableScale';
+import {
+  ArrowRightIcon,
+  ContactlessMark,
+  FingerprintIcon,
+  UserKeyIcon,
+  WalletIcon,
+} from '../components/OnboardingIcons';
+
+// Original generated artwork (no third-party licence). Source size 1080x1180.
+const HERO_DARK = require('../assets/onboarding-hero-dark.jpg');
+const HERO_LIGHT = require('../assets/onboarding-hero-light.jpg');
+const HERO_ASPECT_W = 1080;
+const HERO_ASPECT_H = 1180;
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'WalletSetup'>;
@@ -88,7 +102,8 @@ export default function WalletSetupScreen({navigation}: Props) {
     saveUsername,
     address,
   } = useWallet();
-  const {colors} = useTheme();
+  const {colors, isDark} = useTheme();
+  const {width} = useWindowDimensions();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const [step, setStep] = useState<Step>(() => {
@@ -622,6 +637,15 @@ export default function WalletSetupScreen({navigation}: Props) {
               <Text style={styles.primaryPillText}>Restore wallet</Text>
             )}
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.secondaryTextButton}
+            onPress={() => setStep('import')}
+            disabled={loading}
+            activeOpacity={0.7}
+            accessibilityRole="button">
+            <Text style={styles.secondaryText}>Import a private key instead (advanced)</Text>
+          </TouchableOpacity>
         </ScrollView>
       </View>
     );
@@ -676,57 +700,137 @@ export default function WalletSetupScreen({navigation}: Props) {
   }
 
   // ── Welcome ──────────────────────────────────────────────────────────────
+  const heroHeight = Math.round((width * HERO_ASPECT_H) / HERO_ASPECT_W);
+  // The artwork starts under the logo row, like a poster.
+  const heroTop = insets.top + 44;
+  const ink = isDark ? '#FFFFFF' : colors.text;
+  const primaryInk = isDark ? '#0B0B0D' : '#FFFFFF';
   return (
-    <View style={[styles.welcomeRoot, {paddingTop: insets.top + 12, paddingBottom: insets.bottom + 20}]}>
-      <AmbientBackground />
-      <WelcomeHero />
-      <View style={styles.welcomeCta}>
-        <PressableScale
-          style={styles.welcomePrimary}
-          contentStyle={styles.welcomePrimaryInner}
-          onPress={handleCreate}
-          disabled={loading}>
-          {loading ? (
-            <ActivityIndicator color="#000000" />
-          ) : (
-            <Text style={styles.welcomePrimaryText}>Create Wallet</Text>
-          )}
-        </PressableScale>
-        <PressableScale
-          style={styles.welcomeSecondary}
-          contentStyle={styles.welcomeSecondaryInner}
-          onPress={() => setStep('restore')}
-          disabled={loading}>
-          <Text style={styles.welcomeSecondaryText}>I Have a Recovery Phrase</Text>
-        </PressableScale>
-        {isPasskeyRecoveryConfigured() ? (
-          <TouchableOpacity onPress={handleRecoverWithPasskey} disabled={loading} activeOpacity={0.7}>
-            <Text style={styles.welcomeAdvanced}>Recover with Passkey</Text>
-          </TouchableOpacity>
-        ) : null}
-        <TouchableOpacity onPress={() => setStep('import')} disabled={loading} activeOpacity={0.7}>
-          <Text style={styles.welcomeAdvanced}>Import private key (advanced)</Text>
-        </TouchableOpacity>
-        <Text style={styles.welcomeFine}>
-          Secured by your phone's fingerprint, face or screen lock.
-        </Text>
+    <View style={[styles.welcomeRoot, {backgroundColor: colors.background}]}>
+      <View pointerEvents="none" style={[styles.welcomeHero, {top: heroTop, height: heroHeight}]}>
+        <Image
+          source={isDark ? HERO_DARK : HERO_LIGHT}
+          style={styles.welcomeHeroImage}
+          resizeMode="cover"
+          accessibilityIgnoresInvertColors
+        />
+        <Svg style={styles.welcomeHeroFade} width="100%" height="100%" preserveAspectRatio="none">
+          <Defs>
+            <LinearGradient id="heroFade" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor={colors.background} stopOpacity={1} />
+              <Stop offset="0.14" stopColor={colors.background} stopOpacity={0} />
+              <Stop offset="0.55" stopColor={colors.background} stopOpacity={0} />
+              <Stop offset="1" stopColor={colors.background} stopOpacity={1} />
+            </LinearGradient>
+          </Defs>
+          <Rect x="0" y="0" width="100%" height="100%" fill="url(#heroFade)" />
+        </Svg>
       </View>
+      <ScrollView
+        style={styles.welcomeScroll}
+        contentContainerStyle={[
+          styles.welcomeContent,
+          {paddingTop: insets.top + 18, paddingBottom: insets.bottom + 20},
+        ]}
+        showsVerticalScrollIndicator={false}
+        bounces={false}>
+        <View style={styles.welcomeBrand} accessibilityRole="header" accessibilityLabel="TapPay">
+          <ContactlessMark size={24} color={ink} />
+          <Text style={[styles.welcomeBrandText, {color: ink}]}>TapPay</Text>
+        </View>
+
+        <View style={[styles.welcomeSpacer, {minHeight: heroHeight * 0.68}]} />
+
+        <Text style={[styles.welcomeHeadline, {color: ink}]} accessibilityRole="header">
+          Tap. Pay.{'\n'}Onchain.
+        </Text>
+        <Text style={[styles.welcomeSub, {color: colors.textMuted}]}>
+          Crypto and local payments,{'\n'}with a simple tap.
+        </Text>
+
+        <View style={styles.welcomeCta}>
+          <PressableScale
+            style={[styles.welcomeButton, isDark ? styles.welcomePrimaryDark : styles.welcomePrimaryLight]}
+            contentStyle={styles.welcomeButtonInner}
+            onPress={handleCreate}
+            disabled={loading}
+            accessibilityLabel="Create a new wallet"
+            accessibilityState={{disabled: loading}}>
+            <UserKeyIcon size={24} color={primaryInk} />
+            <Text style={[styles.welcomeButtonText, {color: primaryInk}]}>Create a new wallet</Text>
+            {loading ? (
+              <ActivityIndicator color={primaryInk} />
+            ) : (
+              <ArrowRightIcon size={22} color={primaryInk} />
+            )}
+          </PressableScale>
+          {isPasskeyRecoveryConfigured() ? (
+            <PressableScale
+              style={[styles.welcomeButton, isDark ? styles.welcomeSecondaryDark : styles.welcomeSecondaryLight]}
+              contentStyle={styles.welcomeButtonInner}
+              onPress={handleRecoverWithPasskey}
+              disabled={loading}
+              accessibilityLabel="Recover with passkey">
+              <FingerprintIcon size={24} color={ink} />
+              <Text style={[styles.welcomeButtonText, {color: ink}]}>Recover with Passkey</Text>
+            </PressableScale>
+          ) : null}
+          <PressableScale
+            style={[styles.welcomeButton, isDark ? styles.welcomeSecondaryDark : styles.welcomeSecondaryLight]}
+            contentStyle={styles.welcomeButtonInner}
+            onPress={() => setStep('restore')}
+            disabled={loading}
+            accessibilityLabel="Import or restore wallet">
+            <WalletIcon size={24} color={ink} />
+            <Text style={[styles.welcomeButtonText, {color: ink}]}>Import or Restore Wallet</Text>
+          </PressableScale>
+        </View>
+
+        <Text style={[styles.welcomeFine, {color: colors.textMuted}]}>
+          Secured by your phone's fingerprint,{'\n'}face or screen lock.
+        </Text>
+      </ScrollView>
     </View>
   );
 }
 
 function createStyles(colors: AppColors) {
   return StyleSheet.create({
-  welcomeRoot: {flex: 1, backgroundColor: '#000000', paddingHorizontal: 24},
-  welcomeCta: {gap: 12, alignItems: 'center'},
-  welcomePrimary: {width: '100%', borderRadius: 28, overflow: 'hidden', backgroundColor: '#FFFFFF'},
-  welcomePrimaryInner: {height: 56, alignItems: 'center', justifyContent: 'center'},
-  welcomePrimaryText: {fontSize: 17, fontWeight: '600', color: '#000000'},
-  welcomeSecondary: {width: '100%', borderRadius: 28, backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)'},
-  welcomeSecondaryInner: {height: 56, alignItems: 'center', justifyContent: 'center'},
-  welcomeSecondaryText: {fontSize: 17, fontWeight: '600', color: '#FFFFFF'},
-  welcomeAdvanced: {fontSize: 15, fontWeight: '400', color: '#0A84FF', paddingVertical: 6},
-  welcomeFine: {fontSize: 12, color: '#636366', textAlign: 'center'},
+  welcomeRoot: {flex: 1},
+  welcomeHero: {position: 'absolute', left: 0, right: 0},
+  welcomeHeroImage: {width: '100%', height: '100%'},
+  welcomeHeroFade: {position: 'absolute', top: 0, left: 0},
+  welcomeScroll: {flex: 1},
+  welcomeContent: {flexGrow: 1, paddingHorizontal: 24},
+  welcomeBrand: {flexDirection: 'row', alignItems: 'center', gap: 10},
+  welcomeBrandText: {fontSize: 22, fontWeight: '600', letterSpacing: -0.3},
+  welcomeSpacer: {flexGrow: 1},
+  welcomeHeadline: {fontSize: 42, fontWeight: '700', letterSpacing: -1.2, lineHeight: 46},
+  welcomeSub: {marginTop: 12, fontSize: 17, lineHeight: 23, letterSpacing: -0.2},
+  welcomeCta: {marginTop: 30, gap: 12},
+  welcomeButton: {width: '100%', borderRadius: 26, overflow: 'hidden'},
+  welcomePrimaryDark: {backgroundColor: '#ECEBF1'},
+  welcomePrimaryLight: {backgroundColor: '#0B0B0D'},
+  welcomeSecondaryDark: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.16)',
+  },
+  welcomeSecondaryLight: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.10)',
+  },
+  welcomeButtonInner: {
+    height: 54,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: 20,
+    paddingRight: 20,
+    gap: 16,
+  },
+  welcomeButtonText: {flex: 1, fontSize: 17, fontWeight: '600', letterSpacing: -0.2},
+  welcomeFine: {marginTop: 26, fontSize: 13, lineHeight: 18, textAlign: 'center'},
   screenWrapper: {
     flex: 1,
     backgroundColor: colors.background,

@@ -118,9 +118,11 @@ export function createHandler(
       return !Number.isFinite(hits) || hits > limit;
     };
 
-    // Returns true when the proof is fresh and has now been consumed; false on replay (#131).
-    const consumeProof = async (message: string, signature: string): Promise<boolean> => {
-      const proofHash = await sha256Hex(`${message}\n${signature.toLowerCase()}`);
+    // Returns true when the canonical proof message is fresh and has now been consumed;
+    // hashes ONLY the canonical message (never the signature) so malleable/alias signature
+    // encodings (e.g. v=27/28 vs 0/1) cannot replay the same proof (#131).
+    const consumeProof = async (message: string): Promise<boolean> => {
+      const proofHash = await sha256Hex(message);
       const res = await rest('rpc/consume_passkey_proof', {
         method: 'POST',
         body: JSON.stringify({p_proof_hash: proofHash}),
@@ -186,7 +188,7 @@ export function createHandler(
         }
       }
 
-      if (!(await consumeProof(message, req.signature))) {
+      if (!(await consumeProof(message))) {
         return reply(409, {error: 'This proof has already been used. Please sign again.'});
       }
 

@@ -202,6 +202,21 @@ Deno.test('replayed put or delete proof is rejected with 409 (#131)', async () =
   assert(!sDel.calls.some(c => c.init?.method === 'DELETE'));
 });
 
+Deno.test('equivalent signature encodings for the same proof produce the same proof hash (#131)', async () => {
+  const s1 = stub();
+  await createHandler(config, verifyAs(WALLET), s1.fetcher, quiet)(
+    request(await putBody({signature: '0x' + '1'.repeat(128) + '1b'})),
+  );
+  const s2 = stub();
+  await createHandler(config, verifyAs(WALLET), s2.fetcher, quiet)(
+    request(await putBody({signature: '0x' + '1'.repeat(128) + '00'})),
+  );
+  const c1 = s1.calls.find(c => c.url.includes('rpc/consume_passkey_proof'));
+  const c2 = s2.calls.find(c => c.url.includes('rpc/consume_passkey_proof'));
+  assert(c1 && c2);
+  assert(JSON.parse(String(c1.init?.body)).p_proof_hash === JSON.parse(String(c2.init?.body)).p_proof_hash);
+});
+
 Deno.test('rate limiter uses the right-most X-Forwarded-For hop, ignoring spoofed left-most IPs (#132)', async () => {
   const s1 = stub({rows: []});
   await createHandler(config, verifyAs(null), s1.fetcher, quiet)(

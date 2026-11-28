@@ -65,6 +65,11 @@ const SAMPLE = JSON.stringify([
   },
 ]);
 
+// The stored blob is base64 ciphertext, which is random and can contain any short run of letters
+// or digits (CI once saw "kai" in it). Look for values as they would appear in plaintext JSON,
+// quoted, since a quote never occurs in base64.
+const asJson = (value: string) => JSON.stringify(value);
+
 function freshStore(): typeof import('../../src/services/secureHistoryStore') {
   jest.resetModules();
   return require('../../src/services/secureHistoryStore');
@@ -86,8 +91,8 @@ describe('secureHistoryStore', () => {
     await store.saveHistoryJson(SAMPLE);
     const raw = mockAsync[ENC];
     expect(raw).toBeTruthy();
-    for (const secret of ['0x1111', 'rhea', '25.5', 'USDC', 'abab', 'counterparty']) {
-      expect(raw).not.toContain(secret);
+    for (const secret of ['0x' + '1'.repeat(40), 'rhea', '25.5', 'USDC', '0x' + 'ab'.repeat(32), 'counterparty']) {
+      expect(raw).not.toContain(asJson(secret));
     }
     expect(mockAsync[LEGACY]).toBeUndefined();
     await expect(store.loadHistoryJson()).resolves.toBe(SAMPLE);
@@ -124,7 +129,7 @@ describe('secureHistoryStore', () => {
     await expect(store.loadHistoryJson()).resolves.toBe(SAMPLE);
     expect(mockAsync[LEGACY]).toBeUndefined();
     expect(mockAsync[ENC]).toBeTruthy();
-    expect(mockAsync[ENC]).not.toContain('rhea');
+    expect(mockAsync[ENC]).not.toContain(asJson('rhea'));
     // and it reads back from the encrypted copy after a restart
     await expect(freshStore().loadHistoryJson()).resolves.toBe(SAMPLE);
   });
@@ -433,8 +438,8 @@ describe('history service uses the encrypted store', () => {
 
     expect(mockAsync[ENC]).toBeTruthy();
     expect(mockAsync[LEGACY]).toBeUndefined();
-    expect(mockAsync[ENC]).not.toContain('kai');
-    expect(mockAsync[ENC]).not.toContain('2222');
+    expect(mockAsync[ENC]).not.toContain(asJson('kai'));
+    expect(mockAsync[ENC]).not.toContain(asJson('0x' + '2'.repeat(40)));
 
     jest.resetModules();
     const restarted = require('../../src/services/history');

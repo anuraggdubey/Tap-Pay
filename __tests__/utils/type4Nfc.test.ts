@@ -120,6 +120,45 @@ describe('type4Nfc reader (#120)', () => {
     }
   });
 
+  it('skips CC APDU round-trips for short payloads (<=255 bytes) (#136)', async () => {
+    const shortUri = 'tappay://tap/0x1111111111111111111111111111111111111111?s=aabbccdd';
+    const uriBytes = Array.from(Buffer.from(shortUri, 'utf8'));
+    const payload = [0x00, ...uriBytes];
+    const ndefMsg = [0xd1, 0x01, payload.length, 0x55, ...payload];
+    expect(ndefMsg.length).toBeLessThanOrEqual(255);
+
+    const fileData = [(ndefMsg.length >> 8) & 0xff, ndefMsg.length & 0xff, ...ndefMsg];
+    (Ndef as any).decodeMessage = jest.fn((bytes: number[]) => [
+      {tnf: Ndef.TNF_WELL_KNOWN, type: Ndef.RTD_URI, payload: bytes.slice(4)},
+    ]);
+    (Ndef as any).isType = jest.fn((_r: any, _tnf: any, type: any) => type === Ndef.RTD_URI);
+    (Ndef as any).uri = {
+      decodePayload: (p: Uint8Array) => Buffer.from(p.slice(1)).toString('utf8'),
+    };
+
+    let ccSelected = false;
+    mockTransceive.mockImplementation(async (apdu: number[]) => {
+      if (sameBytes(apdu, TYPE4_NDEF_APP_AID)) return SW_OK;
+      if (sameBytes(apdu, TYPE4_SELECT_CC_FILE)) {
+        ccSelected = true;
+        return SW_OK;
+      }
+      if (sameBytes(apdu, TYPE4_SELECT_NDEF_FILE)) return SW_OK;
+      if (apdu[0] === 0x00 && apdu[1] === 0xb0) {
+        const offset = (apdu[2] << 8) | apdu[3];
+        const le = apdu[4];
+        return [...fileData.slice(offset, offset + le), ...SW_OK];
+      }
+      return [0x6a, 0x82];
+    });
+
+    const result = await readType4HceText();
+    expect(result).toBe(shortUri);
+    expect(ccSelected).toBe(false);
+    // Only 4 APDUs: SELECT APP, SELECT NDEF, READ NLEN, READ NDEF
+    expect(mockTransceive).toHaveBeenCalledTimes(4);
+  });
+
   it('rejects a short NLEN response cleanly without indexing out of bounds', async () => {
     mockTransceive.mockImplementation(async (apdu: number[]) => {
       if (sameBytes(apdu, TYPE4_NDEF_APP_AID)) return SW_OK;

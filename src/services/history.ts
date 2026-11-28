@@ -206,6 +206,25 @@ export function updateTransactionStatus(txHash: string, status: Exclude<Transact
   }));
 }
 
+export function updateTransactionUsername(
+  walletAddress: string,
+  txHash: string,
+  counterpartyUsername: string,
+) {
+  const state = histories.get(walletAddress.toLowerCase()) ?? histories.get(activeScope);
+  if (!state) {
+    return;
+  }
+  mutate(state, rows =>
+    rows.map(tx => {
+      if (rowHasHash(tx, txHash) && !tx.counterpartyUsername) {
+        return {...tx, counterpartyUsername};
+      }
+      return tx;
+    }),
+  );
+}
+
 /** Remember the sender nonce of a pending payment (needed to detect a dropped transaction). */
 export function setTransactionNonce(txHash: string, nonce: number) {
   const state = histories.get(activeScope)!;
@@ -236,7 +255,6 @@ export function replaceTransaction(oldHash: string, newHash: string, kind: 'spee
 export function getStuckPayments(now: number = Date.now()): TransactionRecord[] {
   return histories.get(activeScope)!.cache.filter(tx => isStuck(tx, now));
 }
-
 
 /**
  * Rows that are still pending and have a real on-chain hash (placeholder hashes such as

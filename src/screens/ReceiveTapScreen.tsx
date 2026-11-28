@@ -24,6 +24,7 @@ import {
 } from '../services/nfcReader';
 import {
   createReceiverBroadcastLease,
+  snapshotCurrentBlockNumber,
   waitForIncomingPayment,
   type ExpectedPaymentRequest,
 } from '../services/tapPayment';
@@ -140,6 +141,11 @@ export default function ReceiveTapScreen({navigation}: Props) {
         const expectedRequest: ExpectedPaymentRequest | undefined = activeRequest
           ? {amountWei: activeRequest.amountWei, tokenSymbol: activeRequest.tokenSymbol}
           : undefined;
+        // Snapshot starting block head in parallel with HCE activation (#136)
+        const startBlockPromise =
+          typeof snapshotCurrentBlockNumber === 'function'
+            ? snapshotCurrentBlockNumber()
+            : undefined;
         // Start HCE broadcasting address + per-session nonce (and optional payment request)
         const started = await startReceiverBroadcast(address, expiresAt, {
           sessionNonce,
@@ -168,6 +174,7 @@ export default function ReceiveTapScreen({navigation}: Props) {
             sessionIdHash: expectedSessionIdHash,
             paymentRequest: expectedRequest,
           },
+          startBlockPromise,
         );
 
         if (payment.detected && !cancelled && !controller.signal.aborted) {

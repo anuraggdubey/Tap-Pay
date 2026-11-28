@@ -97,7 +97,7 @@ export default function PasskeyRecoveryScreen(_props: Props) {
   const confirmLink = () => {
     Alert.alert(
       status.linked ? 'Replace your passkey?' : 'Set up passkey recovery?',
-      'Your recovery phrase is encrypted with a passkey stored in your Google or Apple account. If you lose this phone, you can recover the wallet with that passkey. Your recovery phrase stays your primary backup.',
+      'Your recovery phrase is encrypted with a passkey unlocked by your fingerprint or Face ID and synced via your Google or Apple account. Each wallet links to one unique passkey (no duplicates). Your recovery phrase stays your primary backup.',
       [
         {text: 'Cancel', style: 'cancel'},
         {text: status.linked ? 'Replace' : 'Continue', onPress: link},

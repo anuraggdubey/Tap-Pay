@@ -299,6 +299,7 @@ export async function storeWallet(secret: {
     await assertDeviceAuthReady();
 
     const secureOptions = {
+      accessible: Keychain.ACCESSIBLE?.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
       accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_ANY_OR_DEVICE_PASSCODE,
       securityLevel: Keychain.SECURITY_LEVEL.SECURE_HARDWARE,
       storage: Keychain.STORAGE_TYPE.AES_GCM,

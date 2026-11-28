@@ -62,7 +62,7 @@ const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), {stat
 
 type Call = {url: string; init?: RequestInit};
 /** Routes REST calls; `rows` is the existing blob lookup result, `hits` the rate limiter count. */
-function stub(options: {hits?: number; rows?: unknown[]; failAt?: string} = {}) {
+function stub(options: {hits?: number; rows?: unknown[]; failAt?: string; replayed?: boolean} = {}) {
   const calls: Call[] = [];
   const fetcher = ((url: string | URL | Request, init?: RequestInit) => {
     const u = String(url);
@@ -72,6 +72,9 @@ function stub(options: {hits?: number; rows?: unknown[]; failAt?: string} = {}) 
     }
     if (u.includes('rpc/consume_passkey_recovery_rate_limit')) {
       return Promise.resolve(json(options.hits ?? 1));
+    }
+    if (u.includes('rpc/consume_passkey_proof')) {
+      return Promise.resolve(json(options.replayed ? false : true));
     }
     if (init?.method === 'GET') {
       return Promise.resolve(json(options.rows ?? []));
@@ -185,4 +188,30 @@ Deno.test('upstream failures return a generic 503 and never leak details', async
   assert(res.status === 503);
   const text = await res.text();
   assert(!text.includes('rate limiter'));
+});
+
+Deno.test('replayed put or delete proof is rejected with 409 (#131)', async () => {
+  const sPut = stub({replayed: true});
+  const resPut = await createHandler(config, verifyAs(WALLET), sPut.fetcher, quiet)(request(await putBody()));
+  assert(resPut.status === 409);
+  assert(!sPut.calls.some(c => c.url.includes('passkey_recovery_blobs')));
+
+  const sDel = stub({replayed: true});
+  const resDel = await createHandler(config, verifyAs(WALLET), sDel.fetcher, quiet)(request(deleteBody()));
+  assert(resDel.status === 409);
+  assert(!sDel.calls.some(c => c.init?.method === 'DELETE'));
+});
+
+Deno.test('rate limiter uses the right-most X-Forwarded-For hop, ignoring spoofed left-most IPs (#132)', async () => {
+  const s1 = stub({rows: []});
+  await createHandler(config, verifyAs(null), s1.fetcher, quiet)(
+    request(getBody(), undefined, {'x-forwarded-for': '1.2.3.4, 203.0.113.9'}),
+  );
+  const s2 = stub({rows: []});
+  await createHandler(config, verifyAs(null), s2.fetcher, quiet)(
+    request(getBody(), undefined, {'x-forwarded-for': '9.9.9.9, 203.0.113.9'}),
+  );
+  const b1 = JSON.parse(String(s1.calls[0].init?.body)).p_bucket;
+  const b2 = JSON.parse(String(s2.calls[0].init?.body)).p_bucket;
+  assert(b1 === b2);
 });

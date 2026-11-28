@@ -45,6 +45,7 @@ jest.mock('../src/services/history', () => ({
 }));
 
 import HomeScreen, {shortWhen} from '../src/screens/HomeScreen';
+import {slotOf} from '../src/components/WalletCardStack';
 
 let tree: ReactTestRenderer.ReactTestRenderer;
 const texts = () => tree.root.findAllByType(Text).map(n => [n.props.children].flat().join(''));
@@ -121,10 +122,40 @@ describe('HomeScreen', () => {
     expect(mockNavigate).toHaveBeenCalledWith('ReceiveTap');
   });
 
+  it('brings a tapped card to the front', async () => {
+    await render();
+    const selected = (label: string) =>
+      tree.root.findAll(n => n.props.accessibilityLabel === label && n.props.accessibilityState)[0].props.accessibilityState.selected;
+    expect(selected('AUSD card')).toBe(true);
+    expect(selected('MON card')).toBe(false);
+    await press('MON card');
+    expect(selected('MON card')).toBe(true);
+    expect(selected('AUSD card')).toBe(false);
+    expect(has('2.418 MON')).toBe(true);
+    await press('Tap to Pay card');
+    expect(selected('Tap to Pay card')).toBe(true);
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('hides the card balances with the balance', async () => {
+    await render();
+    expect(has('1,284.50 AUSD')).toBe(true);
+    await press('Hide balance');
+    expect(has('1,284.50 AUSD')).toBe(false);
+  });
+
   it('drops the old wallet shortcuts section', async () => {
     await render();
     expect(has('Your wallet')).toBe(false);
     expect(has('TapPay ID')).toBe(false);
+  });
+});
+
+describe('slotOf', () => {
+  it('puts the front card in the middle and the others on each side', () => {
+    expect([0, 1, 2].map(i => slotOf(i, 0))).toEqual([0, 1, -1]);
+    expect([0, 1, 2].map(i => slotOf(i, 1))).toEqual([-1, 0, 1]);
+    expect([0, 1, 2].map(i => slotOf(i, 2))).toEqual([1, -1, 0]);
   });
 });
 

@@ -324,7 +324,7 @@ export default function HomeScreen() {
                   <Rect width="100%" height="100%" fill="url(#homeGlow)" />
                 </Svg>
               </View>
-              <WalletCardStack holder={holder} width={contentWidth} />
+              <WalletCardStack holder={holder} width={contentWidth} ausd={displayAusd} mon={balanceMon} hidden={hidden} />
             </View>
 
             <PressableScale

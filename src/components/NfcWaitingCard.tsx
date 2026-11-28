@@ -211,13 +211,13 @@ export default function NfcWaitingCard({
   let title = '';
   let sub = '';
   if (isSearching) {
-    title = isSend ? 'Hold Near Reader' : 'Ready to Receive';
+    title = isSend ? 'Tap Top-Middle Back' : 'Ready to Receive';
     sub =
       hint ||
-      'Hold the top of your iPhone near the other phone.'.replace('iPhone', 'phone');
+      'Touch the top-middle backs of both phones together briefly.';
   } else if (isBroadcasting) {
     title = isSend ? 'Sending…' : 'Receiving…';
-    sub = 'Keep your phones together';
+    sub = 'Phones linked — completing transaction';
   } else if (isSuccess) {
     title = isSend ? 'Payment sent' : 'Payment received';
     sub = counterparty ? `${isSend ? 'To' : 'From'} ${counterparty}` : '';

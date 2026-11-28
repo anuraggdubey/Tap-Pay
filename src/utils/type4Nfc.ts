@@ -101,8 +101,6 @@ export async function readType4HceText(): Promise<string | null> {
     return mle > 0 ? Math.min(mle, MAX_SHORT_APDU_LE) : MAX_SHORT_APDU_LE;
   };
 
-  const maxChunk = await readMaxChunkSize();
-
   const selectFile = await NfcManager.isoDepHandler.transceive(TYPE4_SELECT_NDEF_FILE);
   if (!apduOk(selectFile)) {
     throw new Error('Could not select NDEF file on HCE card.');
@@ -121,6 +119,31 @@ export async function readType4HceText(): Promise<string | null> {
 
   const ndefMessage: number[] = [];
   let offset = 2;
+
+  // Fast path (#136): skip SELECT CC + READ BINARY CC when the payload fits in one short read.
+  let maxChunk = MAX_SHORT_APDU_LE;
+  if (ndefLength <= MAX_SHORT_APDU_LE) {
+    const fastResponse = await NfcManager.isoDepHandler.transceive(
+      readBinaryApdu(2, ndefLength),
+    );
+    if (apduOk(fastResponse)) {
+      const fastData = stripSw(fastResponse);
+      const take = Math.min(fastData.length, ndefLength);
+      for (let i = 0; i < take; i++) {
+        ndefMessage.push(fastData[i]);
+      }
+      offset += take;
+    }
+  }
+
+  if (ndefMessage.length < ndefLength) {
+    maxChunk = await readMaxChunkSize();
+    const reselectFile = await NfcManager.isoDepHandler.transceive(TYPE4_SELECT_NDEF_FILE);
+    if (!apduOk(reselectFile)) {
+      throw new Error('Could not re-select NDEF file on HCE card.');
+    }
+  }
+
   while (ndefMessage.length < ndefLength) {
     const toRead = Math.min(maxChunk, ndefLength - ndefMessage.length);
     const chunkResponse = await NfcManager.isoDepHandler.transceive(

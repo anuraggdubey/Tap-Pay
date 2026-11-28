@@ -34,6 +34,7 @@ import {
   TapSenderPhase,
 } from '../services/tapPayment';
 import {recordTransaction} from '../services/history';
+import {reverseResolveAddress} from '../services/registry';
 import {SUPPORTED_TOKENS} from '../config/tokens';
 import ConfirmPaymentModal from '../components/ConfirmPaymentModal';
 import InsufficientBalanceModal from '../components/InsufficientBalanceModal';
@@ -135,6 +136,27 @@ export default function SendTapScreen({navigation}: Props) {
     setScanHint(null);
     setPhase('idle');
     setActiveAmount('');
+  };
+
+  const hydrateRecipientUsername = (recipient: TapRecipient) => {
+    if (recipient.receiverUsername) {
+      return;
+    }
+    reverseResolveAddress(recipient.receiverAddress)
+      .then(username => {
+        if (!username || !isMountedRef.current) {
+          return;
+        }
+        setPendingRecipient(prev =>
+          prev &&
+          prev.receiverAddress.toLowerCase() === recipient.receiverAddress.toLowerCase()
+            ? {...prev, receiverUsername: username}
+            : prev,
+        );
+      })
+      .catch(() => {
+        // Username is optional; the checksummed address is what the user confirms.
+      });
   };
 
   // Step 2: user confirmed the on-screen recipient — now sign and broadcast.
@@ -322,11 +344,15 @@ export default function SendTapScreen({navigation}: Props) {
       }, 1000);
 
       // Step 1: read the recipient. This does NOT sign or broadcast anything.
-      readTapRecipient(address, hint => {
-        if (isMountedRef.current) {
-          setScanHint(hint);
-        }
-      }).then(result => {
+      readTapRecipient(
+        address,
+        hint => {
+          if (isMountedRef.current) {
+            setScanHint(hint);
+          }
+        },
+        {skipUsernameLookup: true},
+      ).then(result => {
         if (!isMountedRef.current) {
           return;
         }
@@ -342,12 +368,13 @@ export default function SendTapScreen({navigation}: Props) {
           return;
         }
 
-        // Step 2: show the recipient and wait for explicit confirmation before signing.
+        // Step 2: show the recipient immediately and resolve @username async (#137).
         triggerHaptic.notificationSuccess();
         setScanHint(null);
         setPendingRecipient(result.recipient);
         setPhase('confirming');
         setConfirmVisible(true);
+        hydrateRecipientUsername(result.recipient);
       });
     } catch (err: any) {
       triggerHaptic.notificationError();
@@ -400,11 +427,15 @@ export default function SendTapScreen({navigation}: Props) {
       });
     }, 1000);
 
-    readTapRecipient(address, hint => {
-      if (isMountedRef.current) {
-        setScanHint(hint);
-      }
-    }).then(result => {
+    readTapRecipient(
+      address,
+      hint => {
+        if (isMountedRef.current) {
+          setScanHint(hint);
+        }
+      },
+      {skipUsernameLookup: true},
+    ).then(result => {
       if (!isMountedRef.current) {
         return;
       }
@@ -436,6 +467,7 @@ export default function SendTapScreen({navigation}: Props) {
       setPendingRecipient(result.recipient);
       setPhase('confirming');
       setConfirmVisible(true);
+      hydrateRecipientUsername(result.recipient);
     });
   };
 

@@ -11,6 +11,7 @@ export const RECEIVER_NDEF_PREFIX = 'tappay://tap/';
 const ADDRESS_REGEX = /^0x[0-9a-fA-F]{40}$/;
 const SESSION_NONCE_REGEX = /^[0-9a-fA-F]{16,64}$/;
 const DECIMAL_AMOUNT_REGEX = /^(?:0|[1-9]\d*)(?:\.\d+)?$/;
+const EXPIRY_SECONDS_REGEX = /^[1-9]\d{0,11}$/;
 
 export interface TapPaymentRequest {
   amount: string;
@@ -20,6 +21,8 @@ export interface TapPaymentRequest {
 export interface TapEncodeOptions {
   sessionNonce?: string;
   paymentRequest?: TapPaymentRequest;
+  /** Session expiry timestamp in Unix milliseconds (encoded as ?exp=<unixSeconds>). */
+  expiresAt?: number;
 }
 
 export interface TapNdefPayload {
@@ -27,6 +30,8 @@ export interface TapNdefPayload {
   sessionNonce?: string;
   amount?: string;
   tokenSymbol?: string;
+  /** Session expiry timestamp in Unix milliseconds, decoded from ?exp=<unixSeconds>. */
+  expiresAt?: number;
 }
 
 /**
@@ -78,6 +83,7 @@ export function encodeReceiverAddress(
   const addrHex = receiverAddress.startsWith('0x') ? receiverAddress : `0x${receiverAddress}`;
   let sessionNonce: string | undefined;
   let paymentRequest: TapPaymentRequest | undefined;
+  let expiresAt: number | undefined;
 
   if (typeof options === 'string') {
     sessionNonce = options;
@@ -87,6 +93,7 @@ export function encodeReceiverAddress(
     } else {
       sessionNonce = options.sessionNonce;
       paymentRequest = options.paymentRequest;
+      expiresAt = options.expiresAt;
     }
   }
 
@@ -103,6 +110,12 @@ export function encodeReceiverAddress(
       throw new Error('Invalid payment request amount or token.');
     }
     params.push(`amt=${validated.amount}`, `tok=${validated.tokenSymbol}`);
+  }
+  if (typeof expiresAt === 'number' && Number.isFinite(expiresAt) && expiresAt > 0) {
+    const expSec = Math.floor(expiresAt / 1000);
+    if (expSec > 0) {
+      params.push(`exp=${expSec}`);
+    }
   }
 
   if (params.length === 0) {
@@ -135,6 +148,7 @@ export function decodeReceiverPayload(text: string): TapNdefPayload | null {
   let sessionNonce: string | undefined;
   let amt: string | undefined;
   let tok: string | undefined;
+  let expiresAt: number | undefined;
   for (const part of queryStr.split('&')) {
     if (!part) continue;
     const eqIdx = part.indexOf('=');
@@ -149,12 +163,24 @@ export function decodeReceiverPayload(text: string): TapNdefPayload | null {
       amt = val;
     } else if (key === 'tok') {
       tok = val;
+    } else if (key === 'exp') {
+      if (!EXPIRY_SECONDS_REGEX.test(val)) {
+        return null;
+      }
+      const parsedSec = Number(val);
+      if (!Number.isSafeInteger(parsedSec) || parsedSec <= 0) {
+        return null;
+      }
+      expiresAt = parsedSec * 1000;
     }
   }
 
   const payload: TapNdefPayload = {receiverAddress: hex};
   if (sessionNonce) {
     payload.sessionNonce = sessionNonce;
+  }
+  if (expiresAt !== undefined) {
+    payload.expiresAt = expiresAt;
   }
   if (amt !== undefined || tok !== undefined) {
     if (amt === undefined || tok === undefined) {

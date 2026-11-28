@@ -96,9 +96,15 @@ export function createHceReceiverLease(): HceReceiverLease {
       const expired = () => expiresAt !== undefined && Date.now() >= expiresAt;
       try {
         if (!await preparation || !ownsSession()) return false;
+        const encodeOptions: TapEncodeOptions =
+          typeof options === 'string'
+            ? {sessionNonce: options, expiresAt}
+            : options && 'amount' in options && 'tokenSymbol' in options
+            ? {paymentRequest: options, expiresAt}
+            : {...options, expiresAt: options?.expiresAt ?? expiresAt};
         const tag = new NFCTagType4({
           type: NFCTagType4NDEFContentType.URL,
-          content: encodeReceiverAddress(receiverAddress, options),
+          content: encodeReceiverAddress(receiverAddress, encodeOptions),
           writable: false,
         });
 

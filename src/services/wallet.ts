@@ -15,6 +15,8 @@ import {normalizeMnemonic, walletFromRecoveryPhrase} from '../utils/recovery';
 import {FanoutProvider} from './fanoutProvider';
 import {readStoredCustomRpc, storeCustomRpc, validateRpcUrl} from './rpcSettings';
 import {MONAD_CONFIG, GAS_LIMIT_FALLBACK, TX_POLL_INTERVAL_MS, TX_MAX_WAIT_MS} from '../config/monad';
+import {SUPPORTED_TOKENS} from '../config/tokens';
+import {estimateErc20LedgerGasCost} from './multiTokenLedger';
 import {PaymentLimits, checkPaymentLimits} from '../utils/validation';
 import {getStuckPayments} from './history';
 
@@ -1314,4 +1316,39 @@ export async function estimateGasCost(
       gasCostWei: fallbackGasLimit * fallbackGasPrice,
     };
   }
+}
+
+/**
+ * Estimate gas cost for a tap payment in either native MON or an ERC-20 token
+ * (including any required ERC-20 `approve()` + `MultiTokenLedger.payERC20WithLog()` calls, #138).
+ */
+export async function estimateTokenPaymentGasCost(
+  from: string,
+  tokenSymbol: string,
+  to: string,
+  amountRaw: bigint,
+): Promise<{gasLimit: bigint; gasPrice: bigint; gasCostWei: bigint; needsApproval?: boolean} | null> {
+  const normalized = tokenSymbol.trim().toUpperCase();
+  const token = SUPPORTED_TOKENS[normalized];
+  if (!token || token.isNative || !token.contractAddress) {
+    return estimateGasCost(from, to, amountRaw);
+  }
+  try {
+    const result = await withRpcFailover(provider =>
+      estimateErc20LedgerGasCost(from, token.contractAddress!, to, amountRaw, provider),
+    );
+    if (result) {
+      return result;
+    }
+  } catch {
+    // Fall back to safe combined approve + ledger estimate if RPC is offline.
+  }
+  const fallbackGasLimit = 175_000n;
+  const fallbackGasPrice = ethers.parseUnits('50', 'gwei');
+  return {
+    gasLimit: fallbackGasLimit,
+    gasPrice: fallbackGasPrice,
+    gasCostWei: fallbackGasLimit * fallbackGasPrice,
+    needsApproval: true,
+  };
 }

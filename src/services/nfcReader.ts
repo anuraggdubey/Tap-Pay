@@ -30,6 +30,7 @@ export interface NfcReadResponse {
   sessionNonce?: string;
   requestedAmount?: string;
   requestedToken?: string;
+  expiresAt?: number;
   errorMessage?: string;
 }
 
@@ -229,6 +230,7 @@ export async function readReceiverAddress(
       sessionNonce: payload.sessionNonce,
       requestedAmount: payload.amount,
       requestedToken: payload.tokenSymbol,
+      expiresAt: payload.expiresAt,
     };
   } catch (error: any) {
     if (isUserCancelled(error)) {

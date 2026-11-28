@@ -21,11 +21,26 @@ async function sha256Hex(text: string): Promise<string> {
 }
 
 function clientId(request: Request): string {
-  return (
-    request.headers.get('cf-connecting-ip') ||
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    'unknown'
-  );
+  const cfIp = request.headers.get('cf-connecting-ip')?.trim();
+  if (cfIp) {
+    return cfIp;
+  }
+  const realIp = request.headers.get('x-real-ip')?.trim();
+  if (realIp) {
+    return realIp;
+  }
+  const forwarded = request.headers.get('x-forwarded-for');
+  if (forwarded) {
+    // Use the right-most entry added by the trusted edge proxy, never the spoofable left-most value (#132).
+    const hops = forwarded
+      .split(',')
+      .map(part => part.trim())
+      .filter(Boolean);
+    if (hops.length > 0) {
+      return hops[hops.length - 1];
+    }
+  }
+  return 'unknown';
 }
 
 export function createHandler(
@@ -103,6 +118,21 @@ export function createHandler(
       return !Number.isFinite(hits) || hits > limit;
     };
 
+    // Returns true when the canonical proof message is fresh and has now been consumed;
+    // hashes ONLY the canonical message (never the signature) so malleable/alias signature
+    // encodings (e.g. v=27/28 vs 0/1) cannot replay the same proof (#131).
+    const consumeProof = async (message: string): Promise<boolean> => {
+      const proofHash = await sha256Hex(message);
+      const res = await rest('rpc/consume_passkey_proof', {
+        method: 'POST',
+        body: JSON.stringify({p_proof_hash: proofHash}),
+      });
+      if (!res.ok) {
+        throw new Error('proof store unavailable');
+      }
+      return (await res.json()) === true;
+    };
+
     try {
       if (req.action === 'get') {
         if (await limited(`get:${clientId(request)}`, READ_LIMIT)) {
@@ -151,6 +181,17 @@ export function createHandler(
         return reply(429, {error: 'Too many attempts. Try again later.'});
       }
 
+      if (req.action === 'put') {
+        // put: the digest signed by the wallet must match the blob actually sent.
+        if (req.digest !== (await sha256Hex(`${req.blob.ciphertext}.${req.blob.nonce}`))) {
+          return reply(400);
+        }
+      }
+
+      if (!(await consumeProof(message))) {
+        return reply(409, {error: 'This proof has already been used. Please sign again.'});
+      }
+
       if (req.action === 'delete') {
         const del = await rest(
           `passkey_recovery_blobs?credential_id=eq.${req.credentialId}&wallet_address=eq.${req.walletAddress}`,
@@ -163,10 +204,6 @@ export function createHandler(
         return reply(200, {ok: true});
       }
 
-      // put: the digest signed by the wallet must match the blob actually sent.
-      if (req.digest !== (await sha256Hex(`${req.blob.ciphertext}.${req.blob.nonce}`))) {
-        return reply(400);
-      }
       // Never overwrite a blob that belongs to a different wallet.
       const existing = await rest(
         `passkey_recovery_blobs?select=wallet_address&credential_id=eq.${req.credentialId}`,

@@ -40,6 +40,120 @@ export async function sendMonViaMultiTokenLedger(
   return await ledger.payWithLog(to, sessionIdHash, {value: amountWei});
 }
 
+const ERC20_APPROVE_GAS_FALLBACK = 55_000n;
+const ERC20_RESET_APPROVE_GAS_FALLBACK = 35_000n;
+const ERC20_LEDGER_PAY_GAS_FALLBACK = 120_000n;
+
+export interface Erc20LedgerGasEstimate {
+  gasLimit: bigint;
+  gasPrice: bigint;
+  gasCostWei: bigint;
+  needsApproval: boolean;
+  needsResetApproval: boolean;
+}
+
+/**
+ * Estimate total gas for an ERC-20 payment through MultiTokenLedger, including
+ * any required `approve(0)` reset and `approve(amountRaw)` transactions (#138).
+ */
+export async function estimateErc20LedgerGasCost(
+  from: string,
+  tokenAddress: string,
+  to: string,
+  amountRaw: bigint,
+  provider: ethers.Provider,
+): Promise<Erc20LedgerGasEstimate | null> {
+  const ledgerAddress = getMultiTokenLedgerAddress();
+  if (!ledgerAddress || amountRaw <= 0n) {
+    return null;
+  }
+
+  const allowanceContract = new ethers.Contract(
+    tokenAddress,
+    ['function allowance(address owner, address spender) view returns (uint256)'],
+    provider,
+  );
+  const approvalInterface = new ethers.Interface([
+    'function approve(address spender, uint256 amount) returns (bool)',
+  ]);
+  const ledgerInterface = new ethers.Interface(MULTI_TOKEN_LEDGER_ABI);
+
+  let allowance = 0n;
+  try {
+    allowance = BigInt(await allowanceContract.allowance(from, ledgerAddress));
+  } catch {
+    allowance = 0n;
+  }
+
+  const needsApproval = allowance !== amountRaw;
+  const needsResetApproval = needsApproval && allowance !== 0n;
+  let totalGas = 0n;
+
+  if (needsResetApproval) {
+    try {
+      const est = await provider.estimateGas({
+        from,
+        to: tokenAddress,
+        data: approvalInterface.encodeFunctionData('approve', [ledgerAddress, 0n]),
+      });
+      totalGas += (est * 120n) / 100n;
+    } catch {
+      totalGas += ERC20_RESET_APPROVE_GAS_FALLBACK;
+    }
+  }
+
+  if (needsApproval) {
+    try {
+      const est = await provider.estimateGas({
+        from,
+        to: tokenAddress,
+        data: approvalInterface.encodeFunctionData('approve', [ledgerAddress, amountRaw]),
+      });
+      totalGas += (est * 120n) / 100n;
+    } catch {
+      totalGas += ERC20_APPROVE_GAS_FALLBACK;
+    }
+  }
+
+  // Note: eth_estimateGas on payERC20WithLog reverts if allowance < amountRaw,
+  // so we fall back to a realistic ledger transfer gas limit when approval is pending.
+  if (!needsApproval) {
+    try {
+      const est = await provider.estimateGas({
+        from,
+        to: ledgerAddress,
+        data: ledgerInterface.encodeFunctionData('payERC20WithLog', [
+          tokenAddress,
+          to,
+          amountRaw,
+          createSessionIdHash(),
+        ]),
+      });
+      totalGas += (est * 120n) / 100n;
+    } catch {
+      totalGas += ERC20_LEDGER_PAY_GAS_FALLBACK;
+    }
+  } else {
+    totalGas += ERC20_LEDGER_PAY_GAS_FALLBACK;
+  }
+
+  const feeData = await provider.getFeeData();
+  const gasPrice =
+    feeData.maxFeePerGas && feeData.maxFeePerGas > 0n
+      ? feeData.maxFeePerGas
+      : feeData.gasPrice && feeData.gasPrice > 0n
+      ? feeData.gasPrice
+      : ethers.parseUnits('50', 'gwei');
+
+  return {
+    gasLimit: totalGas,
+    gasPrice,
+    gasCostWei: totalGas * gasPrice,
+    needsApproval,
+    needsResetApproval,
+  };
+}
+
 export async function sendErc20ViaMultiTokenLedger(
   signer: ethers.Wallet,
   tokenAddress: string,

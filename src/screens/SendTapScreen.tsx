@@ -24,6 +24,7 @@ import {formatMon, truncateAddress} from '../utils/format';
 import {
   checkSufficientBalance,
   estimateGasCost,
+  estimateTokenPaymentGasCost,
   BalanceCheckResult,
 } from '../services/wallet';
 import {isNfcSupported, isNfcEnabled, openNfcSettings} from '../services/nfcReader';
@@ -125,6 +126,42 @@ export default function SendTapScreen({navigation}: Props) {
     return () => clearTimeout(timer);
   }, [amount, address]);
 
+  // Estimate real ERC-20 approval + MultiTokenLedger gas after reading a token payment request (#138).
+  useEffect(() => {
+    if (!pendingRecipient || !address || typeof estimateTokenPaymentGasCost !== 'function') {
+      return;
+    }
+    const tokenSym = (pendingRecipient.requestedToken || 'MON').toUpperCase();
+    const rawAmt = pendingRecipient.requestedAmount || activeAmount || amount;
+    if (!rawAmt) {
+      return;
+    }
+    const tokenInfo = SUPPORTED_TOKENS[tokenSym];
+    const decimals = tokenInfo?.decimals ?? 18;
+    let amountRaw: bigint;
+    try {
+      amountRaw = ethers.parseUnits(rawAmt, decimals);
+    } catch {
+      return;
+    }
+    if (amountRaw <= 0n) {
+      return;
+    }
+    let cancelled = false;
+    estimateTokenPaymentGasCost(address, tokenSym, pendingRecipient.receiverAddress, amountRaw)
+      .then(gasInfo => {
+        if (!cancelled && isMountedRef.current && gasInfo) {
+          setEstimatedGasWei(gasInfo.gasCostWei);
+        }
+      })
+      .catch(() => {
+        // Keep existing gas estimate on RPC error.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [pendingRecipient, address, activeAmount, amount]);
+
   const clearCountdown = () => {
     if (countdownRef.current) {
       clearInterval(countdownRef.current);
@@ -188,6 +225,15 @@ export default function SendTapScreen({navigation}: Props) {
       return;
     }
     const recipient = pendingRecipient;
+    if (recipient.expiresAt !== undefined && Date.now() >= recipient.expiresAt) {
+      triggerHaptic.notificationError();
+      Alert.alert(
+        'Session Expired',
+        'The receiver session has expired. Ask them to reopen Receive and tap again.',
+      );
+      await handleCancel();
+      return;
+    }
     const effectiveToken = (recipient.requestedToken || 'MON').toUpperCase();
     const tokenInfo = SUPPORTED_TOKENS[effectiveToken];
     const decimals = tokenInfo?.decimals ?? 18;
@@ -410,6 +456,22 @@ export default function SendTapScreen({navigation}: Props) {
           return;
         }
 
+        // Cap confirmation countdown to the receiver's session expiry (#138).
+        if (result.recipient.expiresAt !== undefined) {
+          const remainingSec = Math.floor((result.recipient.expiresAt - Date.now()) / 1000);
+          if (remainingSec <= 0) {
+            triggerHaptic.notificationError();
+            setPhase('failed');
+            Alert.alert(
+              'Session Expired',
+              'The receiver session has expired. Ask them to reopen Receive and tap again.',
+              [{text: 'OK', onPress: () => handleCancel()}],
+            );
+            return;
+          }
+          setTimeLeft(prev => Math.min(prev, remainingSec));
+        }
+
         // Step 2: show the recipient immediately and resolve @username async (#137).
         triggerHaptic.notificationSuccess();
         setScanHint(null);
@@ -503,6 +565,21 @@ export default function SendTapScreen({navigation}: Props) {
           [{text: 'OK', onPress: () => handleCancel()}],
         );
         return;
+      }
+
+      if (result.recipient.expiresAt !== undefined) {
+        const remainingSec = Math.floor((result.recipient.expiresAt - Date.now()) / 1000);
+        if (remainingSec <= 0) {
+          triggerHaptic.notificationError();
+          setPhase('failed');
+          Alert.alert(
+            'Session Expired',
+            'The receiver session has expired. Ask them to reopen Receive and tap again.',
+            [{text: 'OK', onPress: () => handleCancel()}],
+          );
+          return;
+        }
+        setTimeLeft(prev => Math.min(prev, remainingSec));
       }
 
       triggerHaptic.notificationSuccess();

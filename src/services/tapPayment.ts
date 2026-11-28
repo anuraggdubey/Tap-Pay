@@ -66,6 +66,7 @@ export type TapRecipient = {
   sessionNonce?: string;
   requestedAmount?: string;
   requestedToken?: string;
+  expiresAt?: number;
 };
 
 export type ExpectedPaymentRequest = {
@@ -122,6 +123,10 @@ export async function readTapRecipient(
     return {error: 'Cannot send payment to your own address.'};
   }
 
+  if (readResult.expiresAt !== undefined && Date.now() >= readResult.expiresAt) {
+    return {error: 'The receiver session has expired. Ask them to reopen Receive and tap again.'};
+  }
+
   let receiverUsername: string | undefined;
   if (!options?.skipUsernameLookup) {
     try {
@@ -138,6 +143,7 @@ export async function readTapRecipient(
       sessionNonce: readResult.sessionNonce,
       requestedAmount: readResult.requestedAmount,
       requestedToken: readResult.requestedToken,
+      expiresAt: readResult.expiresAt,
     },
   };
 }

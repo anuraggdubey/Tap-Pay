@@ -73,13 +73,13 @@ it('keeps B enabled with B\'s address when cancelled A finishes starting', async
   expect(session.enabled).toBe(false);
   await mount(B);
   await advance(100);
-  expect(content).toMatch(new RegExp(`^tappay://tap/${B}\\?s=[0-9a-f]{32}$`));
+  expect(content).toMatch(new RegExp(`^tappay://tap/${B}\\?s=[0-9a-f]{32}&exp=\\d+$`));
   expect(session.enabled).toBe(true);
   const writes = session.setEnabled.mock.calls.length;
   await advance(400);
   expect(session.setEnabled).toHaveBeenCalledTimes(writes);
   expect(session.enabled).toBe(true);
-  expect(content).toMatch(new RegExp(`^tappay://tap/${B}\\?s=[0-9a-f]{32}$`));
+  expect(content).toMatch(new RegExp(`^tappay://tap/${B}\\?s=[0-9a-f]{32}&exp=\\d+$`));
   await advance(100);
   expect(tapPayment.waitForIncomingPayment).toHaveBeenCalledTimes(1);
   expect((tapPayment.waitForIncomingPayment as jest.Mock).mock.calls[0][0]).toBe(B);
@@ -93,7 +93,7 @@ it('keeps B enabled after non-overlapping receive sessions', async () => {
   await unmount();
   await mount(B);
   await advance(600);
-  expect(content).toMatch(new RegExp(`^tappay://tap/${B}\\?s=[0-9a-f]{32}$`));
+  expect(content).toMatch(new RegExp(`^tappay://tap/${B}\\?s=[0-9a-f]{32}&exp=\\d+$`));
   expect(session.enabled).toBe(true);
   expect(tapPayment.waitForIncomingPayment).toHaveBeenCalledTimes(2);
 });

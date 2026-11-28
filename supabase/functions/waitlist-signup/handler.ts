@@ -95,8 +95,17 @@ export function createHandler(config: Config | null, fetcher: typeof fetch = fet
       return reply(400);
     }
 
-    const ip = request.headers.get('cf-connecting-ip')?.trim() ??
-      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
+    const forwardedHops = request.headers
+      .get('x-forwarded-for')
+      ?.split(',')
+      .map(part => part.trim())
+      .filter(Boolean);
+    const ip =
+      request.headers.get('cf-connecting-ip')?.trim() ||
+      request.headers.get('x-real-ip')?.trim() ||
+      (forwardedHops && forwardedHops.length > 0
+        ? forwardedHops[forwardedHops.length - 1]
+        : undefined);
     if (!ip || ip.length > 45 || !/^[0-9a-fA-F:.]+$/.test(ip)) {
       log('waitlist: missing trusted client IP');
       return reply(503);

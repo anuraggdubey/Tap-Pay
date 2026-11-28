@@ -220,20 +220,21 @@ Deno.test('fails closed when the rate limiter is unavailable', async () => {
   assert(calls.length === 1);
 });
 
-Deno.test('buckets are per client address and never contain the raw address', async () => {
-  const bucketFor = async (ip: string) => {
+Deno.test('buckets are per client address and ignore spoofed left-most X-Forwarded-For (#132)', async () => {
+  const bucketFor = async (forwarded: string) => {
     const {handler, calls} = setup([json(99)]);
     const req = new Request('https://edge.example.com/register-username', {
       method: 'POST',
-      headers: {'content-type': 'application/json', 'x-forwarded-for': `${ip}, 10.0.0.1`},
+      headers: {'content-type': 'application/json', 'x-forwarded-for': forwarded},
       body: JSON.stringify(body()),
     });
     await handler(req);
     return JSON.parse(String(calls[0].init?.body)).p_bucket as string;
   };
-  const a = await bucketFor('203.0.113.7');
-  const b = await bucketFor('203.0.113.8');
-  assert(/^[0-9a-f]{64}$/.test(a) && a !== b);
+  const a = await bucketFor('1.1.1.1, 203.0.113.7');
+  const spoofedA = await bucketFor('9.9.9.9, 203.0.113.7');
+  const b = await bucketFor('1.1.1.1, 203.0.113.8');
+  assert(/^[0-9a-f]{64}$/.test(a) && a === spoofedA && a !== b);
   assert(!a.includes('203'));
 });
 

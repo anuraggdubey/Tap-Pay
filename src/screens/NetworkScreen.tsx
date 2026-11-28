@@ -8,6 +8,7 @@ import {ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, View}
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import {MONAD_CONFIG} from '../config/monad';
+import {SUPPORTED_CHAINS} from '../config/chains';
 import {useTheme} from '../context/ThemeContext';
 import {Group, Row} from '../components/IosList';
 import AmbientBackground from '../components/AmbientBackground';
@@ -103,6 +104,28 @@ export default function NetworkScreen(_props: Props) {
             value={`${MONAD_CONFIG.nativeCurrency.name} (${MONAD_CONFIG.nativeCurrency.symbol})`}
           />
           <Row title="Decimals" value={String(MONAD_CONFIG.nativeCurrency.decimals)} />
+        </Group>
+
+        <Group
+          title="Supported EVM Networks"
+          footer="Payments and NFC Tap-to-Pay currently run on Monad Mainnet. Ethereum and Base are registered as EVM mainnets for upcoming multichain payment routing.">
+          {SUPPORTED_CHAINS.map(chain => {
+            const isActive = chain.tapPayLedgerSupported;
+            return (
+              <Row
+                key={chain.key}
+                title={chain.chainName}
+                subtitle={
+                  isActive
+                    ? `Chain ${chain.chainId} · NFC Tap-to-Pay Live`
+                    : `Chain ${chain.chainId} · Coming Soon`
+                }
+                value={isActive ? 'Active' : 'Read-only'}
+                chevron={false}
+                right={<Dot color={isActive ? colors.success : colors.textSubtle} />}
+              />
+            );
+          })}
         </Group>
 
         <Group

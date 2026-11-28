@@ -42,9 +42,9 @@ Deno.test('valid signup verifies CAPTCHA and inserts only normalized fields', as
   assert(result.status === 200 && (await result.json()).ok === true);
   assert(result.headers.get('Access-Control-Allow-Origin') === config.origins[0]);
   const hashed = JSON.parse(String(calls[0].init?.body)).p_ip_hash;
-  assert(hashed === await hashIp('198.51.100.9', config.ipSalt));
+  assert(hashed === await hashIp('192.0.2.1', config.ipSalt));
   const verification = calls[1].init?.body as URLSearchParams;
-  assert(verification.get('remoteip') === '198.51.100.9');
+  assert(verification.get('remoteip') === '192.0.2.1');
   assert(verification.get('response') === valid.token);
   assert(calls[2].init?.body === JSON.stringify({name: 'Ada', email: 'ada@example.com', source: 'web'}));
 });

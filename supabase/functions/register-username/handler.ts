@@ -18,11 +18,26 @@ const REGISTER_LIMIT = 10; // registrations per client address per hour
 const RELEASE_LIMIT = 20; // releases per client address per hour
 
 function clientAddress(request: Request): string {
-  return (
-    request.headers.get('cf-connecting-ip') ||
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    'unknown'
-  );
+  const cfIp = request.headers.get('cf-connecting-ip')?.trim();
+  if (cfIp) {
+    return cfIp;
+  }
+  const realIp = request.headers.get('x-real-ip')?.trim();
+  if (realIp) {
+    return realIp;
+  }
+  const forwarded = request.headers.get('x-forwarded-for');
+  if (forwarded) {
+    // Use the right-most entry added by the trusted edge proxy, never the spoofable left-most value (#132).
+    const hops = forwarded
+      .split(',')
+      .map(part => part.trim())
+      .filter(Boolean);
+    if (hops.length > 0) {
+      return hops[hops.length - 1];
+    }
+  }
+  return 'unknown';
 }
 
 async function sha256Hex(text: string): Promise<string> {

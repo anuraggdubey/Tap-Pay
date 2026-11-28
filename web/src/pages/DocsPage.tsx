@@ -63,11 +63,11 @@ export default function DocsPage() {
             on-device signing, and fast settlement across supported chains.
           </p>
           <div className="docs-hero-cta-row">
-            <Link to="/#prerequisites" className="phantom-btn-pill" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-              View landing requirements
+            <Link to="/#prerequisites" className="docs-btn docs-btn--primary">
+              View requirements
               <ArrowUpRight size={16} />
             </Link>
-            <Link to="/#watch-demo" className="phantom-btn-pill" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'transparent', border: '1px solid rgba(26,26,26,0.12)' }}>
+            <Link to="/#watch-demo" className="docs-btn docs-btn--ghost">
               Watch product film
             </Link>
           </div>

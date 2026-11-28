@@ -46,7 +46,7 @@ export const Navbar: React.FC = () => {
   return (
     <>
       <header
-        className={`site-navbar-header ${navSolid ? 'is-scrolled' : ''} ${isDarkNav ? 'is-dark' : ''}`}
+        className={`site-navbar-header ${navSolid ? 'is-scrolled' : ''} ${isSubpage ? 'is-subpage' : ''} ${isDarkNav ? 'is-dark' : ''}`}
         style={{
           position: 'fixed',
           top: 0,
@@ -122,7 +122,7 @@ export const Navbar: React.FC = () => {
             <Link
               to="/docs"
               className="phantom-nav-item"
-              style={isDocsPage ? { background: 'rgba(26, 26, 26, 0.08)' } : undefined}
+              style={isDocsPage ? { background: 'var(--canvas-line)', color: 'var(--text-dark)' } : undefined}
               aria-current={isDocsPage ? 'page' : undefined}
             >
               <span>Docs</span>
@@ -151,9 +151,10 @@ export const Navbar: React.FC = () => {
               className="phantom-icon-btn nav-mobile-toggle"
               style={{
                 display: 'none',
-                background: isDarkNav ? 'rgba(255, 255, 255, 0.12)' : 'var(--pill-bg)',
-                color: isDarkNav ? '#FFFDF8' : 'var(--text-dark)',
-                border: isDarkNav ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(26, 26, 26, 0.08)',
+                background: 'transparent',
+                color: 'var(--text-dark)',
+                border: '1px solid var(--canvas-line-bright)',
+                boxShadow: 'none',
               }}
               aria-label="Menu"
             >
@@ -236,6 +237,12 @@ export const Navbar: React.FC = () => {
           -webkit-backdrop-filter: blur(20px);
           border-bottom: 1px solid var(--canvas-line);
           box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+        }
+        .site-navbar-header.is-subpage {
+          background: var(--canvas-bg);
+          backdrop-filter: none;
+          -webkit-backdrop-filter: none;
+          box-shadow: none;
         }
         .site-navbar-header.is-scrolled.is-dark {
           background: var(--nav-bg-dark);

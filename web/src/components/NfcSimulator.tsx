@@ -196,9 +196,10 @@ export const NfcSimulator: React.FC = () => {
               gap: '6px',
               padding: '6px 16px',
               borderRadius: '9999px',
-              background: 'var(--pill-bg)',
-              color: 'var(--text-dark)',
-              fontWeight: 600,
+              background: 'transparent',
+              border: '1px solid var(--canvas-line-bright)',
+              color: 'var(--text-dark-muted)',
+              fontWeight: 500,
               fontSize: '13px',
             }}
           >
